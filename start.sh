@@ -20,9 +20,17 @@ set -euo pipefail
 export USE_NANO_GRAPHRAG=true
 export USE_LIGHTRAG=true
 
-# 启动应用 (使用绝对路径避免路径依赖)
-echo "[INFO] 正在启动应用..."
-python "$(dirname "$0")/app.py"  # 自动获取脚本所在目录的app.py
+#!/bin/bash
+set -euo pipefail
 
-# 状态反馈
-echo "[INFO] 应用已启动"
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+# 重定向所有输出到日志函数
+exec 1> >(while read -r line; do log "$line"; done)
+exec 2>&1  # 合并错误流
+
+log "[INFO] 正在启动应用..."
+python "$(dirname "$0")/app.py"
+log "[INFO] 应用已启动"
