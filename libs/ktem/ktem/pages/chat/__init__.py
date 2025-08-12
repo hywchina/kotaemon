@@ -237,7 +237,7 @@ class ChatPage(BasePage):
                     index_name = index.name
 
                     if KH_DEMO_MODE and is_first_index:
-                        index_name = "Select from Paper Collection"
+                        index_name = "从论文库选择"  # translate Select from Paper Collection --》从论文库选择
 
                     with gr.Accordion(
                         label=index_name,
@@ -272,7 +272,7 @@ class ChatPage(BasePage):
 
                 if len(self._app.index_manager.indices) > 0:
                     quick_upload_label = (
-                        "Quick Upload" if not KH_DEMO_MODE else "Or input new paper URL"
+                        "快速上传" if not KH_DEMO_MODE else "或输入新论文URL"  # translate Quick Upload --》快速上传 | Or input new paper URL --》或输入新论文URL
                     )
 
                     with gr.Accordion(label=quick_upload_label) as _:
@@ -287,7 +287,7 @@ class ChatPage(BasePage):
                             )
                         self.quick_urls = gr.Textbox(
                             placeholder=(
-                                "Or paste URLs"
+                                "或粘贴URL链接"  # translate Or paste URLs --》或粘贴URL链接
                                 if not KH_DEMO_MODE
                                 else "Paste Arxiv URLs\n(https://arxiv.org/abs/xxx)"
                             ),
@@ -302,7 +302,7 @@ class ChatPage(BasePage):
                 if not KH_DEMO_MODE:
                     self.report_issue = ReportIssue(self._app)
                 else:
-                    with gr.Accordion(label="Related papers", open=False):
+                    with gr.Accordion(label="相关论文", open=False):  # translate Related papers --》相关论文
                         self.related_papers = gr.Markdown(elem_id="related-papers")
 
                     self.hint_page = HintPage(self._app)
@@ -314,17 +314,17 @@ class ChatPage(BasePage):
                 self.chat_panel = ChatPanel(self._app)
 
                 with gr.Accordion(
-                    label="Chat settings",
+                    label="会话设置",  # translate Chat settings --》辅助问诊设置
                     elem_id="chat-settings-expand",
                     open=False,
                     visible=not KH_DEMO_MODE,
                 ) as self.chat_settings:
                     with gr.Row(elem_id="quick-setting-labels"):
-                        gr.HTML("Reasoning method")
+                        gr.HTML("推理方法")  # translate Reasoning method --》推理方法
                         gr.HTML(
-                            "Model", visible=not KH_DEMO_MODE and not KH_SSO_ENABLED
+                            "模型", visible=not KH_DEMO_MODE and not KH_SSO_ENABLED  # translate Model --》模型
                         )
-                        gr.HTML("Language")
+                        gr.HTML("语言")  # translate Language --》语言
 
                     with gr.Row():
                         reasoning_setting = (
@@ -390,7 +390,7 @@ class ChatPage(BasePage):
                 scale=INFO_PANEL_SCALES[False], elem_id="chat-info-panel"
             ) as self.info_column:
                 with gr.Accordion(
-                    label="Information panel", open=True, elem_id="info-expand"
+                    label="信息面板", open=True, elem_id="info-expand"  # translate Information panel --》信息面板
                 ):
                     self.modal = gr.HTML("<div id='pdf-modal'></div>")
                     self.plot_panel = gr.Plot(visible=False)
@@ -813,7 +813,7 @@ class ChatPage(BasePage):
             outputs=[self._reasoning_type],
         )
         self.use_mindmap_check.change(
-            lambda x: (x, gr.update(label="Mindmap " + ("(on)" if x else "(off)"))),
+            lambda x: (x, gr.update(label="思维导图 " + ("(开启)" if x else "(关闭)"))),  # translate Mindmap (on)/(off) --》思维导图 (开启)/(关闭)
             inputs=[self.use_mindmap_check],
             outputs=[self.use_mindmap, self.use_mindmap_check],
             show_progress="hidden",
@@ -824,7 +824,7 @@ class ChatPage(BasePage):
 
         def raise_error_on_state(state):
             if not state:
-                raise ValueError("Chat suggestion disabled")
+                raise ValueError("辅助诊断建议功能已禁用")  # translate Chat suggestion disabled --》聊天建议功能已禁用
 
         self.chat_control.cb_suggest_chat.change(
             fn=toggle_chat_suggestion,
@@ -996,7 +996,7 @@ class ChatPage(BasePage):
 
     def on_set_public_conversation(self, is_public, convo_id):
         if not convo_id:
-            gr.Warning("No conversation selected")
+            gr.Warning("未选择任何辅助诊断")  # translate No conversation selected --》未选择任何对话
             return
 
         with Session(engine) as session:
@@ -1013,7 +1013,7 @@ class ChatPage(BasePage):
                 session.commit()
 
                 gr.Info(
-                    f"Conversation: {name} is {'public' if is_public else 'private'}."
+                    f"辅助诊断: {name} 当前为{'公开' if is_public else '私有'}状态。"  # translate Conversation... --》对话...
                 )
 
     def on_subscribe_public_events(self):

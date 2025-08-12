@@ -32,10 +32,10 @@ class LoginPage(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        gr.Markdown(f"# Welcome to {self._app.app_name}!")
-        self.usn = gr.Textbox(label="Username", visible=False)
-        self.pwd = gr.Textbox(label="Password", type="password", visible=False)
-        self.btn_login = gr.Button("Login", visible=False)
+        gr.Markdown(f"# 欢迎使用{self._app.app_name}！")  # translate Welcome to... --》欢迎使用...！
+        self.usn = gr.Textbox(label="用户名", visible=False)  # translate Username --》用户名
+        self.pwd = gr.Textbox(label="密码", type="password", visible=False)  # translate Password --》密码
+        self.btn_login = gr.Button("登录", visible=False)  # translate Login --》登录
 
     def on_register_events(self):
         onSignIn = gr.on(
@@ -103,10 +103,10 @@ class LoginPage(BasePage):
                 result = session.exec(stmt).all()
 
             if result:
-                print("Existing user:", user)
+                print("现有用户:", user)  # translate Existing user --》现有用户
                 return user_id, "", ""
             else:
-                print("Creating new user:", user)
+                print("创建新用户:", user)  # translate Creating new user --》创建新用户
                 create_user(
                     usn=user["email"],
                     pwd="",
@@ -128,5 +128,5 @@ class LoginPage(BasePage):
                 if result:
                     return result[0].id, "", ""
 
-                gr.Warning("Invalid username or password")
+                gr.Warning("用户名或密码无效")  # translate Invalid username or password --》用户名或密码无效
                 return None, usn, pwd

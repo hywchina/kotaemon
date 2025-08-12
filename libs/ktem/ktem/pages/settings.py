@@ -123,7 +123,7 @@ class SettingsPage(BasePage):
                 elem_id="save-setting-btn",
             )
         if self._app.f_user_management:
-            with gr.Tab("User settings"):
+            with gr.Tab("用户设置"):  # translate User settings --》用户设置
                 self.user_tab()
 
         self.app_tab()
@@ -292,7 +292,7 @@ class SettingsPage(BasePage):
         #         self._components[f"index.{n}"] = obj
 
         id2name = {k: v.name for k, v in self._app.index_manager.info().items()}
-        with gr.Tab("Retrieval settings", visible=self._render_index_tab):
+        with gr.Tab("检索设置", visible=self._render_index_tab):  # translate Retrieval settings --》检索设置
             for pn, sig in self._default_settings.index.options.items():
                 name = id2name.get(pn, f"<id {pn}>")
                 with gr.Tab(name):
@@ -305,7 +305,7 @@ class SettingsPage(BasePage):
                             self._embeddings.append(obj)
 
     def reasoning_tab(self):
-        with gr.Tab("Reasoning settings", visible=self._render_reasoning_tab):
+        with gr.Tab("推理设置", visible=self._render_reasoning_tab):  # translate Reasoning settings --》推理设置
             with gr.Group():
                 for n, si in self._default_settings.reasoning.settings.items():
                     if n == "use":

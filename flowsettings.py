@@ -335,19 +335,19 @@ SETTINGS_APP: dict[str, dict] = {}
 
 SETTINGS_REASONING = {
     "use": {
-        "name": "Reasoning options",
+        "name": "推理选项", # translate Reasoning options --》推理选项
         "value": None,
         "choices": [],
         "component": "radio",
     },
     "lang": {
-        "name": "Language",
+        "name": "语言",  # translate Language --》语言
         "value": "zh",
         "choices": [(lang, code) for code, lang in SUPPORTED_LANGUAGE_MAP.items()],
         "component": "dropdown",
     },
     "max_context_length": {
-        "name": "Max context length (LLM)",
+        "name": "最大上下文长度(LLM)",  # translate Max context length (LLM) --》最大上下文长度(LLM)
         "value": 32000,
         "component": "number",
     },

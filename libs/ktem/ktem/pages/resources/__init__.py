@@ -16,20 +16,20 @@ class ResourcesTab(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Tab("Index Collections") as self.index_management_tab:
+        with gr.Tab("索引集合") as self.index_management_tab:  # translate Index Collections --》索引集合
             self.index_management = IndexManagement(self._app)
 
-        with gr.Tab("LLMs") as self.llm_management_tab:
+        with gr.Tab("大语言模型") as self.llm_management_tab:  # translate LLMs --》大语言模型
             self.llm_management = LLMManagement(self._app)
 
-        with gr.Tab("Embeddings") as self.emb_management_tab:
+        with gr.Tab("嵌入模型") as self.emb_management_tab:  # translate Embeddings --》嵌入模型
             self.emb_management = EmbeddingManagement(self._app)
 
-        with gr.Tab("Rerankings") as self.rerank_management_tab:
+        with gr.Tab("重排序模型") as self.rerank_management_tab:  # translate Rerankings --》重排序模型
             self.rerank_management = RerankingManagement(self._app)
 
         if self._app.f_user_management:
-            with gr.Tab("Users", visible=False) as self.user_management_tab:
+            with gr.Tab("用户管理", visible=False) as self.user_management_tab:  # translate Users --》用户管理
                 self.user_management = UserManagement(self._app)
 
     def on_subscribe_public_events(self):
