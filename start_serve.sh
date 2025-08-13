@@ -70,7 +70,13 @@ mkfifo "$PIPE_FILE"
         done < "$PIPE_FILE" >> "$current_log_file" &
 
         cat_pid=$!
-        sleep 3600  # 每小时切一次日志
+
+        # 计算到下一个整点的秒数
+        current_minute=$(date +%M)
+        current_second=$(date +%S)
+        sleep_seconds=$(( (60 - 10#$current_minute - 1)*60 + (60 - 10#$current_second) ))
+        sleep $sleep_seconds
+
         kill $cat_pid >/dev/null 2>&1 || true
     done
 ) >> "${BASE_LOG_DIR}/start_serve.log" 2>&1 &
