@@ -23,4 +23,5 @@ demo.queue().launch(
         GRADIO_TEMP_DIR,
     ],
     share=KH_GRADIO_SHARE,
+    server_name='0.0.0.0',
 )
