@@ -106,199 +106,259 @@ KH_LLMS = {}  # 语言模型配置
 KH_EMBEDDINGS = {}  # 嵌入配置
 KH_RERANKINGS = {}  # 重排序配置
 
-# populate options from config
-if config("AZURE_OPENAI_API_KEY", default="") and config(  # Azure OpenAI API配置
-    "AZURE_OPENAI_ENDPOINT", default=""
-):
-    if config("AZURE_OPENAI_CHAT_DEPLOYMENT", default=""):  # Azure OpenAI聊天部署配置
-        KH_LLMS["azure"] = {  # Azure语言模型配置
-            "spec": {
-                "__type__": "kotaemon.llms.AzureChatOpenAI",
-                "temperature": 0,
-                "azure_endpoint": config("AZURE_OPENAI_ENDPOINT", default=""),
-                "api_key": config("AZURE_OPENAI_API_KEY", default=""),
-                "api_version": config("OPENAI_API_VERSION", default="")
-                or "2024-02-15-preview",
-                "azure_deployment": config("AZURE_OPENAI_CHAT_DEPLOYMENT", default=""),
-                "timeout": 20,
-            },
-            "default": False,
-        }
-    if config("AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT", default=""):
-        KH_EMBEDDINGS["azure"] = {  # Azure嵌入配置
-            "spec": {
-                "__type__": "kotaemon.embeddings.AzureOpenAIEmbeddings",
-                "azure_endpoint": config("AZURE_OPENAI_ENDPOINT", default=""),
-                "api_key": config("AZURE_OPENAI_API_KEY", default=""),
-                "api_version": config("OPENAI_API_VERSION", default="")
-                or "2024-02-15-preview",
-                "azure_deployment": config(
-                    "AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT", default=""
-                ),
-                "timeout": 10,
-            },
-            "default": False,
-        }
+
+"""temp settings for LLMs and embeddings"""
+# Ollama语言模型配置
+KH_LLMS["ollama-qwen3:0.6b"] = {  # Ollama语言模型配置
+    "spec": {
+        "__type__": "kotaemon.llms.ChatOpenAI",
+        "base_url": "http://localhost:11434/v1",
+        "model": "qwen3:0.6b",
+        "api_key": "ollama",
+    },
+    "default": False,
+}
+
+KH_EMBEDDINGS["ollama-bge-large:335m"] = {  # Ollama嵌入配置
+    "spec": {
+        "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+        "base_url": "http://localhost:11434/v1",
+        "model": "qwen3:0.6b",
+        "api_key": "ollama",
+    },
+    "default": False,
+}
+
+# 类openai api llm 与 embeddings
+KH_LLMS["无问芯穹-gpt-4o"] = {  # OpenAI语言模型配置
+    "spec": {
+        "__type__": "kotaemon.llms.ChatOpenAI",
+        "temperature": 0.5,
+        "base_url": "https://cloud.infini-ai.com/maas/v1",
+        "api_key": "sk-7xet3afg2b7fumjl",
+        "model": "gpt-4o",
+        "timeout": 30,
+    },
+    "default": True,
+}
+KH_EMBEDDINGS["无问芯穹-bge-m3"] = {  # OpenAI嵌入配置
+    "spec": {
+        "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+        "base_url": "https://cloud.infini-ai.com/maas/v1",
+        "api_key": "sk-7xet3afg2b7fumjl",
+        "model": "bge-m3",
+        "timeout": 30,
+        # "context_length": 8191, # 我也不知道
+    },
+    "default": True,
+}
+
+# reranking model
+
+KH_RERANKINGS["local-bge-reranker-v2-m3"] = {  
+    "spec": {
+        "__type__": "kotaemon.rerankings.TeiFastReranking",
+        "endpoint_url": "http://localhost:8001/rerank",
+    },
+    "default": True,
+}
+
+
+"""end of temp settings for LLMs and embeddings"""
+
+# # populate options from config
+# if config("AZURE_OPENAI_API_KEY", default="") and config(  # Azure OpenAI API配置
+#     "AZURE_OPENAI_ENDPOINT", default=""
+# ):
+#     if config("AZURE_OPENAI_CHAT_DEPLOYMENT", default=""):  # Azure OpenAI聊天部署配置
+#         KH_LLMS["azure"] = {  # Azure语言模型配置
+#             "spec": {
+#                 "__type__": "kotaemon.llms.AzureChatOpenAI",
+#                 "temperature": 0,
+#                 "azure_endpoint": config("AZURE_OPENAI_ENDPOINT", default=""),
+#                 "api_key": config("AZURE_OPENAI_API_KEY", default=""),
+#                 "api_version": config("OPENAI_API_VERSION", default="")
+#                 or "2024-02-15-preview",
+#                 "azure_deployment": config("AZURE_OPENAI_CHAT_DEPLOYMENT", default=""),
+#                 "timeout": 20,
+#             },
+#             "default": False,
+#         }
+#     if config("AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT", default=""):
+#         KH_EMBEDDINGS["azure"] = {  # Azure嵌入配置
+#             "spec": {
+#                 "__type__": "kotaemon.embeddings.AzureOpenAIEmbeddings",
+#                 "azure_endpoint": config("AZURE_OPENAI_ENDPOINT", default=""),
+#                 "api_key": config("AZURE_OPENAI_API_KEY", default=""),
+#                 "api_version": config("OPENAI_API_VERSION", default="")
+#                 or "2024-02-15-preview",
+#                 "azure_deployment": config(
+#                     "AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT", default=""
+#                 ),
+#                 "timeout": 10,
+#             },
+#             "default": False,
+#         }
 
 OPENAI_DEFAULT = "<YOUR_OPENAI_KEY>"  # OpenAI默认API密钥
 OPENAI_API_KEY = config("OPENAI_API_KEY", default=OPENAI_DEFAULT)  # OpenAI API密钥
-GOOGLE_API_KEY = config("GOOGLE_API_KEY", default="your-key")  # Google API密钥
+GOOGLE_API_KEY = config("GOOGLE_API_KEY", default="")  # Google API密钥
 IS_OPENAI_DEFAULT = len(OPENAI_API_KEY) > 0 and OPENAI_API_KEY != OPENAI_DEFAULT  # 是否使用OpenAI默认密钥
 
-if OPENAI_API_KEY:  # 如果设置了OpenAI API密钥
-    KH_LLMS["openai"] = {  # OpenAI语言模型配置
-        "spec": {
-            "__type__": "kotaemon.llms.ChatOpenAI",
-            "temperature": 0,
-            "base_url": config("OPENAI_API_BASE", default="")
-            or "https://api.openai.com/v1",
-            "api_key": OPENAI_API_KEY,
-            "model": config("OPENAI_CHAT_MODEL", default="gpt-4o-mini"),
-            "timeout": 20,
-        },
-        "default": IS_OPENAI_DEFAULT,
-    }
-    KH_EMBEDDINGS["openai"] = {  # OpenAI嵌入配置
-        "spec": {
-            "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
-            "base_url": config("OPENAI_API_BASE", default="https://api.openai.com/v1"),
-            "api_key": OPENAI_API_KEY,
-            "model": config(
-                "OPENAI_EMBEDDINGS_MODEL", default="text-embedding-3-large"
-            ),
-            "timeout": 10,
-            "context_length": 8191,
-        },
-        "default": IS_OPENAI_DEFAULT,
-    }
+# if OPENAI_API_KEY:  # 如果设置了OpenAI API密钥
+#     KH_LLMS["openai"] = {  # OpenAI语言模型配置
+#         "spec": {
+#             "__type__": "kotaemon.llms.ChatOpenAI",
+#             "temperature": 0,
+#             "base_url": config("OPENAI_API_BASE", default="")
+#             or "https://api.openai.com/v1",
+#             "api_key": OPENAI_API_KEY,
+#             "model": config("OPENAI_CHAT_MODEL", default="gpt-4o-mini"),
+#             "timeout": 20,
+#         },
+#         "default": IS_OPENAI_DEFAULT,
+#     }
+#     KH_EMBEDDINGS["openai"] = {  # OpenAI嵌入配置
+#         "spec": {
+#             "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+#             "base_url": config("OPENAI_API_BASE", default="https://api.openai.com/v1"),
+#             "api_key": OPENAI_API_KEY,
+#             "model": config(
+#                 "OPENAI_EMBEDDINGS_MODEL", default="text-embedding-3-large"
+#             ),
+#             "timeout": 10,
+#             "context_length": 8191,
+#         },
+#         "default": IS_OPENAI_DEFAULT,
+#     }
 
-VOYAGE_API_KEY = config("VOYAGE_API_KEY", default="")  # Voyage API密钥
-if VOYAGE_API_KEY:  # 如果设置了Voyage API密钥
-    KH_EMBEDDINGS["voyageai"] = {  # Voyage嵌入配置
-        "spec": {
-            "__type__": "kotaemon.embeddings.VoyageAIEmbeddings",
-            "api_key": VOYAGE_API_KEY,
-            "model": config("VOYAGE_EMBEDDINGS_MODEL", default="voyage-3-large"),
-        },
-        "default": False,
-    }
-    KH_RERANKINGS["voyageai"] = {  # Voyage重排序配置
-        "spec": {
-            "__type__": "kotaemon.rerankings.VoyageAIReranking",
-            "model_name": "rerank-2",
-            "api_key": VOYAGE_API_KEY,
-        },
-        "default": False,
-    }
+# VOYAGE_API_KEY = config("VOYAGE_API_KEY", default="")  # Voyage API密钥
+# if VOYAGE_API_KEY:  # 如果设置了Voyage API密钥
+#     KH_EMBEDDINGS["voyageai"] = {  # Voyage嵌入配置
+#         "spec": {
+#             "__type__": "kotaemon.embeddings.VoyageAIEmbeddings",
+#             "api_key": VOYAGE_API_KEY,
+#             "model": config("VOYAGE_EMBEDDINGS_MODEL", default="voyage-3-large"),
+#         },
+#         "default": False,
+#     }
+#     KH_RERANKINGS["voyageai"] = {  # Voyage重排序配置
+#         "spec": {
+#             "__type__": "kotaemon.rerankings.VoyageAIReranking",
+#             "model_name": "rerank-2",
+#             "api_key": VOYAGE_API_KEY,
+#         },
+#         "default": False,
+#     }
 
-if config("LOCAL_MODEL", default=""):  # 如果设置了本地模型
-    KH_LLMS["ollama"] = {  # Ollama语言模型配置
-        "spec": {
-            "__type__": "kotaemon.llms.ChatOpenAI",
-            "base_url": KH_OLLAMA_URL,
-            "model": config("LOCAL_MODEL", default="qwen2.5:7b"),
-            "api_key": "ollama",
-        },
-        "default": False,
-    }
-    KH_LLMS["ollama-long-context"] = {  # Ollama长上下文语言模型配置
-        "spec": {
-            "__type__": "kotaemon.llms.LCOllamaChat",
-            "base_url": KH_OLLAMA_URL.replace("v1/", ""),
-            "model": config("LOCAL_MODEL", default="qwen2.5:7b"),
-            "num_ctx": 8192,
-        },
-        "default": False,
-    }
+# if config("LOCAL_MODEL", default=""):  # 如果设置了本地模型
+#     KH_LLMS["ollama"] = {  # Ollama语言模型配置
+#         "spec": {
+#             "__type__": "kotaemon.llms.ChatOpenAI",
+#             "base_url": KH_OLLAMA_URL,
+#             "model": config("LOCAL_MODEL", default="qwen2.5:7b"),
+#             "api_key": "ollama",
+#         },
+#         "default": False,
+#     }
+#     KH_LLMS["ollama-long-context"] = {  # Ollama长上下文语言模型配置
+#         "spec": {
+#             "__type__": "kotaemon.llms.LCOllamaChat",
+#             "base_url": KH_OLLAMA_URL.replace("v1/", ""),
+#             "model": config("LOCAL_MODEL", default="qwen2.5:7b"),
+#             "num_ctx": 8192,
+#         },
+#         "default": False,
+#     }
 
-    KH_EMBEDDINGS["ollama"] = {  # Ollama嵌入配置
-        "spec": {
-            "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
-            "base_url": KH_OLLAMA_URL,
-            "model": config("LOCAL_MODEL_EMBEDDINGS", default="nomic-embed-text"),
-            "api_key": "ollama",
-        },
-        "default": False,
-    }
-    KH_EMBEDDINGS["fast_embed"] = {  # 快速嵌入配置
-        "spec": {
-            "__type__": "kotaemon.embeddings.FastEmbedEmbeddings",
-            "model_name": "BAAI/bge-base-en-v1.5",
-        },
-        "default": False,
-    }
+#     KH_EMBEDDINGS["ollama"] = {  # Ollama嵌入配置
+#         "spec": {
+#             "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+#             "base_url": KH_OLLAMA_URL,
+#             "model": config("LOCAL_MODEL_EMBEDDINGS", default="nomic-embed-text"),
+#             "api_key": "ollama",
+#         },
+#         "default": False,
+#     }
+#     KH_EMBEDDINGS["fast_embed"] = {  # 快速嵌入配置
+#         "spec": {
+#             "__type__": "kotaemon.embeddings.FastEmbedEmbeddings",
+#             "model_name": "BAAI/bge-base-en-v1.5",
+#         },
+#         "default": False,
+#     }
 
-# additional LLM configurations
-KH_LLMS["claude"] = {  # Claude语言模型配置
-    "spec": {
-        "__type__": "kotaemon.llms.chats.LCAnthropicChat",
-        "model_name": "claude-3-5-sonnet-20240620",
-        "api_key": "your-key",
-    },
-    "default": False,
-}
-KH_LLMS["google"] = {  # Google语言模型配置
-    "spec": {
-        "__type__": "kotaemon.llms.chats.LCGeminiChat",
-        "model_name": "gemini-1.5-flash",
-        "api_key": GOOGLE_API_KEY,
-    },
-    "default": not IS_OPENAI_DEFAULT,
-}
-KH_LLMS["groq"] = {  # Groq语言模型配置
-    "spec": {
-        "__type__": "kotaemon.llms.ChatOpenAI",
-        "base_url": "https://api.groq.com/openai/v1",
-        "model": "llama-3.1-8b-instant",
-        "api_key": "your-key",
-    },
-    "default": False,
-}
-KH_LLMS["cohere"] = {  # Cohere语言模型配置
-    "spec": {
-        "__type__": "kotaemon.llms.chats.LCCohereChat",
-        "model_name": "command-r-plus-08-2024",
-        "api_key": config("COHERE_API_KEY", default="your-key"),
-    },
-    "default": False,
-}
-KH_LLMS["mistral"] = {  # Mistral语言模型配置
-    "spec": {
-        "__type__": "kotaemon.llms.ChatOpenAI",
-        "base_url": "https://api.mistral.ai/v1",
-        "model": "ministral-8b-latest",
-        "api_key": config("MISTRAL_API_KEY", default="your-key"),
-    },
-    "default": False,
-}
+# # additional LLM configurations
+# KH_LLMS["claude"] = {  # Claude语言模型配置
+#     "spec": {
+#         "__type__": "kotaemon.llms.chats.LCAnthropicChat",
+#         "model_name": "claude-3-5-sonnet-20240620",
+#         "api_key": "your-key",
+#     },
+#     "default": False,
+# }
+# KH_LLMS["google"] = {  # Google语言模型配置
+#     "spec": {
+#         "__type__": "kotaemon.llms.chats.LCGeminiChat",
+#         "model_name": "gemini-1.5-flash",
+#         "api_key": GOOGLE_API_KEY,
+#     },
+#     "default": not IS_OPENAI_DEFAULT,
+# }
+# KH_LLMS["groq"] = {  # Groq语言模型配置
+#     "spec": {
+#         "__type__": "kotaemon.llms.ChatOpenAI",
+#         "base_url": "https://api.groq.com/openai/v1",
+#         "model": "llama-3.1-8b-instant",
+#         "api_key": "your-key",
+#     },
+#     "default": False,
+# }
+# KH_LLMS["cohere"] = {  # Cohere语言模型配置
+#     "spec": {
+#         "__type__": "kotaemon.llms.chats.LCCohereChat",
+#         "model_name": "command-r-plus-08-2024",
+#         "api_key": config("COHERE_API_KEY", default="your-key"),
+#     },
+#     "default": False,
+# }
+# KH_LLMS["mistral"] = {  # Mistral语言模型配置
+#     "spec": {
+#         "__type__": "kotaemon.llms.ChatOpenAI",
+#         "base_url": "https://api.mistral.ai/v1",
+#         "model": "ministral-8b-latest",
+#         "api_key": config("MISTRAL_API_KEY", default="your-key"),
+#     },
+#     "default": False,
+# }
 
-# additional embeddings configurations
-KH_EMBEDDINGS["cohere"] = {  # Cohere嵌入配置
-    "spec": {
-        "__type__": "kotaemon.embeddings.LCCohereEmbeddings",
-        "model": "embed-multilingual-v3.0",
-        "cohere_api_key": config("COHERE_API_KEY", default="your-key"),
-        "user_agent": "default",
-    },
-    "default": False,
-}
-KH_EMBEDDINGS["google"] = {  # Google嵌入配置
-    "spec": {
-        "__type__": "kotaemon.embeddings.LCGoogleEmbeddings",
-        "model": "models/text-embedding-004",
-        "google_api_key": GOOGLE_API_KEY,
-    },
-    "default": not IS_OPENAI_DEFAULT,
-}
-KH_EMBEDDINGS["mistral"] = {  # Mistral嵌入配置
-    "spec": {
-        "__type__": "kotaemon.embeddings.LCMistralEmbeddings",
-        "model": "mistral-embed",
-        "api_key": config("MISTRAL_API_KEY", default="your-key"),
-    },
-    "default": False,
-}
-# KH_EMBEDDINGS["huggingface"] = {
+# # additional embeddings configurations
+# KH_EMBEDDINGS["cohere"] = {  # Cohere嵌入配置
+#     "spec": {
+#         "__type__": "kotaemon.embeddings.LCCohereEmbeddings",
+#         "model": "embed-multilingual-v3.0",
+#         "cohere_api_key": config("COHERE_API_KEY", default="your-key"),
+#         "user_agent": "default",
+#     },
+#     "default": False,
+# }
+# KH_EMBEDDINGS["google"] = {  # Google嵌入配置
+#     "spec": {
+#         "__type__": "kotaemon.embeddings.LCGoogleEmbeddings",
+#         "model": "models/text-embedding-004",
+#         "google_api_key": GOOGLE_API_KEY,
+#     },
+#     "default": not IS_OPENAI_DEFAULT,
+# }
+# KH_EMBEDDINGS["mistral"] = {  # Mistral嵌入配置
+#     "spec": {
+#         "__type__": "kotaemon.embeddings.LCMistralEmbeddings",
+#         "model": "mistral-embed",
+#         "api_key": config("MISTRAL_API_KEY", default="your-key"),
+#     },
+#     "default": False,
+# }
+# # KH_EMBEDDINGS["huggingface"] = {
 #     "spec": {
 #         "__type__": "kotaemon.embeddings.LCHuggingFaceEmbeddings",
 #         "model_name": "sentence-transformers/all-mpnet-base-v2",
@@ -307,14 +367,14 @@ KH_EMBEDDINGS["mistral"] = {  # Mistral嵌入配置
 # }
 
 # default reranking models
-KH_RERANKINGS["cohere"] = {  # Cohere重排序配置
-    "spec": {
-        "__type__": "kotaemon.rerankings.CohereReranking",
-        "model_name": "rerank-multilingual-v2.0",
-        "cohere_api_key": config("COHERE_API_KEY", default=""),
-    },
-    "default": True,
-}
+# KH_RERANKINGS["cohere"] = {  # Cohere重排序配置
+#     "spec": {
+#         "__type__": "kotaemon.rerankings.CohereReranking",
+#         "model_name": "rerank-multilingual-v2.0",
+#         "cohere_api_key": config("COHERE_API_KEY", default=""),
+#     },
+#     "default": False,
+# }
 
 KH_REASONINGS = [  # 推理配置
     "ktem.reasoning.simple.FullQAPipeline",
@@ -353,15 +413,15 @@ SETTINGS_REASONING = {  # 推理设置
     },
 }
 
-USE_GLOBAL_GRAPHRAG = config("USE_GLOBAL_GRAPHRAG", default=True, cast=bool)  # 是否使用全局GraphRAG
+USE_GLOBAL_GRAPHRAG = config("USE_GLOBAL_GRAPHRAG", default=False, cast=bool)  # 是否使用全局GraphRAG
 USE_NANO_GRAPHRAG = config("USE_NANO_GRAPHRAG", default=False, cast=bool)  # 是否使用NanoGraphRAG
 USE_LIGHTRAG = config("USE_LIGHTRAG", default=True, cast=bool)  # 是否使用LightRAG
 USE_MS_GRAPHRAG = config("USE_MS_GRAPHRAG", default=True, cast=bool)  # 是否使用MSGraphRAG
 
 GRAPHRAG_INDEX_TYPES = []  # GraphRAG索引类型
 
-if USE_MS_GRAPHRAG:
-    GRAPHRAG_INDEX_TYPES.append("ktem.index.file.graph.GraphRAGIndex")
+# if USE_MS_GRAPHRAG:
+#     GRAPHRAG_INDEX_TYPES.append("ktem.index.file.graph.GraphRAGIndex")
 if USE_NANO_GRAPHRAG:
     GRAPHRAG_INDEX_TYPES.append("ktem.index.file.graph.NanoGraphRAGIndex")
 if USE_LIGHTRAG:

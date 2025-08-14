@@ -77,7 +77,7 @@ class App(BaseApp):
                         setattr(self, f"_index_{index.id}", page)
             elif len(self.index_manager.indices) > 1:
                 with gr.Tab(
-                    "知识库",  # translate Files --》知识库
+                    "文件管理",  # translate Files --》文件管理
                     elem_id="indices-tab",
                     elem_classes=["fill-main-area-height", "scrollable", "indices-tab"],
                     id="indices-tab",
@@ -94,7 +94,7 @@ class App(BaseApp):
             if not KH_DEMO_MODE:
                 if not KH_SSO_ENABLED:
                     with gr.Tab(
-                        "资源中心",  # translate Resources --》资源中心
+                        "资源管理",  # translate Resources --》资源管理
                         elem_id="resources-tab",
                         id="resources-tab",
                         visible=not self.f_user_management,

@@ -20,7 +20,7 @@
 set -euo pipefail
 
 # ========= 环境变量 =========
-export USE_NANO_GRAPHRAG=true
+# export USE_NANO_GRAPHRAG=true
 export USE_LIGHTRAG=true
 
 BASE_LOG_DIR="$(dirname "$0")/logs"

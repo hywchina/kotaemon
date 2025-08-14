@@ -101,7 +101,7 @@ class ConversationControl(BasePage):
         with gr.Row() as self._new_delete:
             self.cb_suggest_chat = gr.Checkbox(
                 value=False,
-                label="诊断建议",  # translate Suggest chat --》发起诊断建议
+                label="智能诊断建议",  # translate Suggest chat --》智能诊断建议
                 min_width=10,
                 scale=6,
                 elem_id="suggest-chat-checkbox",
@@ -110,7 +110,7 @@ class ConversationControl(BasePage):
             )
             self.cb_is_public = gr.Checkbox(
                 value=False,
-                label="分享当前对话",  # translate Share this conversation --》分享当前对话
+                label="分享当前会话",  # translate Share this conversation --》分享当前会话
                 elem_id="is-public-checkbox",
                 container=False,
                 visible=not KH_DEMO_MODE and not KH_SSO_ENABLED,
@@ -144,7 +144,7 @@ class ConversationControl(BasePage):
                 )
             else:
                 self.btn_new = gr.Button(
-                    value="新建辅助问诊",  # translate New chat --》新建辅助问诊
+                    value="新建会话",  # translate New chat --》新建会话
                     min_width=120,
                     size="sm",
                     scale=1,
@@ -189,7 +189,7 @@ class ConversationControl(BasePage):
         with gr.Row():
             self.conversation_rn = gr.Text(
                 label="(回车键)保存",  # translate (Enter) to save --》(回车键)保存
-                placeholder="辅助问诊名称",  # translate Conversation name --》对话名称
+                placeholder="会话名称",  # translate Conversation name --》会话名称
                 container=True,
                 scale=5,
                 min_width=10,
@@ -274,7 +274,7 @@ class ConversationControl(BasePage):
     def delete_conv(self, conversation_id, user_id):
         """Delete the selected conversation"""
         if not conversation_id:
-            gr.Warning("未选择任何对话")  # translate No conversation selected --》未选择任何对话
+            gr.Warning("未选择任何会话")  # translate No conversation selected --》未选择任何对话
             return None, gr.update()
 
         if user_id is None:
@@ -401,7 +401,7 @@ class ConversationControl(BasePage):
             session.commit()
 
         history = self.load_chat_history(user_id)
-        gr.Info("辅助问诊已重命名")  # translate Conversation renamed --》对话已重命名
+        gr.Info("会话已重命名")  # translate Conversation renamed --》对话已重命名
         return (
             gr.update(choices=history),
             conversation_id,
