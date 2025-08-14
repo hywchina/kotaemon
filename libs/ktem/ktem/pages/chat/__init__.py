@@ -372,7 +372,7 @@ class ChatPage(BasePage):
                         if not config("USE_LOW_LLM_REQUESTS", default=False, cast=bool):
                             self.use_mindmap = gr.State(value=True)
                             self.use_mindmap_check = gr.Checkbox(
-                                label="Mindmap (on)",
+                                label="思维导图 (开启)", # translate Mindmap (on)/(off) --》思维导图 (开启)/(关闭)
                                 container=False,
                                 elem_id="use-mindmap-checkbox",
                                 value=True,
@@ -380,7 +380,7 @@ class ChatPage(BasePage):
                         else:
                             self.use_mindmap = gr.State(value=False)
                             self.use_mindmap_check = gr.Checkbox(
-                                label="Mindmap (off)",
+                                label="思维导图 (关闭)", # translate Mindmap (on)/(off) --》思维导图 (开启)/(关闭)
                                 container=False,
                                 elem_id="use-mindmap-checkbox",
                                 value=False,
