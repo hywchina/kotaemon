@@ -50,7 +50,7 @@ class ConversationControl(BasePage):
 
     def on_building_ui(self):
         with gr.Row():
-            title_text = "会话记录" if not KH_DEMO_MODE else "Kotaemon 论文库"  # translate Conversations --》对话记录 | Kotaemon Papers --》Kotaemon 论文库
+            title_text = "辅助诊断记录" if not KH_DEMO_MODE else "Kotaemon 论文库"  # translate Conversations --》对话记录 | Kotaemon Papers --》Kotaemon 论文库
             gr.Markdown("## {}".format(title_text))
             self.btn_toggle_dark_mode = gr.Button(
                 value="",
@@ -156,7 +156,7 @@ class ConversationControl(BasePage):
         if KH_DEMO_MODE:
             with gr.Row():
                 self.btn_demo_login = gr.Button(
-                    value="请登录以创建新的辅助问诊",  # translate Sign-in to create new chat --》请登录以创建新对话
+                    value="请登录以创建新会话",  # translate Sign-in to create new chat --》请登录以创建新对话
                     min_width=120,
                     size="sm",
                     scale=1,
@@ -436,7 +436,7 @@ class ConversationControl(BasePage):
             session.add(result)
             session.commit()
 
-        gr.Info("辅助问诊建议已更新")  # translate Chat suggestions updated --》聊天建议已更新
+        gr.Info("辅助诊断建议已更新")  # translate Chat suggestions updated --》聊天建议已更新
 
 
     def toggle_demo_login_visibility(self, user_api_key, request: gr.Request):

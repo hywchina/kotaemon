@@ -53,7 +53,7 @@ class App(BaseApp):
                     self.login_page = LoginPage(self)
 
             with gr.Tab(
-                "辅助问诊",  # translate Chat --》辅助问诊
+                "辅助诊断",  # translate Chat --》辅助诊断
                 elem_id="chat-tab",
                 id="chat-tab",
                 visible=not self.f_user_management,
