@@ -39,7 +39,7 @@ class ChatPanel(BasePage):
                 scale=20,
                 file_count="multiple",  # translate
                 placeholder=(  # translate
-                    "输入消息、使用@web搜索或通过@filename标记文件"
+                    "输入消息，或@filename文件开始会话"
                 ),  # translate Type a message, search the @web, or tag a file with @filename --》输入消息、使用@web搜索或通过@filename标记文件
                 container=False,
                 show_label=False,

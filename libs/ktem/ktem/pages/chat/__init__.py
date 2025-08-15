@@ -294,6 +294,7 @@ class ChatPage(BasePage):
                             lines=1,
                             container=False,
                             show_label=False,
+                            visible=False,
                             elem_id=(
                                 "quick-url" if not KH_DEMO_MODE else "quick-url-demo"
                             ),
@@ -900,9 +901,9 @@ class ChatPage(BasePage):
         # get all file names with pattern @"filename" in input_str
         file_names, chat_input_text = get_file_names_regex(chat_input_text)
 
-        # check if web search command is in file_names
-        if WEB_SEARCH_COMMAND in file_names:
-            used_command = WEB_SEARCH_COMMAND
+        # # check if web search command is in file_names
+        # if WEB_SEARCH_COMMAND in file_names:
+        #     used_command = WEB_SEARCH_COMMAND
 
         # get all urls in input_str
         urls, chat_input_text = get_urls(chat_input_text)

@@ -300,7 +300,7 @@ class FileIndexPage(BasePage):
                         if msg:
                             gr.Markdown(msg)
 
-                    with gr.Tab("Use Web Links"):
+                    with gr.Tab("Use Web Links", visible=False):
                         self.urls = gr.Textbox(
                             label="Input web URLs",
                             lines=8,
