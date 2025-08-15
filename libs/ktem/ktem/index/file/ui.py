@@ -659,7 +659,7 @@ class FileIndexPage(BasePage):
                             fn=lambda: True,
                             inputs=None,
                             outputs=None,
-                            js=chat_input_focus_js_with_submit,
+                            js=chat_input_focus_js,
                         )
                     )
 
@@ -717,7 +717,7 @@ class FileIndexPage(BasePage):
                     fn=lambda: True,
                     inputs=None,
                     outputs=None,
-                    js=chat_input_focus_js_with_submit,
+                    js=chat_input_focus_js,
                 )
 
         except Exception as e:
