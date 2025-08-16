@@ -1631,8 +1631,9 @@ class FileSelector(BasePage):
         self.mode = gr.Radio(
             value=default_mode,
             choices=[
-                ("Search All", "all"),
-                ("Search In File(s)", "select"),
+                ("All", "all"),
+                ("Search", "select"),
+                ("Cancel", "disabled"),  # ✅ 添加了取消选择选项
             ],
             container=False,
         )
