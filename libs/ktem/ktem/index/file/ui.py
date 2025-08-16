@@ -1729,6 +1729,9 @@ class FileSelector(BasePage):
                     (f"group: '{item.name}'", json.dumps(item.data.get("files", [])))
                 )
 
+        # 把 group 开头的排在前面
+        options.sort(key=lambda x: (0 if str(x[0]).startswith("group:") else 1, str(x[0])))
+
         if selected_files:
             available_ids_set = set(available_ids)
             selected_files = [
