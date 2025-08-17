@@ -27,3 +27,5 @@ deactivate \
 # 检查冲突
 # pip check
 
+# ========= 重启服务 =========
+bash stop_serve.sh && rm -rf ktem_app_data && bash start_serve.sh

@@ -415,13 +415,13 @@ SETTINGS_REASONING = {  # 推理设置
 
 USE_GLOBAL_GRAPHRAG = config("USE_GLOBAL_GRAPHRAG", default=False, cast=bool)  # 是否使用全局GraphRAG
 USE_NANO_GRAPHRAG = config("USE_NANO_GRAPHRAG", default=False, cast=bool)  # 是否使用NanoGraphRAG
-USE_LIGHTRAG = config("USE_LIGHTRAG", default=True, cast=bool)  # 是否使用LightRAG
-USE_MS_GRAPHRAG = config("USE_MS_GRAPHRAG", default=True, cast=bool)  # 是否使用MSGraphRAG
+USE_LIGHTRAG = config("USE_LIGHTRAG", default=False, cast=bool)  # 是否使用LightRAG
+USE_MS_GRAPHRAG = config("USE_MS_GRAPHRAG", default=False, cast=bool)  # 是否使用MSGraphRAG
 
 GRAPHRAG_INDEX_TYPES = []  # GraphRAG索引类型
 
-# if USE_MS_GRAPHRAG:
-#     GRAPHRAG_INDEX_TYPES.append("ktem.index.file.graph.GraphRAGIndex")
+if USE_MS_GRAPHRAG:
+    GRAPHRAG_INDEX_TYPES.append("ktem.index.file.graph.GraphRAGIndex")
 if USE_NANO_GRAPHRAG:
     GRAPHRAG_INDEX_TYPES.append("ktem.index.file.graph.NanoGraphRAGIndex")
 if USE_LIGHTRAG:
