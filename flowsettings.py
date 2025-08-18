@@ -139,8 +139,21 @@ KH_LLMS["无问芯穹-gpt-4o"] = {  # OpenAI语言模型配置
         "model": "gpt-4o",
         "timeout": 30,
     },
+    "default": False,
+}
+
+KH_LLMS["无问芯穹-baichuan-m2-32b"] = {  # OpenAI语言模型配置
+    "spec": {
+        "__type__": "kotaemon.llms.ChatOpenAI",
+        "temperature": 0.5,
+        "base_url": "https://cloud.infini-ai.com/maas/v1",
+        "api_key": "sk-7xet3afg2b7fumjl",
+        "model": "baichuan-m2-32b",
+        "timeout": 30,
+    },
     "default": True,
 }
+
 KH_EMBEDDINGS["无问芯穹-bge-m3"] = {  # OpenAI嵌入配置
     "spec": {
         "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
