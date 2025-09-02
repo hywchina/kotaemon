@@ -3,6 +3,7 @@
 .mypy_cache/
 __pycache__/
 ktem_app_data/
+logs/
 env/
 .pre-commit-config.yaml
 .commitlintrc
@@ -10,6 +11,6 @@ env/
 .gitattributes
 README.md
 *.zip
-*.sh
+# *.sh
 
-!/launch.sh
+# !/launch.sh
