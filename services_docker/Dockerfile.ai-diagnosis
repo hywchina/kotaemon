@@ -1,0 +1,23 @@
+FROM ghcr.io/cinnamon/kotaemon:main-full
+
+# 安装常用工具
+RUN apt-get update && apt-get install -y \
+    net-tools \
+    curl \
+    vim \
+    iputils-ping \
+    less \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 清空原有代码
+RUN rm -rf /app/*
+
+# 拷贝本地代码到 /app
+COPY . /app
+
+# 如果需要安装依赖，可以取消下面注释
+# RUN pip install -r requirements.txt --no-cache-dir
+
+CMD ["bash"]
