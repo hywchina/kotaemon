@@ -27,6 +27,7 @@ RUN apt-get update -qqy && \
         less \
         tree \
         net-tools \
+        iputils-ping \
         tzdata \
         && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
         && echo "Asia/Shanghai" > /etc/timezone \
