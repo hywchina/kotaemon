@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # ========= 安装依赖 =========
 # # 安装依赖 方式1
 # pip install -e "libs/kotaemon[all]"
@@ -14,7 +13,10 @@
 
 # 安装依赖 方式2
 # pip install -r requirements.txt
-# tips: kotaemon 和 ktem 是安装之前制作 requriements.txt 时 github 上的版本：pip freeze > requirements.txt
+# tips: kotaemon 和 ktem 是安装之前制作 requriements.txt 时 github 上的版本：pip freeze > requirements.txt；需要重新安装 ketm 和 ketaemon[all]，以确保是最新版本
+# pip install -e "libs/kotaemon[all]"   
+# pip install -e "libs/ktem"
+
 
 # ========= 启动脚本 =========
 set -euo pipefail
@@ -23,7 +25,7 @@ set -euo pipefail
 export USE_GLOBAL_GRAPHRAG=True
 export USE_MS_GRAPHRAG=False
 export USE_NANO_GRAPHRAG=False
-export USE_LIGHTRAG=False
+export USE_LIGHTRAG=True
 
 BASE_LOG_DIR="$(dirname "$0")/logs"
 mkdir -p "$BASE_LOG_DIR"

@@ -96,8 +96,8 @@ KH_DOCSTORE = {  # 文档存储配置
     "path": str(KH_USER_DATA_DIR / "docstore"),
 }
 KH_VECTORSTORE = {  # 向量存储配置
-    # "__type__": "kotaemon.storages.LanceDBVectorStore",
-    "__type__": "kotaemon.storages.ChromaVectorStore",
+    "__type__": "kotaemon.storages.LanceDBVectorStore",
+    # "__type__": "kotaemon.storages.ChromaVectorStore",
     # "__type__": "kotaemon.storages.MilvusVectorStore",
     # "__type__": "kotaemon.storages.QdrantVectorStore",
     "path": str(KH_USER_DATA_DIR / "vectorstore"),
@@ -130,6 +130,18 @@ KH_EMBEDDINGS["ollama-bge-large:335m"] = {  # Ollama嵌入配置
 }
 
 # 类openai api llm 与 embeddings
+KH_LLMS["无问芯穹-deepseek-r1"] = {  # OpenAI语言模型配置
+    "spec": {
+        "__type__": "kotaemon.llms.ChatOpenAI",
+        "temperature": 0.5,
+        "base_url": "https://cloud.infini-ai.com/maas/v1",
+        "api_key": "sk-7xet3afg2b7fumjl",
+        "model": "deepseek-r1",
+        "timeout": 30,
+    },
+    "default": False,
+}
+
 KH_LLMS["无问芯穹-gpt-4o"] = {  # OpenAI语言模型配置
     "spec": {
         "__type__": "kotaemon.llms.ChatOpenAI",
@@ -167,7 +179,6 @@ KH_EMBEDDINGS["无问芯穹-bge-m3"] = {  # OpenAI嵌入配置
 }
 
 # reranking model
-
 KH_RERANKINGS["local-bge-reranker-v2-m3"] = {  
     "spec": {
         "__type__": "kotaemon.rerankings.TeiFastReranking",
