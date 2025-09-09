@@ -437,6 +437,10 @@ SETTINGS_REASONING = {  # 推理设置
     },
 }
 
+"""GraphRAG settings
+`USE_GLOBAL_GRAPHRAG` 参数用于控制在全局范围内使用 GraphRAG 索引。当该参数为 `True` 时，所有文件的索引将共享一个全局的图 ID，这可能提高索引和检索的效率。在 `lightrag_pipelines.py` 和 `nano_pipelines.py` 文件中，该参数用于决定 `store_file_id_with_graph_id` 方法是否使用集合范围的图 ID 来记录所有文件。
+
+"""
 USE_GLOBAL_GRAPHRAG = config("USE_GLOBAL_GRAPHRAG", default=False, cast=bool)  # 是否使用全局GraphRAG
 USE_NANO_GRAPHRAG = config("USE_NANO_GRAPHRAG", default=False, cast=bool)  # 是否使用NanoGraphRAG
 USE_LIGHTRAG = config("USE_LIGHTRAG", default=False, cast=bool)  # 是否使用LightRAG

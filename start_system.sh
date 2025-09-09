@@ -22,6 +22,8 @@
 # ========= 启动脚本 =========
 set -euo pipefail
 
+PORT="${1:-7860}"   # 默认端口 7860，可通过 ./start_system.sh 8001 覆盖
+
 # ========= 环境变量 =========
 export USE_GLOBAL_GRAPHRAG=True
 export USE_MS_GRAPHRAG=False
@@ -31,12 +33,13 @@ export USE_LIGHTRAG=True
 BASE_LOG_DIR="$(dirname "$0")/logs/system"
 mkdir -p "$BASE_LOG_DIR"
 
-# ========= 杀死占用 7860 端口的进程 =========
-if lsof -i:7860 | grep python >/dev/null 2>&1; then
-    echo "[INFO] 杀死占用 7860 端口的进程..."
-    lsof -i:7860 | grep python | awk '{print $2}' | xargs kill -9
+# ========= 杀死占用 ${PORT} 端口的进程 =========
+if lsof -i:${PORT} | grep python >/dev/null 2>&1; then
+    echo "[INFO] 杀死占用 ${PORT} 端口的进程..."
+    lsof -i:${PORT} | grep python | awk '{print $2}' | xargs kill -9
+    sleep 2  # 等待端口释放
 else
-    echo "[INFO] 端口 7860 没有被占用"
+    echo "[INFO] 端口 ${PORT} 没有被占用"
 fi
 
 # ========= 当前日志文件变量 =========
@@ -77,10 +80,10 @@ mkfifo "$PIPE_FILE"
 
         kill $cat_pid >/dev/null 2>&1 || true
     done
-) >> "${BASE_LOG_DIR}/start_serve.log" 2>&1 &
+) >> "${BASE_LOG_DIR}/start_system.log" 2>&1 &
 
 # ========= 启动应用（后台）=========
 nohup python "$(dirname "$0")/app.py" > "$PIPE_FILE" 2>&1 &
 
-echo "[INFO] 服务已启动，日志记录在 ${BASE_LOG_DIR}/start_serve.log"
+echo "[INFO] 服务已启动，日志记录在 ${BASE_LOG_DIR}/start_system.log"
 echo "[INFO] 可用命令查看后台进程: ps -ef | grep app.py"
