@@ -96,8 +96,8 @@ KH_DOCSTORE = {  # 文档存储配置
     "path": str(KH_USER_DATA_DIR / "docstore"),
 }
 KH_VECTORSTORE = {  # 向量存储配置
-    "__type__": "kotaemon.storages.LanceDBVectorStore",
-    # "__type__": "kotaemon.storages.ChromaVectorStore",
+    # "__type__": "kotaemon.storages.LanceDBVectorStore",
+    "__type__": "kotaemon.storages.ChromaVectorStore",
     # "__type__": "kotaemon.storages.MilvusVectorStore",
     # "__type__": "kotaemon.storages.QdrantVectorStore",
     "path": str(KH_USER_DATA_DIR / "vectorstore"),

@@ -2,6 +2,7 @@
 
 # ========= 安装依赖 =========
 # # 安装依赖 方式1
+# virtualenv -p python3.10 venv && source venv/bin/activate && python -m pip install --upgrade pip
 # pip install -e "libs/kotaemon[all]"
 # pip install -e "libs/ktem"
 # # pip uninstall hnswlib chroma-hnswlib && pip install chroma-hnswlib
@@ -27,7 +28,7 @@ export USE_MS_GRAPHRAG=False
 export USE_NANO_GRAPHRAG=False
 export USE_LIGHTRAG=True
 
-BASE_LOG_DIR="$(dirname "$0")/logs"
+BASE_LOG_DIR="$(dirname "$0")/logs/system"
 mkdir -p "$BASE_LOG_DIR"
 
 # ========= 杀死占用 7860 端口的进程 =========
@@ -39,19 +40,12 @@ else
 fi
 
 # ========= 当前日志文件变量 =========
-current_log_dir=""
 current_log_file=""
 
 # ========= 日志切换函数 =========
 rotate_log() {
-    # 每天一个目录
-    log_dir="${BASE_LOG_DIR}/$(date '+%Y%m%d')"
-    mkdir -p "$log_dir"
-
-    # 每小时一个文件
-    log_file="${log_dir}/$(date '+%H').log"
-
-    current_log_dir="$log_dir"
+    # 每天一个文件，文件名为日期
+    log_file="${BASE_LOG_DIR}/$(date '+%Y%m%d').log"
     current_log_file="$log_file"
 }
 
@@ -75,16 +69,15 @@ mkfifo "$PIPE_FILE"
 
         cat_pid=$!
 
-        # 计算到下一个整点的秒数
-        current_minute=$(date +%M)
-        current_second=$(date +%S)
-        sleep_seconds=$(( (60 - 10#$current_minute - 1)*60 + (60 - 10#$current_second) ))
+        # 计算到明天零点的秒数
+        now=$(date +%s)
+        tomorrow=$(date -d "tomorrow 00:00:00" +%s)
+        sleep_seconds=$(( tomorrow - now ))
         sleep $sleep_seconds
 
         kill $cat_pid >/dev/null 2>&1 || true
     done
 ) >> "${BASE_LOG_DIR}/start_serve.log" 2>&1 &
-
 
 # ========= 启动应用（后台）=========
 nohup python "$(dirname "$0")/app.py" > "$PIPE_FILE" 2>&1 &
