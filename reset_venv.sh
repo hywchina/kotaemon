@@ -10,9 +10,9 @@ deactivate \
 
 # ========= 安装依赖 =========
 # # 安装依赖 方式1
+# virtualenv -p python3.10 venv && source venv/bin/activate && python -m pip install --upgrade pip setuptools wheel build 
 # pip install -e "libs/kotaemon[all]"
 # pip install -e "libs/ktem"
-# # pip uninstall hnswlib chroma-hnswlib && pip install chroma-hnswlib
 # pip install nano-graphrag
 # pip install git+https://github.com/HKUDS/LightRAG.git
 # pip install umap-learn==0.5.5
@@ -21,8 +21,9 @@ deactivate \
 
 # 安装依赖 方式2
 # pip install -r requirements.txt
-# tips: kotaemon 和 ktem 是安装之前制作 requriements.txt 时 github 上的版本：pip freeze > requirements.txt
-
+# tips: kotaemon 和 ktem 是安装之前制作 requriements.txt 时 github 上的版本：pip freeze > requirements.txt；需要重新安装 ketm 和 ketaemon[all]，以确保是最新版本
+# pip install -e "libs/kotaemon[all]"   
+# pip install -e "libs/ktem"
 
 # 检查冲突
 # pip check
