@@ -5,7 +5,6 @@
 # virtualenv -p python3.10 venv && source venv/bin/activate && python -m pip install --upgrade pip
 # pip install -e "libs/kotaemon[all]"
 # pip install -e "libs/ktem"
-# # pip uninstall hnswlib chroma-hnswlib && pip install chroma-hnswlib
 # pip install nano-graphrag
 # pip install git+https://github.com/HKUDS/LightRAG.git
 # pip install umap-learn==0.5.5
@@ -25,10 +24,10 @@ set -euo pipefail
 PORT="${1:-7860}"   # 默认端口 7860，可通过 ./start_system.sh 8001 覆盖
 
 # ========= 环境变量 =========
-export USE_GLOBAL_GRAPHRAG=True
+export USE_GLOBAL_GRAPHRAG=False
 export USE_MS_GRAPHRAG=False
-export USE_NANO_GRAPHRAG=False
-export USE_LIGHTRAG=True
+export USE_NANO_GRAPHRAG=True
+export USE_LIGHTRAG=False
 
 BASE_LOG_DIR="$(dirname "$0")/logs/system"
 mkdir -p "$BASE_LOG_DIR"
