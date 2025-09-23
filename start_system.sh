@@ -8,7 +8,7 @@ PORT="${1:-7860}"   # 默认端口 7860，可通过 ./start_system.sh 8001 覆�
 # ========= 环境变量 =========
 export USE_GLOBAL_GRAPHRAG=False
 export USE_MS_GRAPHRAG=False
-export USE_NANO_GRAPHRAG=True
+export USE_NANO_GRAPHRAG=False
 export USE_LIGHTRAG=False
 
 BASE_LOG_DIR="$(dirname "$0")/logs/system"

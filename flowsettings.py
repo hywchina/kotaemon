@@ -151,7 +151,7 @@ KH_LLMS["无问芯穹-gpt-4o"] = {  # OpenAI语言模型配置
         "model": "gpt-4o",
         "timeout": 30,
     },
-    "default": False,
+    "default": True,
 }
 
 KH_LLMS["无问芯穹-baichuan-m2-32b"] = {  # OpenAI语言模型配置
@@ -163,7 +163,7 @@ KH_LLMS["无问芯穹-baichuan-m2-32b"] = {  # OpenAI语言模型配置
         "model": "baichuan-m2-32b",
         "timeout": 30,
     },
-    "default": True,
+    "default": False,
 }
 
 KH_EMBEDDINGS["无问芯穹-bge-m3"] = {  # OpenAI嵌入配置
