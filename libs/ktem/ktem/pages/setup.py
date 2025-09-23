@@ -16,9 +16,7 @@ if DEFAULT_OLLAMA_URL.endswith("/"):
 
 
 DEMO_MESSAGE = (
-    "This is a public space. Please use the "
-    '"Duplicate Space" function on the top right '
-    "corner to setup your own space."
+    "这是一个公共空间。请点击右上角的“Duplicate Space”来创建属于你自己的工作区。"
 )
 
 
@@ -30,7 +28,6 @@ def pull_model(name: str, stream: bool = True):
         DEFAULT_OLLAMA_URL + "/pull", json=payload, headers=headers, stream=stream
     )
 
-    # Check if the request was successful
     response.raise_for_status()
 
     if stream:
@@ -55,21 +52,18 @@ class SetupPage(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        gr.Markdown(f"# Welcome to {self._app.app_name} first setup!")
+        gr.Markdown(f"# 欢迎使用 {self._app.app_name} 初始化设置！")
         self.radio_model = gr.Radio(
             [
-                ("Cohere API (*free registration*) - recommended", "cohere"),
-                ("Google API (*free registration*)", "google"),
-                ("OpenAI API (for GPT-based models)", "openai"),
-                ("Local LLM (for completely *private RAG*)", "ollama"),
+                # ("Cohere API（免费注册）- 推荐", "cohere"),
+                # ("Google API（免费注册）", "google"),
+                ("本地 LLM（完全私有化 RAG）- 推荐", "ollama"),
+                ("OpenAI API（适用于 GPT 模型）", "openai"),
+                
             ],
-            label="Select your model provider",
-            value="cohere",
-            info=(
-                "Note: You can change this later. "
-                "If you are not sure, go with the first option "
-                "which fits most normal users."
-            ),
+            label="请选择你的模型提供方",
+            value="ollama",  # 默认选择本地 LLM
+            info="注意：你之后可以在设置中修改。如果不确定，建议选择 OpenAI。",
             interactive=True,
         )
 
@@ -77,52 +71,51 @@ class SetupPage(BasePage):
             gr.Markdown(
                 (
                     "#### OpenAI API Key\n\n"
-                    "(create at https://platform.openai.com/api-keys)"
+                    "（请在 https://platform.openai.com/api-keys 获取）"
                 )
             )
             self.openai_api_key = gr.Textbox(
-                show_label=False, placeholder="OpenAI API Key"
+                show_label=False, placeholder="请输入你的 OpenAI API Key"
             )
 
-        with gr.Column(visible=True) as self.cohere_option:
-            gr.Markdown(
-                (
-                    "#### Cohere API Key\n\n"
-                    "(register your free API key "
-                    "at https://dashboard.cohere.com/api-keys)"
-                )
-            )
-            self.cohere_api_key = gr.Textbox(
-                show_label=False, placeholder="Cohere API Key"
-            )
+        # 注释掉 Cohere 相关
+        # with gr.Column(visible=True) as self.cohere_option:
+        #     gr.Markdown(
+        #         (
+        #             "#### Cohere API Key\n\n"
+        #             "（请在 https://dashboard.cohere.com/api-keys 免费注册获取）"
+        #         )
+        #     )
+        #     self.cohere_api_key = gr.Textbox(
+        #         show_label=False, placeholder="请输入你的 Cohere API Key"
+        #     )
 
-        with gr.Column(visible=False) as self.google_option:
-            gr.Markdown(
-                (
-                    "#### Google API Key\n\n"
-                    "(register your free API key "
-                    "at https://aistudio.google.com/app/apikey)"
-                )
-            )
-            self.google_api_key = gr.Textbox(
-                show_label=False, placeholder="Google API Key"
-            )
+        # 注释掉 Google 相关
+        # with gr.Column(visible=False) as self.google_option:
+        #     gr.Markdown(
+        #         (
+        #             "#### Google API Key\n\n"
+        #             "（请在 https://aistudio.google.com/app/apikey 获取）"
+        #         )
+        #     )
+        #     self.google_api_key = gr.Textbox(
+        #         show_label=False, placeholder="请输入你的 Google API Key"
+        #     )
 
-        with gr.Column(visible=False) as self.ollama_option:
+        with gr.Column(visible=True) as self.ollama_option:
             gr.Markdown(
                 (
-                    "#### Setup Ollama\n\n"
-                    "Download and install Ollama from "
-                    "https://ollama.com/. Check out latest models at "
-                    "https://ollama.com/library. "
+                    "#### 配置 Ollama\n\n"
+                    "请先从 https://ollama.com/ 下载并安装 Ollama。"
+                    "可以在 https://ollama.com/library 查看最新模型。"
                 )
             )
             self.ollama_model_name = gr.Textbox(
-                label="LLM model name",
+                label="大语言模型名称",
                 value=config("LOCAL_MODEL", default="qwen2.5:7b"),
             )
             self.ollama_emb_model_name = gr.Textbox(
-                label="Embedding model name",
+                label="向量模型名称",
                 value=config("LOCAL_MODEL_EMBEDDINGS", default="nomic-embed-text"),
             )
 
@@ -131,23 +124,21 @@ class SetupPage(BasePage):
         )
 
         with gr.Row():
-            self.btn_finish = gr.Button("Proceed", variant="primary")
-            self.btn_skip = gr.Button(
-                "I am an advance user. Skip this.", variant="stop"
-            )
+            self.btn_finish = gr.Button("继续", variant="primary")
+            self.btn_skip = gr.Button("我是高级用户，跳过设置", variant="stop")
 
     def on_register_events(self):
         onFirstSetupComplete = gr.on(
             triggers=[
                 self.btn_finish.click,
-                self.cohere_api_key.submit,
+                # self.cohere_api_key.submit,
                 self.openai_api_key.submit,
             ],
             fn=self.update_model,
             inputs=[
-                self.cohere_api_key,
+                # self.cohere_api_key,
                 self.openai_api_key,
-                self.google_api_key,
+                # self.google_api_key,
                 self.ollama_model_name,
                 self.ollama_emb_model_name,
                 self.radio_model,
@@ -179,59 +170,29 @@ class SetupPage(BasePage):
             inputs=[self.radio_model],
             show_progress="hidden",
             outputs=[
-                self.cohere_option,
+                # self.cohere_option,
                 self.openai_option,
                 self.ollama_option,
-                self.google_option,
+                # self.google_option,
             ],
         )
 
     def update_model(
         self,
-        cohere_api_key,
+        # cohere_api_key,
         openai_api_key,
-        google_api_key,
+        # google_api_key,
         ollama_model_name,
         ollama_emb_model_name,
         radio_model_value,
     ):
         log_content = ""
         if not radio_model_value:
-            gr.Info("Skip setup models.")
+            gr.Info("跳过模型配置。")
             yield gr.value(visible=False)
             return
 
-        if radio_model_value == "cohere":
-            if cohere_api_key:
-                llms.update(
-                    name="cohere",
-                    spec={
-                        "__type__": "kotaemon.llms.chats.LCCohereChat",
-                        "model_name": "command-r-plus-08-2024",
-                        "api_key": cohere_api_key,
-                    },
-                    default=True,
-                )
-                embeddings.update(
-                    name="cohere",
-                    spec={
-                        "__type__": "kotaemon.embeddings.LCCohereEmbeddings",
-                        "model": "embed-multilingual-v3.0",
-                        "cohere_api_key": cohere_api_key,
-                        "user_agent": "default",
-                    },
-                    default=True,
-                )
-                rerankers.update(
-                    name="cohere",
-                    spec={
-                        "__type__": "kotaemon.rerankings.CohereReranking",
-                        "model_name": "rerank-multilingual-v2.0",
-                        "cohere_api_key": cohere_api_key,
-                    },
-                    default=True,
-                )
-        elif radio_model_value == "openai":
+        if radio_model_value == "openai":
             if openai_api_key:
                 llms.update(
                     name="openai",
@@ -256,26 +217,7 @@ class SetupPage(BasePage):
                     },
                     default=True,
                 )
-        elif radio_model_value == "google":
-            if google_api_key:
-                llms.update(
-                    name="google",
-                    spec={
-                        "__type__": "kotaemon.llms.chats.LCGeminiChat",
-                        "model_name": "gemini-1.5-flash",
-                        "api_key": google_api_key,
-                    },
-                    default=True,
-                )
-                embeddings.update(
-                    name="google",
-                    spec={
-                        "__type__": "kotaemon.embeddings.LCGoogleEmbeddings",
-                        "model": "models/text-embedding-004",
-                        "google_api_key": google_api_key,
-                    },
-                    default=True,
-                )
+
         elif radio_model_value == "ollama":
             llms.update(
                 name="ollama",
@@ -298,13 +240,13 @@ class SetupPage(BasePage):
                 default=True,
             )
 
-            # download required models through ollama
+            # 下载模型
             llm_model_name = llms.get("ollama").model  # type: ignore
             emb_model_name = embeddings.get("ollama").model  # type: ignore
 
             try:
                 for model_name in [emb_model_name, llm_model_name]:
-                    log_content += f"- Downloading model `{model_name}` from Ollama<br>"
+                    log_content += f"- 正在从 Ollama 下载模型 `{model_name}`<br>"
                     yield log_content
 
                     pre_download_log = log_content
@@ -325,85 +267,72 @@ class SetupPage(BasePage):
                         yield log_content
             except Exception as e:
                 log_content += (
-                    "Make sure you have download and installed Ollama correctly. "
-                    f"Got error: {str(e)}"
+                    "请确认已正确安装并运行 Ollama。"
+                    f"错误信息: {str(e)}"
                 )
                 yield log_content
-                raise gr.Error("Failed to download model from Ollama.")
+                raise gr.Error("从 Ollama 下载模型失败。")
 
-        # test models connection
+        # 测试模型连接
         llm_output = emb_output = None
 
-        # LLM model
-        log_content += f"- Testing LLM model: {radio_model_value}<br>"
+        log_content += f"- 正在测试 LLM 模型: {radio_model_value}<br>"
         yield log_content
 
         llm = llms.get(radio_model_value)  # type: ignore
-        log_content += "- Sending a message `Hi`<br>"
+        log_content += "- 发送测试消息 `你好`<br>"
         yield log_content
         try:
-            llm_output = llm("Hi")
+            llm_output = llm("你好")
         except Exception as e:
             log_content += (
-                f"<mark style='color: yellow; background: red'>- Connection failed. "
-                f"Got error:\n {str(e)}</mark>"
+                f"<mark style='color: yellow; background: red'>- 连接失败，错误信息:\n {str(e)}</mark>"
             )
 
         if llm_output:
             log_content += (
-                "<mark style='background: green; color: white'>- Connection success. "
-                "</mark><br>"
+                "<mark style='background: green; color: white'>- 连接成功！</mark><br>"
             )
         yield log_content
 
         if llm_output:
-            # embedding model
-            log_content += f"- Testing Embedding model: {radio_model_value}<br>"
+            log_content += f"- 正在测试向量模型: {radio_model_value}<br>"
             yield log_content
 
             emb = embeddings.get(radio_model_value)
-            assert emb, f"Embedding model {radio_model_value} not found."
+            assert emb, f"未找到向量模型 {radio_model_value}。"
 
-            log_content += "- Sending a message `Hi`<br>"
+            log_content += "- 发送测试消息 `你好`<br>"
             yield log_content
             try:
-                emb_output = emb("Hi")
+                emb_output = emb("你好")
             except Exception as e:
                 log_content += (
-                    f"<mark style='color: yellow; background: red'>"
-                    "- Connection failed. "
-                    f"Got error:\n {str(e)}</mark>"
+                    f"<mark style='color: yellow; background: red'>连接失败，错误信息:\n {str(e)}</mark>"
                 )
 
             if emb_output:
                 log_content += (
-                    "<mark style='background: green; color: white'>"
-                    "- Connection success. "
-                    "</mark><br>"
+                    "<mark style='background: green; color: white'>连接成功！</mark><br>"
                 )
             yield log_content
 
         if llm_output and emb_output:
-            gr.Info("Setup models completed successfully!")
+            gr.Info("模型配置成功！")
         else:
-            raise gr.Error(
-                "Setup models failed. Please verify your connection and API key."
-            )
+            raise gr.Error("模型配置失败，请检查网络连接和 API Key。")
 
     def update_default_settings(self, radio_model_value, default_settings):
-        # revise default settings
-        # reranking llm
         default_settings["index.options.1.reranking_llm"] = radio_model_value
         if radio_model_value == "ollama":
             default_settings["index.options.1.use_llm_reranking"] = False
-
         return default_settings
 
     def switch_options_view(self, radio_model_value):
-        components_visible = [gr.update(visible=False) for _ in range(4)]
+        components_visible = [gr.update(visible=False) for _ in range(2)]
 
-        values = ["cohere", "openai", "ollama", "google", None]
-        assert radio_model_value in values, f"Invalid value {radio_model_value}"
+        values = ["openai", "ollama", None]
+        assert radio_model_value in values, f"无效选项 {radio_model_value}"
 
         if radio_model_value is not None:
             idx = values.index(radio_model_value)

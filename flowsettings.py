@@ -465,9 +465,12 @@ GRAPHRAG_INDICES = [  # GraphRAG索引
         "name": graph_type.split(".")[-1].replace("Index", "")
         + " Collection",  # get last name
         "config": {
+            # "supported_file_types": (
+            #     ".png, .jpeg, .jpg, .tiff, .tif, .pdf, .xls, .xlsx, .doc, .docx, "
+            #     ".pptx, .csv, .html, .mhtml, .txt, .md, .zip"
+            # ),
             "supported_file_types": (
-                ".png, .jpeg, .jpg, .tiff, .tif, .pdf, .xls, .xlsx, .doc, .docx, "
-                ".pptx, .csv, .html, .mhtml, .txt, .md, .zip"
+                ".pdf, .txt, .md, .doc, .docx, .xls, .xlsx, .csv"
             ),
             "private": True,
         },
@@ -481,8 +484,7 @@ KH_INDICES = [  # 索引配置
         "name": "File Collection",
         "config": {
             "supported_file_types": (
-                ".png, .jpeg, .jpg, .tiff, .tif, .pdf, .xls, .xlsx, .doc, .docx, "
-                ".pptx, .csv, .html, .mhtml, .txt, .md, .zip"
+                ".pdf, .txt, .md, .doc, .docx, .xls, .xlsx, .csv"
             ),
             "private": True,
         },
