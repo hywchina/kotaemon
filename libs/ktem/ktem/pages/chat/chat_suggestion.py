@@ -8,9 +8,9 @@ class ChatSuggestion(BasePage):
         flowsettings,
         "KH_FEATURE_CHAT_SUGGESTION_SAMPLES",
         [
-            "Summary this document",
-            "Generate a FAQ for this document",
-            "Identify the main highlights in bullet points",
+            "根据上传的病历或病人基本情况生成简要总结",
+            "基于病例信息自动生成 FAQ，帮助快速理解和解答常见疑问",
+            "用要点形式列出最重要的诊疗关键信息",
         ],
     )
 
@@ -21,7 +21,7 @@ class ChatSuggestion(BasePage):
     def on_building_ui(self):
         self.chat_samples = [[each] for each in self.CHAT_SAMPLES]
         with gr.Accordion(
-            label="Chat Suggestion",
+            label="诊断建议",
             visible=getattr(flowsettings, "KH_FEATURE_CHAT_SUGGESTION", False),
         ) as self.accordion:
             self.default_example = gr.State(

@@ -481,7 +481,7 @@ GRAPHRAG_INDICES = [  # GraphRAG索引
 
 KH_INDICES = [  # 索引配置
     {
-        "name": "File Collection",
+        "name": "文件管理", # File Collection
         "config": {
             "supported_file_types": (
                 ".pdf, .txt, .md, .doc, .docx, .xls, .xlsx, .csv"
