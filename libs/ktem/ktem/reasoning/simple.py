@@ -426,9 +426,12 @@ class FullQAPipeline(BaseReasoning):
                 ),
                 "component": "radio",
                 "choices": [
-                    ("citation: highlight", "highlight"),
-                    ("citation: inline", "inline"),
-                    ("no citation", "off"),
+                    ("引用：高亮", "highlight"),
+                    ("引用：行内", "inline"),
+                    ("无引用", "off"),
+                    # ("citation: highlight", "highlight"),
+                    # ("citation: inline", "inline"),
+                    # ("no citation", "off"),
                 ],
             },
             "create_mindmap": {
