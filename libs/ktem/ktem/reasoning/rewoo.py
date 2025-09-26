@@ -440,7 +440,8 @@ class RewooAgentPipeline(BaseReasoning):
         except Exception as e:
             logger.exception(f"Failed to get LLM options: {e}")
 
-        tool_choices = ["Wikipedia", "Google", "LLM", "SearchDoc"]
+        # tool_choices = ["Wikipedia", "Google", "LLM", "SearchDoc"]
+        tool_choices = ["LLM", "SearchDoc"]
 
         return {
             "planner_llm": {
@@ -494,10 +495,16 @@ class RewooAgentPipeline(BaseReasoning):
             "id": "ReWOO",
             "name": "ReWOO Agent",
             "description": (
-                "Implementing ReWOO paradigm: https://arxiv.org/abs/2305.18323. "
-                "The ReWOO agent makes a step by step plan in the first stage, "
-                "then solves each step in the second stage. The agent can use "
-                "external tools to help in the reasoning process. Once all stages "
-                "are completed, the agent will summarize the answer."
+                # "Implementing ReWOO paradigm: https://arxiv.org/abs/2305.18323. "
+                # "The ReWOO agent makes a step by step plan in the first stage, "
+                # "then solves each step in the second stage. The agent can use "
+                # "external tools to help in the reasoning process. Once all stages "
+                # "are completed, the agent will summarize the answer."
+                "实现 ReWOO 范式（ReWOO paradigm）：https://arxiv.org/abs/2305.18323。"
+                "ReWOO 智能体在第一阶段生成逐步计划（step-by-step plan），"
+                "并在第二阶段逐步完成各个步骤。"
+                "在推理过程中，智能体可以调用外部工具（external tools）以辅助推理。"
+                "在所有阶段完成后，智能体会对结果进行总结，生成最终答案。"
+
             ),
         }
