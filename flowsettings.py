@@ -16,7 +16,15 @@ this_dir = Path(this_file).parent  # 获取当前文件所在目录
 # change this if your app use a different name
 KH_PACKAGE_NAME = "kotaemon_app"  # 应用包名称
 
-KH_APP_VERSION = config("KH_APP_VERSION", None)  # 应用版本
+
+# 修改版本号，主版本号.次版本号.修订号
+    # 示例
+    # 1.0.0 → 第一个正式版本
+    # 1.1.0 → 新增功能
+    # 1.1.1 → 修复小问题
+    # 2.0.0 → 不兼容旧版的大更新
+
+KH_APP_VERSION = config("KH_APP_VERSION", "v0.5.2")  # 应用版本
 if not KH_APP_VERSION:  # 如果版本未设置，尝试获取包版本
     try:
         # Caution: This might produce the wrong version
