@@ -1,16 +1,17 @@
 #!/bin/bash
 # ============================================
-# 通用应用启动管理脚本
+# 通用应用启动管理脚本（稳定版）
 # 支持 start / stop / restart / status / log / help
 # ============================================
 
 set -euo pipefail
 
 APP_NAME="app.py"
-APP_DIR="$(dirname "$0")"
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$APP_DIR/logs/system"
 PID_FILE="$LOG_DIR/app.pid"
 PIPE_FILE="$LOG_DIR/app.pipe"
+ROTATE_PID_FILE="$LOG_DIR/rotate.pid"
 
 DEFAULT_PORT=7860
 PORT="${2:-$DEFAULT_PORT}"
@@ -30,6 +31,51 @@ rotate_log() {
     echo "$LOG_FILE"
 }
 
+start_log_rotator() {
+    local LOG_FILE
+    LOG_FILE=$(rotate_log)
+
+    # 创建命名管道（若不存在）
+    [[ -p "$PIPE_FILE" ]] || mkfifo "$PIPE_FILE"
+
+    echo "[INFO] 启动日志轮转后台任务 ..."
+    (
+        while true; do
+            LOG_FILE=$(rotate_log)
+            echo "[INFO] 写入日志到: $LOG_FILE" >> "$LOG_DIR/start_system.log"
+
+            # 每行前添加时间戳
+            while IFS= read -r line; do
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $line"
+            done < "$PIPE_FILE" >> "$LOG_FILE" 2>/dev/null &
+            cat_pid=$!
+
+            # 睡到明天零点
+            now=$(date +%s)
+            tomorrow=$(date -d "tomorrow 00:00:00" +%s)
+            sleep_seconds=$(( tomorrow - now ))
+            sleep "$sleep_seconds"
+
+            # 停掉当前写入进程，触发轮换
+            kill "$cat_pid" >/dev/null 2>&1 || true
+        done
+    ) >> "$LOG_DIR/start_system.log" 2>&1 &
+
+    echo $! > "$ROTATE_PID_FILE"
+}
+
+
+stop_log_rotator() {
+    if [[ -f "$ROTATE_PID_FILE" ]]; then
+        local pid
+        pid=$(cat "$ROTATE_PID_FILE")
+        if ps -p "$pid" >/dev/null 2>&1; then
+            kill "$pid" >/dev/null 2>&1 || true
+        fi
+        rm -f "$ROTATE_PID_FILE"
+    fi
+}
+
 start_service() {
     if [[ -f "$PID_FILE" ]] && ps -p "$(cat "$PID_FILE")" >/dev/null 2>&1; then
         echo "[WARN] 服务已在运行中 (PID: $(cat "$PID_FILE"))"
@@ -37,7 +83,7 @@ start_service() {
     fi
 
     # 杀掉占用端口的 python 进程
-    if lsof -i:${PORT} | grep python >/dev/null 2>&1; then
+    if lsof -i:${PORT} | grep -q python; then
         echo "[INFO] 杀死占用 ${PORT} 端口的进程..."
         lsof -i:${PORT} | grep python | awk '{print $2}' | xargs kill -9 || true
         sleep 1
@@ -47,25 +93,8 @@ start_service() {
     local LOG_FILE
     LOG_FILE=$(rotate_log)
 
-    # 创建命名管道
-    [[ -p "$PIPE_FILE" ]] || mkfifo "$PIPE_FILE"
-
-    # 启动日志后台轮换进程
-    (
-        while true; do
-            while IFS= read -r line; do
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $line"
-            done < "$PIPE_FILE" >> "$LOG_FILE" &
-            cat_pid=$!
-
-            now=$(date +%s)
-            tomorrow=$(date -d "tomorrow 00:00:00" +%s)
-            sleep_seconds=$(( tomorrow - now ))
-            sleep $sleep_seconds
-
-            kill $cat_pid >/dev/null 2>&1 || true
-        done
-    ) >> "$LOG_DIR/start_system.log" 2>&1 &
+    # 启动日志轮换进程
+    start_log_rotator
 
     # 启动应用
     nohup python "$APP_DIR/$APP_NAME" --port "$PORT" > "$PIPE_FILE" 2>&1 &
@@ -96,11 +125,14 @@ stop_service() {
         echo "[INFO] 服务未运行"
     fi
 
+    stop_log_rotator
     [[ -p "$PIPE_FILE" ]] && rm -f "$PIPE_FILE"
 }
 
 restart_service() {
+    local port="${2:-$DEFAULT_PORT}"
     stop_service
+    PORT="$port"
     start_service
 }
 
@@ -147,7 +179,7 @@ EOF
 case "${1:-}" in
     --start) start_service ;;
     --stop) stop_service ;;
-    --restart) restart_service ;;
+    --restart) restart_service "${2:-}" ;;   # ✅ 修复：安全取参数
     --status) status_service ;;
     --log) show_log ;;
     --help|"") show_help ;;
