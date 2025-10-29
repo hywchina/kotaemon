@@ -823,9 +823,15 @@ class ChatPage(BasePage):
         def toggle_chat_suggestion(current_state):
             return current_state, gr.update(visible=current_state)
 
+        # def raise_error_on_state(state):
+        #     if not state:
+        #         raise ValueError("辅助诊断建议功能已禁用")  # translate Chat suggestion disabled --》聊天建议功能已禁用
         def raise_error_on_state(state):
             if not state:
-                raise ValueError("辅助诊断建议功能已禁用")  # translate Chat suggestion disabled --》聊天建议功能已禁用
+                # 用日志或控制台提示，而不是抛出异常
+                print("⚠️ 辅助诊断建议功能已禁用，跳过执行。")
+                return False
+            return True
 
         self.chat_control.cb_suggest_chat.change(
             fn=toggle_chat_suggestion,
