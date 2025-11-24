@@ -24,7 +24,7 @@ KH_PACKAGE_NAME = "kotaemon_app"  # 应用包名称
     # 1.1.1 → 修复小问题
     # 2.0.0 → 不兼容旧版的大更新
 
-KH_APP_VERSION = config("KH_APP_VERSION", "v0.5.2")  # 应用版本
+KH_APP_VERSION = config("KH_APP_VERSION", "v1.0.0")  # 应用版本
 if not KH_APP_VERSION:  # 如果版本未设置，尝试获取包版本
     try:
         # Caution: This might produce the wrong version
@@ -116,6 +116,27 @@ KH_RERANKINGS = {}  # 重排序配置
 
 
 """temp settings for LLMs and embeddings"""
+# LM Studio 语言模型配置
+KH_LLMS["lmstudio-gpt-oss-20b"] = {  # LM Studio语言模型配置
+    "spec": {
+        "__type__": "kotaemon.llms.ChatOpenAI",
+        "base_url": "http://localhost:1234/v1",
+        "model": "gpt-oss-20b",
+        "api_key": "lmstudio",
+    },
+    "default": False,
+}
+
+KH_EMBEDDINGS["lmstudio-text-embedding-qwen3-embedding-8b"] = {  # LM Studio嵌入配置
+    "spec": {
+        "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+        "base_url": "http://localhost:1234/v1",
+        "model": "text-embedding-qwen3-embedding-8b",
+        "api_key": "lmstudio",
+    },
+    "default": False,
+}
+
 # Ollama语言模型配置
 KH_LLMS["ollama-qwen3:0.6b"] = {  # Ollama语言模型配置
     "spec": {

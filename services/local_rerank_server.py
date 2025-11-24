@@ -5,7 +5,7 @@ from sentence_transformers import CrossEncoder
 import torch
 
 # 选一个强悍且多语言的重排模型
-MODEL_NAME = "/home/huyanwei/projects/llm_cache/ms/model/bge-reranker-v2-m3"  # 也可换成 -base/-large 等
+MODEL_NAME = "/Users/huyanwei/Projects/chifeng/bge-reranker-v2-m3"  # 也可换成 -base/-large 等
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 32
 MAX_LENGTH = 512  # 截断上限
