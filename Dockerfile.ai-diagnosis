@@ -112,4 +112,4 @@ RUN apt-get autoremove \
 RUN chmod +x /app/run.sh
 
 # Start the service when container starts
-CMD ["bash", "/app/run.sh", "--start"]
+CMD ["bash", "-c", "/app/run.sh --start && tail -f /dev/null"]

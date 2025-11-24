@@ -4,7 +4,7 @@ docker build --target full -t chifeng-ai-diagnosis:v0.1 -f Dockerfile .
 docker build --target ollama -t my-app-ollama -f Dockerfile .
 
 # 新的 单独 dockerfile
-docker build -t chifeng-ai-diagnosis:v0.1 -f Dockerfile.ai-diagnosis .
+docker build -t chifeng-ai-diagnosis:v1.0.0 -f Dockerfile.ai-diagnosis .
 
 # 创建容器
 docker run -itd \
@@ -15,7 +15,7 @@ docker run -itd \
 -v ./models:/app/models \
 -p 7860:7860  \
 --name ai-diagnosis-service \
-chifeng-ai-diagnosis:v0.1 
+chifeng-ai-diagnosis:v1.0.0
 
 # 容器--》镜像--》离线压缩包--》加载离线压缩包
 docker commit <容器ID或容器名> <新镜像名>:<tag>
