@@ -102,3 +102,9 @@ RUN apt-get autoremove \
 # RUN chmod +x /app/start_serve.sh
 
 # ENTRYPOINT ["bash", "/app/start_serve.sh"]
+
+# Make run.sh executable
+RUN chmod +x /app/run.sh
+
+# Start the service when container starts
+CMD ["bash", "/app/run.sh", "--start"]
