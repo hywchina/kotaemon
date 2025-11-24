@@ -42,7 +42,7 @@ class IndexManagement(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Tab(label="View"):
+        with gr.Tab(label="查看"):  # View
             self.index_list = gr.DataFrame(
                 headers=["id", "name", "index type"],
                 interactive=False,
@@ -53,11 +53,11 @@ class IndexManagement(BasePage):
                 with gr.Row():
                     with gr.Column():
                         self.edit_name = gr.Textbox(
-                            label="Index name",
+                            label="索引名称",  # Index name
                         )
                         self.edit_spec = gr.Textbox(
-                            label="Index config",
-                            info="Admin configuration of the Index in YAML format",
+                            label="索引配置",  # Index config
+                            info="管理员配置，使用YAML格式",  # Admin configuration of the Index in YAML format
                             lines=10,
                         )
 
@@ -68,40 +68,40 @@ class IndexManagement(BasePage):
                         )
                         with gr.Row():
                             self.btn_edit_save = gr.Button(
-                                "Save", min_width=10, variant="primary"
+                                "保存", min_width=10, variant="primary"  # Save
                             )
                             self.btn_delete = gr.Button(
-                                "Delete", min_width=10, variant="stop"
+                                "删除", min_width=10, variant="stop"  # Delete
                             )
                             with gr.Row(visible=False) as self._delete_confirm:
                                 self.btn_delete_yes = gr.Button(
-                                    "Confirm Delete",
+                                    "确认删除",  # Confirm Delete
                                     variant="stop",
                                     min_width=10,
                                 )
-                                self.btn_delete_no = gr.Button("Cancel", min_width=10)
-                            self.btn_close = gr.Button("Close", min_width=10)
+                                self.btn_delete_no = gr.Button("取消", min_width=10)  # Cancel
+                            self.btn_close = gr.Button("关闭", min_width=10)  # Close
 
                     with gr.Column():
-                        self.edit_spec_desc = gr.Markdown("# Spec description")
+                        self.edit_spec_desc = gr.Markdown("# 规格描述")  # Spec description
 
-        with gr.Tab(label="Add") as self._add_tab:
+        with gr.Tab(label="新增") as self._add_tab:  # Add
             with gr.Row():
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
-                        label="Index name",
-                        info="Must be unique and non-empty.",
+                        label="索引名称",  # Index name
+                        info="必须唯一且非空。",  # Must be unique and non-empty.
                     )
-                    self.index_type = gr.Dropdown(label="Index type")
+                    self.index_type = gr.Dropdown(label="索引类型")  # Index type
                     self.spec = gr.Textbox(
-                        label="Specification",
-                        info="Specification of the index in YAML format.",
+                        label="配置规格",  # Specification
+                        info="索引配置，使用YAML格式",  # Specification of the index in YAML format.
                     )
                     gr.Markdown(
                         "<mark>Note</mark>: "
                         "After creating index, please restart the app"
                     )
-                    self.btn_new = gr.Button("Add", variant="primary")
+                    self.btn_new = gr.Button("添加", variant="primary")  # Add
 
                 with gr.Column(scale=3):
                     self.spec_desc = gr.Markdown(self.spec_desc_default)

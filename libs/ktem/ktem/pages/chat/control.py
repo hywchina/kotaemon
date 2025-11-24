@@ -184,7 +184,7 @@ class ConversationControl(BasePage):
                 variant="stop",
                 min_width=10,
             )
-            self.btn_del_cnl = gr.Button(value="Cancel", min_width=10)
+            self.btn_del_cnl = gr.Button(value="取消", min_width=10)  # Cancel
 
         with gr.Row():
             self.conversation_rn = gr.Text(

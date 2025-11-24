@@ -29,7 +29,7 @@ class EmbeddingManagement(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Tab(label="View"):
+        with gr.Tab(label="查看"):  # View
             self.emb_list = gr.DataFrame(
                 headers=["name", "vendor", "default"],
                 interactive=False,
@@ -40,7 +40,7 @@ class EmbeddingManagement(BasePage):
                 with gr.Row():
                     with gr.Column():
                         self.edit_default = gr.Checkbox(
-                            label="Set default",
+                            label="设为默认",  # Set default
                             info=(
                                 "Set this Embedding model as default. This default "
                                 "Embedding will be used by other components by default "
@@ -48,13 +48,13 @@ class EmbeddingManagement(BasePage):
                             ),
                         )
                         self.edit_spec = gr.Textbox(
-                            label="Specification",
-                            info="Specification of the Embedding model in YAML format",
+                            label="配置规格",  # Specification
+                            info="YAML格式的嵌入模型配置",  # Specification of the Embedding model in YAML format
                             lines=10,
                         )
 
                         with gr.Accordion(
-                            label="Test connection", visible=False, open=False
+                            label="测试连接", visible=False, open=False  # Test connection
                         ) as self._check_connection_panel:
                             with gr.Row():
                                 with gr.Column(scale=4):
@@ -63,7 +63,7 @@ class EmbeddingManagement(BasePage):
                                     )
 
                                 with gr.Column(scale=1):
-                                    self.btn_test_connection = gr.Button("Test")
+                                    self.btn_test_connection = gr.Button("测试")  # Test
 
                         with gr.Row(visible=False) as self._selected_panel_btn:
                             with gr.Column():
@@ -85,41 +85,41 @@ class EmbeddingManagement(BasePage):
                                         "Cancel", visible=False, min_width=10
                                     )
                             with gr.Column():
-                                self.btn_close = gr.Button("Close", min_width=10)
+                                self.btn_close = gr.Button("关闭", min_width=10)  # Close
 
                     with gr.Column():
-                        self.edit_spec_desc = gr.Markdown("# Spec description")
+                        self.edit_spec_desc = gr.Markdown("# 规格描述")  # Spec description
 
-        with gr.Tab(label="Add"):
+        with gr.Tab(label="新增"):  # Add
             with gr.Row():
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
-                        label="Name",
+                        label="嵌入模型名称",  # Name
                         info=(
                             "Must be unique and non-empty. "
                             "The name will be used to identify the embedding model."
                         ),
                     )
                     self.emb_choices = gr.Dropdown(
-                        label="Vendors",
+                        label="供应商",  # Vendors
                         info=(
                             "Choose the vendor of the Embedding model. Each vendor "
                             "has different specification."
                         ),
                     )
                     self.spec = gr.Textbox(
-                        label="Specification",
-                        info="Specification of the Embedding model in YAML format.",
+                        label="配置规格",  # Specification
+                        info="YAML格式的嵌入模型配置。",  # Specification of the Embedding model in YAML format.
                     )
                     self.default = gr.Checkbox(
-                        label="Set default",
+                        label="设为默认",  # Set default
                         info=(
                             "Set this Embedding model as default. This default "
                             "Embedding will be used by other components by default "
                             "if no Embedding is specified for such components."
                         ),
                     )
-                    self.btn_new = gr.Button("Add", variant="primary")
+                    self.btn_new = gr.Button("添加嵌入模型", variant="primary")  # Add
 
                 with gr.Column(scale=3):
                     self.spec_desc = gr.Markdown(self.spec_desc_default)

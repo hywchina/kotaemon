@@ -114,18 +114,18 @@ class DirectoryUpload(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Accordion(label="Directory upload", open=False):
-            gr.Markdown(f"Supported file types: {self._supported_file_types_str}")
+        with gr.Accordion(label="文件夹上传", open=False):  # Directory upload
+            gr.Markdown(f"支持的文件类型：{self._supported_file_types_str}")  # Supported file types
             self.path = gr.Textbox(
-                placeholder="Directory path...", lines=1, max_lines=1, container=False
+                placeholder="目录路径...", lines=1, max_lines=1, container=False  # Directory path...
             )
-            with gr.Accordion("Advanced indexing options", open=False):
+            with gr.Accordion("高级索引选项", open=False):  # Advanced indexing options
                 with gr.Row():
                     self.reindex = gr.Checkbox(
-                        value=False, label="Force reindex file", container=False
+                        value=False, label="强制重新索引文件", container=False  # Force reindex file
                     )
 
-            self.upload_button = gr.Button("Upload and Index")
+            self.upload_button = gr.Button("上传并索引")  # Upload and Index
 
 
 class FileIndexPage(BasePage):
@@ -138,8 +138,8 @@ class FileIndexPage(BasePage):
         self._supported_file_types = [
             each.strip() for each in self._supported_file_types_str.split(",")
         ]
-        self.selected_panel_false = "Selected file: (please select above)"
-        self.selected_panel_true = "Selected file: {name}"
+        self.selected_panel_false = "已选文件：(请在上方选择)"  # Selected file: (please select above)
+        self.selected_panel_true = "已选文件：{name}"  # Selected file: {name}
         # TODO: on_building_ui is not correctly named if it's always called in
         # the constructor
         self.public_events = [f"onFileIndex{index.id}Changed"]
@@ -166,10 +166,10 @@ class FileIndexPage(BasePage):
     def render_file_list(self):
         self.filter = gr.Textbox(
             value="",
-            label="Filter by name:",
+            label="按名称筛选:",  # Filter by name:
             info=(
-                "(1) Case-insensitive. "
-                "(2) Search with empty string to show all files."
+                "(1) 不区分大小写。 "  # Case-insensitive
+                "(2) 留空以显示所有文件。"  # Search with empty string to show all files
             ),
         )
         self.file_list_state = gr.State(value=None)
@@ -191,21 +191,21 @@ class FileIndexPage(BasePage):
         with gr.Row():
 
             self.chat_button = gr.Button(
-                "Go to Chat",
+                "前往聊天",  # Go to Chat
                 visible=False,
             )
             self.is_zipped_state = gr.State(value=False)
             self.download_single_button = gr.DownloadButton(
-                "Download",
+                "下载",  # Download
                 visible=False,
             )
             self.delete_button = gr.Button(
-                "Delete",
+                "删除",  # Delete
                 variant="stop",
                 visible=False,
             )
             self.deselect_button = gr.Button(
-                "Close",
+                "关闭",  # Close
                 visible=False,
             )
 
@@ -216,21 +216,21 @@ class FileIndexPage(BasePage):
 
         self.chunks = gr.HTML(visible=False)
 
-        with gr.Accordion("Advance options", open=False):
+        with gr.Accordion("高级选项", open=False):  # Advance options
             with gr.Row():
                 if not KH_SSO_ENABLED:
                     self.download_all_button = gr.DownloadButton(
-                        "Download all files",
+                        "下载所有文件",  # Download all files
                     )
                 self.delete_all_button = gr.Button(
-                    "Delete all files",
+                    "删除所有文件",  # Delete all files
                     variant="stop",
                     visible=True,
                 )
                 self.delete_all_button_confirm = gr.Button(
-                    "Confirm delete", variant="stop", visible=False
+                    "确认删除", variant="stop", visible=False  # Confirm delete
                 )
-                self.delete_all_button_cancel = gr.Button("Cancel", visible=False)
+                self.delete_all_button_cancel = gr.Button("取消", visible=False)  # Cancel
 
     def render_group_list(self):
         self.group_list_state = gr.State(value=None)
@@ -248,20 +248,20 @@ class FileIndexPage(BasePage):
 
         with gr.Row():
             self.group_add_button = gr.Button(
-                "Add",
+                "新增",  # Add
                 variant="primary",
             )
             self.group_chat_button = gr.Button(
-                "Go to Chat",
+                "前往聊天",  # Go to Chat
                 visible=False,
             )
             self.group_delete_button = gr.Button(
-                "Delete",
+                "删除",  # Delete
                 variant="stop",
                 visible=False,
             )
             self.group_close_button = gr.Button(
-                "Close",
+                "关闭",  # Close
                 visible=False,
             )
 
@@ -269,17 +269,17 @@ class FileIndexPage(BasePage):
             self.selected_group_id = gr.State(value=None)
             self.group_label = gr.Markdown()
             self.group_name = gr.Textbox(
-                label="Group name",
-                placeholder="Group name",
+                label="分组名称",  # Group name
+                placeholder="分组名称",  # Group name
                 lines=1,
                 max_lines=1,
             )
             self.group_files = gr.Dropdown(
-                label="Attached files",
+                label="关联文件",  # Attached files
                 multiselect=True,
             )
             self.group_save_button = gr.Button(
-                "Save",
+                "保存",  # Save
                 variant="primary",
             )
 
@@ -288,7 +288,7 @@ class FileIndexPage(BasePage):
         with gr.Row():
             with gr.Column(scale=1):
                 with gr.Column() as self.upload:
-                    with gr.Tab("Upload Files"):
+                    with gr.Tab("上传文件"):  # Upload Files
                         self.files = File(
                             file_types=self._supported_file_types,
                             file_count="multiple",
@@ -302,41 +302,41 @@ class FileIndexPage(BasePage):
 
                     with gr.Tab("Use Web Links", visible=False):
                         self.urls = gr.Textbox(
-                            label="Input web URLs",
+                            label="输入网页链接",  # Input web URLs
                             lines=8,
                         )
-                        gr.Markdown("(separated by new line)")
+                        gr.Markdown("(每行一个链接)")  # (separated by new line)
 
-                    with gr.Accordion("Advanced indexing options", open=False):
+                    with gr.Accordion("高级索引选项", open=False):  # Advanced indexing options
                         with gr.Row():
                             self.reindex = gr.Checkbox(
-                                value=False, label="Force reindex file", container=False
+                                value=False, label="强制重新索引", container=False  # Force reindex file
                             )
 
                     self.upload_button = gr.Button(
-                        "Upload and Index", variant="primary"
+                        "上传文件并构建索引", variant="primary"
                     )
 
             with gr.Column(scale=4):
                 with gr.Column(visible=False) as self.upload_progress_panel:
-                    gr.Markdown("## Upload Progress")
+                    gr.Markdown("## 上传进度")  # Upload Progress
                     with gr.Row():
                         self.upload_result = gr.Textbox(
-                            lines=1, max_lines=20, label="Upload result"
+                            lines=1, max_lines=20, label="上传结果"  # Upload result
                         )
                         self.upload_info = gr.Textbox(
-                            lines=1, max_lines=20, label="Upload info"
+                            lines=1, max_lines=20, label="上传信息"  # Upload info
                         )
                     self.btn_close_upload_progress_panel = gr.Button(
-                        "Clear Upload Info and Close",
+                        "清除上传信息并关闭",  # Clear Upload Info and Close
                         variant="secondary",
                         elem_classes=["right-button"],
                     )
 
-                with gr.Tab("Files"):
+                with gr.Tab("文件"):  # Files
                     self.render_file_list()
 
-                with gr.Tab("Groups"):
+                with gr.Tab("分组"):  # Groups
                     self.render_group_list()
 
     def on_subscribe_public_events(self):
@@ -512,7 +512,7 @@ class FileIndexPage(BasePage):
                 zipMe.write(file, arcname=os.path.basename(file))
 
         if is_zipped_state:
-            new_button = gr.DownloadButton(label="Download", value=None)
+            new_button = gr.DownloadButton(label="下载", value=None)  # Download
         else:
             new_button = gr.DownloadButton(
                 label=DOWNLOAD_MESSAGE, value=f"{zip_file_path}.zip"
@@ -538,7 +538,7 @@ class FileIndexPage(BasePage):
             f.write(file_html)
 
         if is_zipped_state:
-            new_button = gr.DownloadButton(label="Download", value=None)
+            new_button = gr.DownloadButton(label="下载", value=None)  # Download
         else:
             # export the file path
             new_button = gr.DownloadButton(
@@ -607,8 +607,7 @@ class FileIndexPage(BasePage):
                     quickUploadedEvent = (
                         self._app.chat_page.quick_file_upload.upload(
                             fn=lambda: gr.update(
-                                value="Please wait for the indexing process "
-                                "to complete before adding your question."
+                                value="请等待索引进程完成后再添加您的问题。"  # Please wait for the indexing process to complete before adding your question.
                             ),
                             outputs=self._app.chat_page.quick_file_upload_status,
                         )
@@ -646,7 +645,7 @@ class FileIndexPage(BasePage):
                             outputs=self._app.chat_page._indices_input[1],
                         )
                         .then(
-                            fn=lambda: gr.update(value="Indexing completed."),
+                            fn=lambda: gr.update(value="索引已完成。"),  # Indexing completed.
                             outputs=self._app.chat_page.quick_file_upload_status,
                         )
                         .then(
@@ -666,8 +665,7 @@ class FileIndexPage(BasePage):
                 quickURLUploadedEvent = (
                     self._app.chat_page.quick_urls.submit(
                         fn=lambda: gr.update(
-                            value="Please wait for the indexing process "
-                            "to complete before adding your question."
+                            value="请等待索引进程完成后再添加您的问题。"  # Please wait for the indexing process to complete before adding your question.
                         ),
                         outputs=self._app.chat_page.quick_file_upload_status,
                     )
@@ -701,7 +699,7 @@ class FileIndexPage(BasePage):
                     inputs=self.quick_upload_state,
                     outputs=self._app.chat_page._indices_input[1],
                 ).then(
-                    fn=lambda: gr.update(value="Indexing completed."),
+                    fn=lambda: gr.update(value="索引已完成。"),  # Indexing completed.
                     outputs=self._app.chat_page.quick_file_upload_status,
                 )
 
@@ -1633,14 +1631,14 @@ class FileSelector(BasePage):
         self.mode = gr.Radio(
             value=default_mode,
             choices=[
-                ("All", "all"),
-                ("Search", "select"),
-                ("Cancel", "disabled"),  # ✅ 添加了取消选择选项
+                ("全部", "all"),  # All
+                ("搜索", "select"),  # Search
+                ("取消", "disabled"),  # Cancel
             ],
             container=False,
         )
         self.selector = gr.Dropdown(
-            label="Files",
+            label="文件",  # Files
             value=default_selector,
             choices=[],
             multiselect=True,

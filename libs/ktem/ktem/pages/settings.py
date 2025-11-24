@@ -117,7 +117,7 @@ class SettingsPage(BasePage):
     def on_building_ui(self):
         if not KH_SSO_ENABLED:
             self.setting_save_btn = gr.Button(
-                "Save & Close",
+                "保存并关闭",  # Save & Close
                 variant="primary",
                 elem_classes=["right-button"],
                 elem_id="save-setting-btn",
@@ -233,22 +233,22 @@ class SettingsPage(BasePage):
 
     def user_tab(self):
         # user management
-        self.current_name = gr.Markdown("Current user: ___")
+        self.current_name = gr.Markdown("当前用户：___")  # Current user: ___
 
         if KH_SSO_ENABLED:
             import gradiologin as grlogin
 
-            self.sso_signout = grlogin.LogoutButton("Logout")
+            self.sso_signout = grlogin.LogoutButton("退出登录")  # Logout
         else:
-            self.signout = gr.Button("Logout")
+            self.signout = gr.Button("退出登录")  # Logout
 
             self.password_change = gr.Textbox(
-                label="New password", interactive=True, type="password"
+                label="新密码", interactive=True, type="password"  # New password
             )
             self.password_change_confirm = gr.Textbox(
-                label="Confirm password", interactive=True, type="password"
+                label="确认密码", interactive=True, type="password"  # Confirm password
             )
-            self.password_change_btn = gr.Button("Change password", interactive=True)
+            self.password_change_btn = gr.Button("修改密码", interactive=True)  # Change password
 
     def change_password(self, user_id, password, password_confirm):
         from ktem.pages.resources.user import validate_password
@@ -275,7 +275,7 @@ class SettingsPage(BasePage):
         return "", ""
 
     def app_tab(self):
-        with gr.Tab("General", visible=self._render_app_tab):
+        with gr.Tab("常规", visible=self._render_app_tab):  # General
             for n, si in self._default_settings.application.settings.items():
                 obj = render_setting_item(si, si.value)
                 self._components[f"application.{n}"] = obj
@@ -317,7 +317,7 @@ class SettingsPage(BasePage):
                     if si.special_type == "embedding":
                         self._embeddings.append(obj)
 
-            gr.Markdown("### Reasoning-specific settings")
+            gr.Markdown("### 推理特定设置")  # Reasoning-specific settings
             self._components["reasoning.use"] = render_setting_item(
                 self._default_settings.reasoning.settings["use"],
                 self._default_settings.reasoning.settings["use"].value,

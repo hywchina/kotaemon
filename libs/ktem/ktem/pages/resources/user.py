@@ -141,7 +141,7 @@ class UserManagement(BasePage):
 
             with gr.Group(visible=False) as self._selected_panel:
                 self.selected_user_id = gr.State(value=-1)
-                self.usn_edit = gr.Textbox(label="Username")
+                self.usn_edit = gr.Textbox(label="用户名")  # Username
                 with gr.Row():
                     self.pwd_edit = gr.Textbox(label="修改密码", type="password")  # translate Change password --》修改密码
                     self.pwd_cnf_edit = gr.Textbox(
@@ -152,16 +152,16 @@ class UserManagement(BasePage):
 
             with gr.Row(visible=False) as self._selected_panel_btn:
                 with gr.Column():
-                    self.btn_edit_save = gr.Button("Save")
+                    self.btn_edit_save = gr.Button("保存")  # Save
                 with gr.Column():
-                    self.btn_delete = gr.Button("Delete")
+                    self.btn_delete = gr.Button("删除")  # Delete
                     with gr.Row():
                         self.btn_delete_yes = gr.Button(
                             "确认删除", variant="primary", visible=False  # translate Confirm delete --》确认删除
                         )
                         self.btn_delete_no = gr.Button("取消", visible=False)  # translate Cancel --》取消
                 with gr.Column():
-                    self.btn_close = gr.Button("Close")
+                    self.btn_close = gr.Button("关闭")  # Close
 
         with gr.Tab(label="创建用户"):  # translate Create user --》创建用户
             self.usn_new = gr.Textbox(label="用户名", interactive=True)  # translate Username --》用户名

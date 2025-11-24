@@ -10,7 +10,7 @@ class HintPage(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Accordion(label="Hint", open=False):  # translate
+        with gr.Accordion(label="提示", open=False):  # Hint
             gr.Markdown(
                 dedent(
                     """
