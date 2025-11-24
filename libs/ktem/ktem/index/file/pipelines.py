@@ -471,13 +471,15 @@ class IndexPipeline(BaseComponent):
             the file id if the file is indexed, otherwise None
         """
         file_name = file_path.name if isinstance(file_path, Path) else file_path
-        if self.private:
-            cond: tuple = (
-                self.Source.name == file_name,
-                self.Source.user == self.user_id,
-            )
-        else:
-            cond = (self.Source.name == file_name,)
+        # 移除用户过滤，允许检测全局文件重复
+        # if self.private:
+        #     cond: tuple = (
+        #         self.Source.name == file_name,
+        #         self.Source.user == self.user_id,
+        #     )
+        # else:
+        #     cond = (self.Source.name == file_name,)
+        cond = (self.Source.name == file_name,)
 
         with Session(engine) as session:
             stmt = select(self.Source).where(*cond)

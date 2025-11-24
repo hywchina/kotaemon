@@ -275,7 +275,7 @@ class ChatPage(BasePage):
                         "快速上传" if not KH_DEMO_MODE else "或输入新论文URL"  # translate Quick Upload --》快速上传 | Or input new paper URL --》或输入新论文URL
                     )
 
-                    with gr.Accordion(label=quick_upload_label) as _:
+                    with gr.Accordion(label=quick_upload_label) as self.quick_upload_accordion:
                         self.quick_file_upload_status = gr.Markdown()
                         if not KH_DEMO_MODE:
                             self.quick_file_upload = File(
@@ -1056,6 +1056,49 @@ class ChatPage(BasePage):
                     "show_progress": "hidden",
                 },
             )
+
+        # also toggle quick upload visibility for admin users (if the accordion exists)
+        if hasattr(self, "quick_upload_accordion") and self._app.f_user_management:
+            try:
+                self._app.subscribe_event(
+                    name="onSignIn",
+                    definition={
+                        "fn": self.toggle_quick_upload_visibility,
+                        "inputs": [self._app.user_id],
+                        "outputs": [self.quick_upload_accordion],
+                        "show_progress": "hidden",
+                    },
+                )
+
+                self._app.subscribe_event(
+                    name="onSignOut",
+                    definition={
+                        "fn": self.toggle_quick_upload_visibility,
+                        "inputs": [self._app.user_id],
+                        "outputs": [self.quick_upload_accordion],
+                        "show_progress": "hidden",
+                    },
+                )
+            except Exception:
+                pass
+
+    def toggle_quick_upload_visibility(self, user_id):
+        visible = False
+        if not user_id:
+            visible = False
+        else:
+            try:
+                from ktem.db.models import User, engine
+                from sqlmodel import Session, select
+
+                with Session(engine) as session:
+                    user = session.exec(select(User).where(User.id == user_id)).first()
+                    if user and user.admin:
+                        visible = True
+            except Exception:
+                visible = False
+
+        return gr.update(visible=visible)
 
     def _on_app_created(self):
         if KH_DEMO_MODE:

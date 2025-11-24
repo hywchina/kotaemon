@@ -416,6 +416,15 @@ class UserManagement(BasePage):
         with Session(engine) as session:
             statement = select(User).where(User.id == selected_user_id)
             user = session.exec(statement).one()
+
+            # If attempting to remove admin flag, ensure at least one other admin remains
+            if not admin and user.admin:
+                admin_count = session.exec(select(User).where(User.admin == True)).all()
+                # admin_count includes this user; removing would reduce count by 1
+                if len(admin_count) == 1:
+                    gr.Warning("必须至少保留一个管理员账号，无法取消当前管理员的权限")
+                    return pwd, pwd_cnf
+
             user.username = usn
             user.username_lower = usn.lower()
             user.admin = admin
@@ -434,6 +443,14 @@ class UserManagement(BasePage):
         with Session(engine) as session:
             statement = select(User).where(User.id == selected_user_id)
             user = session.exec(statement).one()
+
+            # Prevent deleting the last remaining admin
+            if user.admin:
+                admin_count = session.exec(select(User).where(User.admin == True)).all()
+                if len(admin_count) == 1:
+                    gr.Warning("系统必须至少保留一个管理员账号，无法删除最后的管理员")
+                    return selected_user_id
+
             session.delete(user)
             session.commit()
             gr.Info(f'用户"{user.username}"已删除成功')  # translate User "{user.username}" deleted successfully --》用户"{user.username}"已删除成功

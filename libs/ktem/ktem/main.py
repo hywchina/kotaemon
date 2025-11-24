@@ -155,11 +155,19 @@ class App(BaseApp):
 
                     is_admin = user.admin
 
+                # determine which tabs belong to index management
+                index_keys = {f"{index.id}-tab" for index in self.index_manager.indices}
+                index_group_key = "indices-tab"
+
                 tabs_update = []
                 for k in self._tabs.keys():
                     if k == "login-tab":
                         tabs_update.append(gr.update(visible=False))
                     elif k == "resources-tab":
+                        # 资源管理 仅 admin 可见
+                        tabs_update.append(gr.update(visible=is_admin))
+                    elif k == index_group_key or k in index_keys:
+                        # 文件管理 仅 admin 可见
                         tabs_update.append(gr.update(visible=is_admin))
                     else:
                         tabs_update.append(gr.update(visible=True))

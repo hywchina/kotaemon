@@ -85,7 +85,7 @@ class IndexManagement(BasePage):
                     with gr.Column():
                         self.edit_spec_desc = gr.Markdown("# Spec description")
 
-        with gr.Tab(label="Add"):
+        with gr.Tab(label="Add") as self._add_tab:
             with gr.Row():
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
@@ -219,6 +219,76 @@ class IndexManagement(BasePage):
             lambda: -1,
             outputs=[self.selected_index_id],
         )
+
+    def on_subscribe_public_events(self):
+        # subscribe to sign in/out events to toggle index create/edit permissions
+        try:
+            self._app.subscribe_event(
+                name="onSignIn",
+                definition={
+                    "fn": self.toggle_index_permissions,
+                    "inputs": [self._app.user_id],
+                    "outputs": [
+                        # btn_new, selected panel, edit/save, delete, delete_yes, delete_no
+                        self.btn_new,
+                        self._selected_panel,
+                        self.btn_edit_save,
+                        self.btn_delete,
+                        self.btn_delete_yes,
+                        self.btn_delete_no,
+                        self._add_tab,
+                    ],
+                    "show_progress": "hidden",
+                },
+            )
+
+            self._app.subscribe_event(
+                name="onSignOut",
+                definition={
+                    "fn": self.toggle_index_permissions,
+                    "inputs": [self._app.user_id],
+                    "outputs": [
+                        self.btn_new,
+                        self._selected_panel,
+                        self.btn_edit_save,
+                        self.btn_delete,
+                        self.btn_delete_yes,
+                        self.btn_delete_no,
+                        self._add_tab,
+                    ],
+                    "show_progress": "hidden",
+                },
+            )
+        except Exception:
+            # no-op if event system not ready
+            pass
+
+    def toggle_index_permissions(self, user_id):
+        # default: hide create/edit controls
+        visible_for_admin = False
+        if not user_id:
+            visible_for_admin = False
+        else:
+            try:
+                from ktem.db.models import User, engine
+                from sqlmodel import Session, select
+
+                with Session(engine) as session:
+                    user = session.exec(select(User).where(User.id == user_id)).first()
+                    if user and user.admin:
+                        visible_for_admin = True
+            except Exception:
+                visible_for_admin = False
+
+        btn_new = gr.update(visible=visible_for_admin)
+        selected_panel = gr.update(visible=visible_for_admin)
+        btn_edit_save = gr.update(visible=visible_for_admin)
+        btn_delete = gr.update(visible=visible_for_admin)
+        btn_delete_yes = gr.update(visible=False)
+        btn_delete_no = gr.update(visible=False)
+        add_tab = gr.update(visible=visible_for_admin)
+
+        return btn_new, selected_panel, btn_edit_save, btn_delete, btn_delete_yes, btn_delete_no, add_tab
 
     def on_index_type_change(self, index_type: str):
         """Update the spec description and pre-fill the default values

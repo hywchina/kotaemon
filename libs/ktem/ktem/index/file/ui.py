@@ -1368,8 +1368,9 @@ class FileIndexPage(BasePage):
         Source = self._index._resources["Source"]
         with Session(engine) as session:
             statement = select(Source)
-            if self._index.config.get("private", False):
-                statement = statement.where(Source.user == user_id)
+            # 移除用户过滤，所有用户都能看到所有文件
+            # if self._index.config.get("private", False):
+            #     statement = statement.where(Source.user == user_id)
             if name_pattern:
                 statement = statement.where(Source.name.ilike(f"%{name_pattern}%"))
             results = [
@@ -1435,8 +1436,9 @@ class FileIndexPage(BasePage):
         FileGroup = self._index._resources["FileGroup"]
         with Session(engine) as session:
             statement = select(FileGroup)
-            if self._index.config.get("private", False):
-                statement = statement.where(FileGroup.user == user_id)
+            # 移除用户过滤，所有用户都能看到所有分组
+            # if self._index.config.get("private", False):
+            #     statement = statement.where(FileGroup.user == user_id)
 
             results = [
                 {
@@ -1683,10 +1685,11 @@ class FileSelector(BasePage):
         file_ids = []
         with Session(engine) as session:
             statement = select(self._index._resources["Source"].id)
-            if self._index.config.get("private", False):
-                statement = statement.where(
-                    self._index._resources["Source"].user == user_id
-                )
+            # 移除用户过滤，所有用户都能看到所有文件
+            # if self._index.config.get("private", False):
+            #     statement = statement.where(
+            #         self._index._resources["Source"].user == user_id
+            #     )
             results = session.execute(statement).all()
             for (id,) in results:
                 file_ids.append(id)
@@ -1703,10 +1706,11 @@ class FileSelector(BasePage):
         with Session(engine) as session:
             # get file list from Source table
             statement = select(self._index._resources["Source"])
-            if self._index.config.get("private", False):
-                statement = statement.where(
-                    self._index._resources["Source"].user == user_id
-                )
+            # 移除用户过滤，所有用户都能看到所有文件
+            # if self._index.config.get("private", False):
+            #     statement = statement.where(
+            #         self._index._resources["Source"].user == user_id
+            #     )
 
             if KH_DEMO_MODE:
                 # limit query by MAX_FILE_COUNT
@@ -1720,8 +1724,9 @@ class FileSelector(BasePage):
             # get group list from FileGroup table
             FileGroup = self._index._resources["FileGroup"]
             statement = select(FileGroup)
-            if self._index.config.get("private", False):
-                statement = statement.where(FileGroup.user == user_id)
+            # 移除用户过滤，所有用户都能看到所有分组
+            # if self._index.config.get("private", False):
+            #     statement = statement.where(FileGroup.user == user_id)
             results = session.execute(statement).all()
             for result in results:
                 item = result[0]
