@@ -36,6 +36,15 @@ RUN apt-get update -qqy && \
         && echo "Asia/Shanghai" > /etc/timezone \
         && dpkg-reconfigure -f noninteractive tzdata 
 
+# ----------------------------------------------------
+# ★ Added: 高兼容、中英文混排 PDF 必需字体（精简但非常稳）
+RUN apt-get update -qqy && \
+    apt-get install -y --no-install-recommends \
+        fontconfig \
+        fonts-noto-cjk \
+        fonts-wqy-microhei \
+    && rm -rf /var/lib/apt/lists/*
+
 # Setup args
 ARG TARGETPLATFORM
 ARG TARGETARCH
