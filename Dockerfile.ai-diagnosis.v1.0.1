@@ -1,0 +1,90 @@
+# Full version - Optimized with requirements_macos.txt
+FROM python:3.10-slim
+
+# 使用阿里云镜像源加速
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
+
+# Common dependencies (from lite)
+RUN apt-get update -qqy && \
+    apt-get install -y --no-install-recommends \
+        ssh \
+        git \
+        gcc \
+        g++ \
+        poppler-utils \
+        libpoppler-dev \
+        unzip \
+        curl \
+        cargo \
+        lsof \
+        # Full-specific extra dependencies
+        tesseract-ocr \
+        tesseract-ocr-jpn \
+        libsm6 \
+        libxext6 \
+        libreoffice \
+        ffmpeg \
+        libmagic-dev \
+        vim \
+        wget \
+        less \
+        tree \
+        net-tools \
+        iputils-ping \
+        tzdata \
+        && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+        && echo "Asia/Shanghai" > /etc/timezone \
+        && dpkg-reconfigure -f noninteractive tzdata 
+
+# ★ Added: 高兼容、中英文混排 PDF 必需字体（精简但非常稳）
+RUN apt-get update -qqy && \
+    apt-get install -y --no-install-recommends \
+        fontconfig \
+        fonts-noto-cjk \
+        fonts-wqy-microhei \
+    && rm -rf /var/lib/apt/lists/*
+
+# Setup args
+ARG TARGETPLATFORM
+ARG TARGETARCH
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONIOENCODING=UTF-8
+ENV TARGETARCH=${TARGETARCH}
+ENV USE_LIGHTRAG=true
+ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ENV PIP_TRUSTED_HOST=mirrors.aliyun.com
+
+# Create working directory
+WORKDIR /app
+
+# Copy all files
+COPY . /app
+
+# Copy pre-downloaded NLTK data to avoid network issues at runtime
+COPY nltk_data /usr/local/share/nltk_data
+
+# 设置 NLTK 数据路径环境变量
+ENV NLTK_DATA=/usr/local/share/nltk_data
+
+# Install Python packages from requirements_macos.txt
+# Using cache mount to speed up subsequent builds
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements_macos.txt && \
+    pip install -e "libs/kotaemon[all]" && \
+    pip install -e "libs/ktem"
+
+# Clean up
+RUN apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf ~/.cache
+
+# Make run.sh executable
+RUN chmod +x /app/run.sh
+
+# Start the service when container starts
+CMD ["bash", "-c", "/app/run.sh --start && tail -f /dev/null"]

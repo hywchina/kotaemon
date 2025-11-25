@@ -136,8 +136,6 @@ jsonpointer==3.0.0
 jsonschema==4.25.0
 jsonschema-specifications==2025.4.1
 kiwisolver==1.4.9
--e git+https://github.com/hywchina/kotaemon.git@7abaec23ee0eaf111e7daa3fc75b839b83d258d4#egg=kotaemon&subdirectory=libs/kotaemon
--e git+https://github.com/hywchina/kotaemon.git@7abaec23ee0eaf111e7daa3fc75b839b83d258d4#egg=ktem&subdirectory=libs/ktem
 kubernetes==33.1.0
 lancedb==0.24.2
 langchain==0.2.15
@@ -366,3 +364,4 @@ xlsxwriter==3.2.5
 xxhash==3.5.0
 yarl==1.20.1
 zipp==3.23.0
+docling<=2.5.2
