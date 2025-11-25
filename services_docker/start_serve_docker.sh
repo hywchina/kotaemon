@@ -4,7 +4,7 @@ docker build --target full -t chifeng-ai-diagnosis:v0.1 -f Dockerfile .
 docker build --target ollama -t my-app-ollama -f Dockerfile .
 
 # 新的 单独 dockerfile
-docker build -t chifeng-ai-diagnosis:v1.0.0 -f Dockerfile.ai-diagnosis .
+docker build -t chifeng-ai-diagnosis:v1.0.0 -f Dockerfile.ai-diagnosis.v1.0.0 .
 
 # 创建容器
 docker run -itd \
