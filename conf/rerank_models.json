@@ -1,0 +1,6 @@
+{
+  "models": [
+    {"name": "bge-reranker-v2-m3", "model_name": "~/.cache/modelscope/hub/models/BAAI/bge-reranker-v2-m3", "batch_size": 32, "max_length": 512, "default": true},
+    {"name": "bge-reranker-v2-base", "model_name": "/app/models/bge-reranker-v2-base", "batch_size": 16, "max_length": 512, "default": false}
+  ]
+}

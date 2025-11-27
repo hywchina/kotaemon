@@ -19,7 +19,11 @@
 # pip uninstall -y hnswlib chroma-hnswlib && pip install chroma-hnswlib
 
 # 安装依赖 方式2 (推荐)
-virtualenv -p python3.10 venv && source venv/bin/activate && python -m pip install --upgrade pip setuptools wheel build 
+virtualenv -p python3.10 venv && 
+    source venv/bin/activate && 
+    python -m pip install --upgrade pip setuptools wheel build && 
+    pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
 pip install -r requirements_macos.txt
 # tips: kotaemon 和 ktem 是安装之前制作 requriements.txt 时 github 上的版本：pip freeze > requirements.txt；需要重新安装 ketm 和 ketaemon[all]，以确保是最新版本
 pip install -e "libs/kotaemon[all]"   
