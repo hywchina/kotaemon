@@ -14,6 +14,7 @@ docker run -itd \
 -v ./ktem_app_data:/app/ktem_app_data \
 -v ./logs:/app/logs \
 -v ./models:/app/models \
+--add-host=host.docker.internal:host-gateway \
 -p 7860:7860  \
 --name ai-diagnosis-service \
 ai-diagnosis-service:v1.0.0
