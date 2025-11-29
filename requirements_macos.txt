@@ -360,6 +360,7 @@ websocket-client==1.8.0
 websockets==11.0.3
 wikipedia==1.4.0
 wrapt==1.17.2
+xlrd==2.0.2
 xlsxwriter==3.2.5
 xxhash==3.5.0
 yarl==1.20.1
