@@ -74,9 +74,15 @@ ENV NLTK_DATA=/usr/local/share/nltk_data
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel && \
     pip install -r requirements_macos.txt && \
+    pip install docling && \
     pip install -e "libs/kotaemon[all]" && \
     pip install -e "libs/ktem"
 
+# Unzip prebuilt pdfjs asset for ktem
+RUN cd /app/libs/ktem/ktem/assets/prebuilt && \
+    unzip -o pdfjs-4.0.379-dist.zip -d pdfjs-4.0.379-dist && \
+    cd -
+        
 # Clean up
 RUN apt-get autoremove -y \
     && apt-get clean \
