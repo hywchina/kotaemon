@@ -1,46 +1,65 @@
-# /chat_fn API 压力测试
+````markdown
+# /chat_fn 压力测试（精简）
 
-测试 Kotaemon AI 辅助诊断系统的 `/chat_fn` 接口性能。
+此目录保留用于对 Kotaemon 服务的 `/chat_fn` 接口进行简单压力测试。
 
-## 快速开始
+保留文件：
+
+- `locustfile.py` — Locust 测试脚本（主脚本）
+- `README.md` — 本说明（此文件）
+
+已移除其它辅助脚本和多个文档文件以保持目录简洁。
+
+## 快速运行
+
+1. 激活虚拟环境：
 
 ```bash
-# 1. 激活虚拟环境
 source /home/huyanwei/projects/kotaemon/venv/bin/activate
-
-# 2. 安装依赖
-pip install -r requirements.txt
-
-# 3. 验证测试（可选）
-python verify_locust.py
-
-# 4. 运行压力测试
-./run_test.sh
 ```
 
-## 文件说明
+2. 安装必要依赖：
 
-| 文件 | 说明 |
-|------|------|
-| `locustfile.py` | Locust 压力测试脚本 |
-| `locust.conf` | Locust 配置文件 |
-| `requirements.txt` | Python 依赖 |
-| `run_test.sh` | 一键启动脚本 |
-| `verify_locust.py` | 验证脚本 |
-| `README_PRESSURE_TEST.md` | 详细文档 |
-| `QUICKSTART.md` | 快速开始指南 |
-| `IMPLEMENTATION_NOTES.md` | 实现说明 |
+```bash
+pip install locust gradio-client
+```
 
-## 测试配置
+3. 启动 Locust Web UI：
 
-- **并发用户数:** 10
-- **孵化速率:** 2 用户/秒
-- **测试接口:** `/chat_fn`
-- **目标服务:** http://localhost:7860
+```bash
+locust -f locustfile.py
+```
 
-## 更多信息
+打开 `http://localhost:8089`，填写：
 
-详细文档请查看：
-- [详细使用文档](./README_PRESSURE_TEST.md)
-- [快速开始指南](./QUICKSTART.md)
-- [实现说明](./IMPLEMENTATION_NOTES.md)
+- Number of users: `10`
+- Spawn rate: `2`
+- Host: `http://localhost:7860`
+
+或使用无头模式运行 2 分钟：
+
+```bash
+locust -f locustfile.py --headless --users 10 --spawn-rate 2 --run-time 2m --host http://localhost:7860
+```
+
+## 脚本说明
+
+`locustfile.py` 使用 `gradio_client.Client` 直接调用 `/chat_fn`，包含两类任务：
+
+- 简单单轮提问（权重 3）
+- 带上下文的多轮对话（权重 2）
+
+测试参数（并发用户数、孵化速率、运行时长）可在运行时调整。
+
+## 验证服务连通性（可选）
+
+在 Python 中快速验证：
+
+```python
+from gradio_client import Client
+client = Client("http://localhost:7860/")
+res = client.predict(chat_history=[("你好", None)], api_name="/chat_fn")
+print(res)
+```
+
+````
