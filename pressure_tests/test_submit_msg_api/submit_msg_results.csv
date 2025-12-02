@@ -1,0 +1,20 @@
+user_id,user_input,submit_duration_s,status,note
+user_3151,如何使用这个系统？,0.135,success,"conv_id={'choices': [['Untitled - 2025-12-02 17:13:37', '12ed6b7563dc401fb80c0ea343c4d0ab'], ['Untitled - 2025-12-02 16:58:05', 'f15e6d1917a24ef8934f1994be0d8891'], ['Untitled - 2025-12-02 16:58:04', '678ff8676c44428cb3114c6ac6a59ab4'], ['Untitled - 2025-12-02 16:58:03', 'e2fc7739f54c4baab64e99f2d5c666ec'], ['Untitled - 2025-12-02 16:56:07', '704e56c473f14c10bf48031edf9466ef'], ['Untitled - 2025-12-02 16:54:29', '98772ba181f147469a76904c0e36f344'], ['患者病例分析与AI辅助诊断建议', '709d4f8b2da94fb7a72cb122c92a389d'], ['AI辅助诊断：病例分析与建议', '98834bf30d924a8995be7d90523f45b4']], 'value': '12ed6b7563dc401fb80c0ea343c4d0ab', '__type__': 'update'}"
+user_3149,伴有气促，活动后加重。,0.085,success,"conv_id={'choices': [['Untitled - 2025-12-02 17:13:38', 'fe34ac9acdfb4ffea09a8f3e1a808acd'], ['Untitled - 2025-12-02 17:13:37', '12ed6b7563dc401fb80c0ea343c4d0ab'], ['Untitled - 2025-12-02 16:58:05', 'f15e6d1917a24ef8934f1994be0d8891'], ['Untitled - 2025-12-02 16:58:04', '678ff8676c44428cb3114c6ac6a59ab4'], ['Untitled - 2025-12-02 16:58:03', 'e2fc7739f54c4baab64e99f2d5c666ec'], ['Untitled - 2025-12-02 16:56:07', '704e56c473f14c10bf48031edf9466ef'], ['Untitled - 2025-12-02 16:54:29', '98772ba181f147469a76904c0e36f344'], ['患者病例分析与AI辅助诊断建议', '709d4f8b2da94fb7a72cb122c92a389d'], ['AI辅助诊断：病例分析与建议', '98834bf30d924a8995be7d90523f45b4']], 'value': 'fe34ac9acdfb4ffea09a8f3e1a808acd', '__type__': 'update'},context=yes"
+user_3149,你能帮我做什么？,0.088,success,conv_id={'__type__': 'update'}
+user_3151,你能帮我做什么？,0.135,success,conv_id={'__type__': 'update'}
+user_3151,如何使用这个系统？,0.135,success,conv_id={'__type__': 'update'}
+user_3149,如何使用这个系统？,0.136,success,conv_id={'__type__': 'update'}
+user_3151,你好，请介绍一下你的功能。,0.136,success,conv_id={'__type__': 'update'}
+user_3149,伴有气促，活动后加重。,0.136,success,"conv_id={'__type__': 'update'},context=yes"
+user_3151,你有哪些主要功能？,0.136,success,conv_id={'__type__': 'update'}
+user_3149,既往有高血压病史10年，服药不规律。,0.135,success,"conv_id={'__type__': 'update'},context=yes"
+user_3151,请简单介绍一下你自己。,0.084,success,conv_id={'__type__': 'update'}
+user_3151,你有哪些主要功能？,0.136,success,conv_id={'__type__': 'update'}
+user_3149,你有哪些主要功能？,0.137,success,conv_id={'__type__': 'update'}
+user_3149,既往有高血压病史10年，服药不规律。,0.136,success,"conv_id={'__type__': 'update'},context=yes"
+user_3151,如何使用这个系统？,0.092,success,conv_id={'__type__': 'update'}
+user_3149,你能帮我做什么？,0.135,success,conv_id={'__type__': 'update'}
+user_3149,你好，请介绍一下你的功能。,0.083,success,conv_id={'__type__': 'update'}
+user_3151,伴有气促，活动后加重。,0.135,success,"conv_id={'__type__': 'update'},context=yes"
+AVERAGE,18 samples,0.122,18✓/0✗,success_rate=100.0%
