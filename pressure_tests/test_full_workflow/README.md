@@ -432,3 +432,45 @@ user_4389,既往有高血压病史10年...,根据提供的额外信息...,0.135,
 ## 联系与反馈
 
 如有问题或建议，请查看项目文档或提交 Issue。
+
+
+------
+### 最终性能指标测试：
+技术服务工作成果的验收标准： 
+（1）功能完整性标准：系统软件功能需100%覆盖附件一所列功能，可实现病例数据录入、统计分析模型运行、科研报告生成等核心功能。自定义功能模块需满足甲方要求，无功能缺失或逻辑错误。 
+（2）性能指标标准：单用户操作核心功能的平均响应时间≤5秒。支持≥10个科研用户同时在线操作，且系统无卡顿，数据无丢失。对10条医学样本数据（含结构化病例数据、影像数据、脑电数据等）的批量导入时间≤3分钟，数据解析准确率≥99.9%。 
+（3）数据安全与合规性标准：患者隐私数据需采用加密算法存储，传输过程也需加密，符合《中华人民共和国个人信心保护法》和《信息安全技术-健康医疗数据安全指南》（GB/T39725-2020）的要求。实现三级用户权限的精准管控，权限配置需按甲方需求一致，无越权访问漏洞。软件数据接口需通过甲方科研伦理委员会的合规性审核。
+（4）兼容性和稳定性标准：支持在Windows 10/11、macOS12及以上系统运行，兼容Chromem 90+、Edge 90+浏览器。连续72小时满负荷运行无崩溃、无数据异常、系统日志无ERROR级别错误记录。 
+（5）文档完整性标准：交付的技术文档需包含：可运行软件安装包（含版本号）及完整源代码（需注释率≥80%）；《软件测试报告》（含500条测试用例及通过率100%的验证记录）；《用户操作手册》（含医学科研场景下的操作流程图、常见问题解答）；《数据安全维护手册》（含数据备份、应急处理流程）。
+
+
+目标1：单用户核心功能平均响应时间 ≤ 5 秒
+目标2：≥10 个科研用户同时在线操作，系统无卡顿、数据无丢失
+测试命令
+
+单用户时延基线（核心功能端到端）
+cd /home/huyanwei/projects/kotaemon/pressure_tests/test_full_workflow
+locust -f locustfile.py --host=http://localhost:7860 \
+  --users 1 --spawn-rate 1 --run-time 60s --headless
+
+10用户并发（稳定长测，推荐）
+cd /home/huyanwei/projects/kotaemon/pressure_tests/test_full_workflow
+locust -f locustfile.py --host=http://localhost:7860 \
+  --users 10 --spawn-rate 2 --run-time 5m --headless
+
+10用户并发（快速验证）
+cd /home/huyanwei/projects/kotaemon/pressure_tests/test_full_workflow
+locust -f locustfile.py --host=http://localhost:7860 \
+  --users 10 --spawn-rate 10 --run-time 60s --headless
+
+10用户持续测试（更强置信度）
+cd /home/huyanwei/projects/kotaemon/pressure_tests/test_full_workflow
+locust -f locustfile.py --host=http://localhost:7860 \
+  --users 10 --spawn-rate 2 --run-time 10m --headless
+  
+通过标准（检查项）
+
+时延：CSV full_workflow_results.csv 中 total_duration_s 平均值 ≤ 5.00（单用户与10用户）
+稳定性：Locust汇总“# fails”为0或＜5%；CSV“AVERAGE”行成功率 ≥ 95%
+数据无丢失：CSV note 列均含 persisted=yes；verify_results.py 能列出最近会话且每个会话 messages ≥ 1
+验证步骤（运行后执行）
