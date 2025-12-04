@@ -29,5 +29,8 @@ pip install -r requirements_macos.txt
 pip install -e "libs/kotaemon[all]"   
 pip install -e "libs/ktem"
 
+export NLTK_DATA=./nltk_data
+export TIKTOKEN_CACHE_DIR=./tiktoken_cache
+
 # # 检查冲突
 # pip check
