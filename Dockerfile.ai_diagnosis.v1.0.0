@@ -65,9 +65,11 @@ COPY . /app
 
 # Copy pre-downloaded NLTK data to avoid network issues at runtime
 COPY nltk_data /usr/local/share/nltk_data
+COPY tiktoken_cache /usr/local/share/tiktoken_cache
 
 # 设置 NLTK 数据路径环境变量
 ENV NLTK_DATA=/usr/local/share/nltk_data
+ENV TIKTOKEN_CACHE_DIR=/usr/local/share/tiktoken_cache
 
 # Install Python packages from requirements_macos.txt
 # Using cache mount to speed up subsequent builds
