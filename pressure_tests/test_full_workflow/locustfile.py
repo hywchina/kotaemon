@@ -90,6 +90,30 @@ def _get_user_files(user_id="", index_id=1):
         logger.error(traceback.format_exc())
         return []
 
+
+# 复制 selector choices，避免在 submit_msg 内部被原地修改
+def _clone_selector_choices(file_choices):
+    return list(file_choices) if file_choices else []
+
+
+# 构造问题文本，按需附带知识库文件引用（@"filename" 语法）
+def _prepare_question(base_question, file_choices, force=False, attach_ratio=0.3):
+    """返回 (question_text, selector_choices_copy, kb_file_name)
+
+    force=True 时必定附带知识库；否则按概率 attach_ratio 添加。
+    """
+    if not file_choices:
+        return base_question, [], None
+
+    should_attach = force or random.random() < attach_ratio
+    if not should_attach:
+        return base_question, [], None
+
+    file_name, _ = random.choice(file_choices)
+    kb_question = f'@"{file_name}" 回答：{base_question}'
+    return kb_question, _clone_selector_choices(file_choices), file_name
+
+
 # 结果文件与线程安全计数器（添加时间戳）
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 RESULTS_FILE = os.path.join(os.path.dirname(__file__), f"full_workflow_results_{timestamp}.csv")
@@ -255,7 +279,10 @@ class GradioUser(User):
             "如何使用这个系统？",
         ]
 
-        question = random.choice(test_questions)
+        base_question = random.choice(test_questions)
+        question, selector_choices, kb_file = _prepare_question(
+            base_question, self.file_choices, force=False, attach_ratio=0.3
+        )
         
         # 每个任务创建新的会话名称和 ID
         conv_name = f"压测_{self.user_id}_{int(time.time()*1000)}"
@@ -276,7 +303,7 @@ class GradioUser(User):
                 chat_input={"text": question, "files": []},
                 chat_history=[],
                 conv_name=conv_name,
-                first_selector_choices=self.file_choices,
+                first_selector_choices=selector_choices,
                 api_name="/submit_msg"
             )
             submit_duration = time.time() - submit_start
@@ -301,6 +328,8 @@ class GradioUser(User):
                     conv_id = str(conv_id_data)
                     
                 note = f"conv_id={conv_id}"
+                if kb_file:
+                    note += f",kb_file={kb_file}"
                 logger.debug(f"提交消息成功，conv_id: {conv_id}")
             else:
                 chat_history = [(question, None)]
@@ -414,7 +443,13 @@ class GradioUser(User):
             },
         ]
 
-        template = random.choice(conversation_templates)
+        # 为第二轮问题可选附带知识库文件
+        base_second = random.choice(conversation_templates)
+        second_question, selector_choices_second, kb_file = _prepare_question(
+            base_second["second"], self.file_choices, force=False, attach_ratio=0.3
+        )
+
+        template = base_second
         
         # 每个任务创建新的会话名称和 ID
         conv_name = f"压测_{self.user_id}_上下文_{int(time.time()*1000)}"
@@ -427,7 +462,7 @@ class GradioUser(User):
                 chat_input={"text": template["first"], "files": []},
                 chat_history=[],
                 conv_name=conv_name,
-                first_selector_choices=self.file_choices,
+                first_selector_choices=_clone_selector_choices(self.file_choices),
                 api_name="/submit_msg"
             )
             
@@ -496,10 +531,10 @@ class GradioUser(User):
             # 提交第二条消息（带历史）
             submit_start = time.time()
             second_submit_result = self.client.predict(
-                chat_input={"text": template["second"], "files": []},
+                chat_input={"text": second_question, "files": []},
                 chat_history=updated_chat_history,
                 conv_name=conv_name,
-                first_selector_choices=self.file_choices,
+                first_selector_choices=selector_choices_second,
                 api_name="/submit_msg"
             )
             submit_duration = time.time() - submit_start
@@ -508,7 +543,7 @@ class GradioUser(User):
             if isinstance(second_submit_result, (list, tuple)) and len(second_submit_result) >= 2:
                 second_chat_history = second_submit_result[1]
             else:
-                second_chat_history = updated_chat_history + [(template["second"], None)]
+                second_chat_history = updated_chat_history + [(second_question, None)]
             
             # 获取第二轮 AI 回复
             ai_start = time.time()
@@ -560,8 +595,11 @@ class GradioUser(User):
                 context={}
             )
 
+            if kb_file:
+                note += f",kb_file={kb_file}"
+
             _record_result(
-                self.user_id, template["second"], ai_response,
+                self.user_id, second_question, ai_response,
                 submit_duration, ai_duration, total_duration,
                 tokens_per_s, status, note
             )
@@ -586,8 +624,11 @@ class GradioUser(User):
                 context={}
             )
             
+            if kb_file:
+                note += f",kb_file={kb_file}"
+
             _record_result(
-                self.user_id, template["second"], "",
+                self.user_id, second_question, "",
                 submit_duration, ai_duration, total_duration,
                 0, status, note
             )
@@ -639,7 +680,7 @@ class GradioUser(User):
                 chat_input={"text": question, "files": []},
                 chat_history=[],
                 conv_name=conv_name,
-                first_selector_choices=self.file_choices,  # 传入文件列表
+                first_selector_choices=_clone_selector_choices(self.file_choices),  # 传入文件列表
                 api_name="/submit_msg"
             )
             submit_duration = time.time() - submit_start
