@@ -90,6 +90,26 @@ try:
 except Exception as e:
     logger.warning(f"✗ 无法导入数据库模型: {e}，将跳过数据持久化")
     DB_AVAILABLE = False
+def _normalize_conv_id(conv_id_data):
+    """统一解析 conv_id，无论是 dict/choices/str。
+
+    返回字符串形式的 conv_id。
+    """
+    try:
+        if isinstance(conv_id_data, dict):
+            if 'value' in conv_id_data and conv_id_data['value']:
+                return str(conv_id_data['value'])
+            choices = conv_id_data.get('choices')
+            if isinstance(choices, (list, tuple)) and len(choices) > 0:
+                first = choices[0]
+                # choices 可能是 [str] 或 [(label, value)]
+                return str(first if isinstance(first, str) else first[1])
+            return str(conv_id_data)
+        if isinstance(conv_id_data, (str, int)):
+            return str(conv_id_data)
+        return str(conv_id_data)
+    except Exception:
+        return str(conv_id_data)
 
 
 def _get_user_files(user_id="", index_id=1):
@@ -200,8 +220,8 @@ def _record_result(user_id, user_input, ai_response, submit_duration, ai_duratio
             writer = csv.writer(f)
             writer.writerow([
                 user_id,
-                user_input[:-1],
-                ai_response[:-1] if ai_response else "",
+                user_input.rstrip("\n") if isinstance(user_input, str) else str(user_input),
+                (ai_response.rstrip("\n") if isinstance(ai_response, str) else ""),
                 f"{submit_duration:.3f}",
                 f"{ai_duration:.3f}",
                 f"{total_duration:.3f}",
@@ -212,6 +232,9 @@ def _record_result(user_id, user_input, ai_response, submit_duration, ai_duratio
         _stats["count"] += 1
         _stats["sum_submit_duration"] += submit_duration
         _stats["sum_total_duration"] += total_duration
+        # 准确累计 AI 耗时
+        _stats.setdefault("sum_ai_duration", 0.0)
+        _stats["sum_ai_duration"] += ai_duration
         _stats["sum_tokens_per_s"] += tokens_per_s
         if status == "success":
             _stats["success_count"] += 1
@@ -294,7 +317,11 @@ class GradioUser(User):
             
             # 登录
             login_result = self.client.predict(usn=USERNAME, pwd=PASSWORD, api_name="/login_1")
-            self.logged_in = True
+            # 简单校验：返回非异常且不为空则认为成功（可按实际接口调整）
+            self.logged_in = bool(login_result)
+            if not self.logged_in:
+                logger.error(f"✗ 用户 {self.user_id} 登录失败：返回值为空或无效")
+                return
             
             # 获取用户的知识库文件列表
             try:
@@ -354,19 +381,7 @@ class GradioUser(User):
             if isinstance(submit_result, (list, tuple)) and len(submit_result) >= 3:
                 chat_history = submit_result[1]  # 带问题的 chat_history
                 conv_id_data = submit_result[2]  # conversation_id 数据
-                
-                # 提取真实的 conv_id（处理多种可能的数据格式）
-                if isinstance(conv_id_data, dict):
-                    if 'value' in conv_id_data:
-                        conv_id = conv_id_data['value']
-                    elif 'choices' in conv_id_data and len(conv_id_data['choices']) > 0:
-                        conv_id = conv_id_data['choices'][0] if isinstance(conv_id_data['choices'][0], str) else conv_id_data['choices'][0][1]
-                    else:
-                        conv_id = str(conv_id_data)
-                elif isinstance(conv_id_data, str):
-                    conv_id = conv_id_data
-                else:
-                    conv_id = str(conv_id_data)
+                conv_id = _normalize_conv_id(conv_id_data)
                     
                 note = f"conv_id={conv_id}"
                 logger.debug(f"提交消息成功，conv_id: {conv_id}")
@@ -493,19 +508,7 @@ class GradioUser(User):
             if isinstance(first_submit_result, (list, tuple)) and len(first_submit_result) >= 3:
                 first_chat_history = first_submit_result[1]
                 conv_id_data = first_submit_result[2]
-                
-                # 提取 conv_id（处理多种格式）
-                if isinstance(conv_id_data, dict):
-                    if 'value' in conv_id_data:
-                        conv_id = conv_id_data['value']
-                    elif 'choices' in conv_id_data and len(conv_id_data['choices']) > 0:
-                        conv_id = conv_id_data['choices'][0] if isinstance(conv_id_data['choices'][0], str) else conv_id_data['choices'][0][1]
-                    else:
-                        conv_id = str(conv_id_data)
-                elif isinstance(conv_id_data, str):
-                    conv_id = conv_id_data
-                else:
-                    conv_id = str(conv_id_data)
+                conv_id = _normalize_conv_id(conv_id_data)
                     
                 logger.debug(f"第一轮提交成功，conv_id: {conv_id}")
             else:
@@ -540,6 +543,19 @@ class GradioUser(User):
                 
         except Exception as e:
             logger.error(f"✗ {self.user_id} 第一轮对话失败: {str(e)}")
+            # 记录失败，避免成功率被高估
+            events.request.fire(
+                request_type="gradio",
+                name="/full_workflow_context_round1",
+                response_time=0,
+                response_length=0,
+                exception=e,
+                context={}
+            )
+            _record_result(
+                self.user_id, template.get("first", ""), "",
+                0, 0, 0, 0, "failure", "context_round1_error"
+            )
             return
 
         # === 第二轮对话（带上下文）===
@@ -701,17 +717,7 @@ class GradioUser(User):
             if isinstance(submit_result, (list, tuple)) and len(submit_result) >= 3:
                 chat_history = submit_result[1]
                 conv_id_data = submit_result[2]
-                if isinstance(conv_id_data, dict):
-                    if 'value' in conv_id_data:
-                        conv_id = conv_id_data['value']
-                    elif 'choices' in conv_id_data and len(conv_id_data['choices']) > 0:
-                        conv_id = conv_id_data['choices'][0] if isinstance(conv_id_data['choices'][0], str) else conv_id_data['choices'][0][1]
-                    else:
-                        conv_id = str(conv_id_data)
-                elif isinstance(conv_id_data, str):
-                    conv_id = conv_id_data
-                else:
-                    conv_id = str(conv_id_data)
+                conv_id = _normalize_conv_id(conv_id_data)
                 note += f",conv_id={conv_id}"
             else:
                 chat_history = [(question, None)]
@@ -824,17 +830,7 @@ class GradioUser(User):
             if isinstance(first_submit_result, (list, tuple)) and len(first_submit_result) >= 3:
                 first_chat_history = first_submit_result[1]
                 conv_id_data = first_submit_result[2]
-                if isinstance(conv_id_data, dict):
-                    if 'value' in conv_id_data:
-                        conv_id = conv_id_data['value']
-                    elif 'choices' in conv_id_data and len(conv_id_data['choices']) > 0:
-                        conv_id = conv_id_data['choices'][0] if isinstance(conv_id_data['choices'][0], str) else conv_id_data['choices'][0][1]
-                    else:
-                        conv_id = str(conv_id_data)
-                elif isinstance(conv_id_data, str):
-                    conv_id = conv_id_data
-                else:
-                    conv_id = str(conv_id_data)
+                conv_id = _normalize_conv_id(conv_id_data)
             else:
                 first_chat_history = [(template["first"], None)]
 
@@ -859,6 +855,18 @@ class GradioUser(User):
 
         except Exception as e:
             logger.error(f"✗ {self.user_id} 知识库第一轮失败: {str(e)}")
+            events.request.fire(
+                request_type="gradio",
+                name="/full_workflow_kb_context_round1",
+                response_time=0,
+                response_length=0,
+                exception=e,
+                context={}
+            )
+            _record_result(
+                self.user_id, template.get("first", ""), "",
+                0, 0, 0, 0, "failure", "kb_context_round1_error"
+            )
             return
 
         total_start = time.time()
@@ -967,14 +975,16 @@ def on_test_stop(environment, **kwargs):
         count = _stats.get("count", 0)
         success_count = _stats.get("success_count", 0)
         failure_count = _stats.get("failure_count", 0)
+        sum_ai = _stats.get("sum_ai_duration", 0.0)
         
         if count > 0:
             avg_submit = _stats["sum_submit_duration"] / count
             avg_total = _stats["sum_total_duration"] / count
+            avg_ai = sum_ai / count
             avg_tokens = _stats["sum_tokens_per_s"] / count
             success_rate = (success_count / count * 100)
         else:
-            avg_submit = avg_total = avg_tokens = success_rate = 0.0
+            avg_submit = avg_total = avg_ai = avg_tokens = success_rate = 0.0
 
         # 写入统计行（修复字段对齐）
         _ensure_results_file()
@@ -986,7 +996,7 @@ def on_test_stop(environment, **kwargs):
                 f"{count} samples",  # user_input
                 "",  # ai_response
                 f"{avg_submit:.3f}",  # submit_duration_s
-                f"{(avg_total-avg_submit):.3f}",  # ai_duration_s
+                f"{avg_ai:.3f}",  # ai_duration_s（直接累计）
                 f"{avg_total:.3f}",  # total_duration_s
                 f"{avg_tokens:.2f}",  # tokens_per_s
                 f"{success_count}✓/{failure_count}✗",  # status
@@ -1000,7 +1010,7 @@ def on_test_stop(environment, **kwargs):
     print(f"成功: {success_count} | 失败: {failure_count}")
     print(f"成功率: {success_rate:.1f}%")
     print(f"平均提交时间: {avg_submit:.3f}s")
-    print(f"平均AI响应时间: {avg_total-avg_submit:.3f}s")
+    print(f"平均AI响应时间: {avg_ai:.3f}s")
     print(f"平均总时间: {avg_total:.3f}s")
     print(f"平均生成速度: {avg_tokens:.2f} tokens/s")
     print(f"{'='*60}\n")
