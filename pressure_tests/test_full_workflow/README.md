@@ -1,5 +1,42 @@
 # 压测代码优化总结 (2025-12-05)
 
+## 🚀 如何运行（命令含义）
+
+运行示例：
+
+```bash
+locust -f locustfile.py --headless --users 3 --run-time 5m
+```
+
+- `-f locustfile.py`：指定压测脚本。
+- `--headless`：无 Web UI，直接在终端运行。
+- `--users 3`：并发虚拟用户数 3，每个用户独立登录、独立会话。
+- `--run-time 5m`：总运行 5 分钟后自动停止。
+
+预估请求次数：单个用户的循环周期 ≈ 请求耗时（submit+chat_fn，当前约 50–85s）+ wait_time（2–5s）。粗略估算每人 5 分钟能跑 3–5 个样本，3 个用户约 9–15 个样本，实际以接口耗时为准。
+
+## 📝 运行时日志含义
+
+- 每个任务的完成日志：展示提交时长、AI 时长、总耗时、tokens/s。
+- `note`/`kb_file`/`conv_id`：标记会话 ID、使用的知识库文件、是否落库（`persisted=yes/no/skip`）。
+- `样本数 (count)`：已写入 CSV 的记录数（成功或失败都会计入）。
+- 结束摘要（on_test_stop）：打印总样本数、成功/失败、平均提交时间、平均 AI 响应时间、平均总时间、平均生成速度。
+
+## 📑 CSV 字段说明
+
+CSV 文件名：`full_workflow_results_<timestamp>.csv`，每次运行生成一个新文件。
+
+字段含义：
+- `user_id`：虚拟用户 ID（如 user_1234）。
+- `user_input`：用户问题（截断 100 字）。
+- `ai_response`：AI 回复（截断 200 字）。
+- `submit_duration_s`：提交 `/submit_msg` 耗时（秒）。
+- `ai_duration_s`：`/chat_fn` 耗时（秒）。
+- `total_duration_s`：提交到生成完成的总耗时（秒）。
+- `tokens_per_s`：基于回复估算的生成速度。
+- `status`：`success` 或 `failure`。
+- `note`：附加信息（conv_id、kb_file、persisted=...、context 标记等）。
+
 ## 📋 需求清单
 
 - [x] **检查代码逻辑 Bug**
@@ -388,3 +425,23 @@ locust -f locustfile.py --headless --users 5 --run-time 1m
 ## ✅ 总结
 
 所有需求已完成，代码已优化，测试更全面、更可靠！
+
+
+背景：现在要进行全流程的压测代码进行完善，基本流程如下：
+1. 虚拟环境使用 source /Users/ai_diagnosis/projects/kotaemon/venv/bin/activate 
+2. 测试流程：cd /Users/ai_diagnosis/projects/kotaemon/pressure_tests/test_full_workflow && locust -f locustfile.py a--headless --users 3 --run-time 30s
+
+需求：
+当前测试问题都是没有挂载知识库的，locustfile.py代码里使用的那些挂在知识库的方法都没有用，例如下面使用@方式来指定文档代码不起作用，
+      test_questions_with_file = [
+            f'请根据 @"{file_name}" 总结该精神科病例的诊断要点与危险因素。',
+            f'@"{file_name}" 中的主要精神症状、病程及用药情况是什么？',
+            f'结合 @"{file_name}"，给出随访要点和复发预警建议。',
+            f'基于 @"{file_name}"，列出需进一步评估的风险（如自伤、自杀或他伤）。',
+        ]
+
+参考修改的代码：
+1. /Users/ai_diagnosis/projects/kotaemon/libs/ktem/ktem/index/file/ui.py
+2. /Users/ai_diagnosis/projects/kotaemon/pressure_tests/test_full_workflow/locustfile.py
+
+中文回答我，先梳理下当前压测逻辑，然后修改代码，尽量少修改代码并解决问题，并测试

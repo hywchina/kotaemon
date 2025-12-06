@@ -1672,9 +1672,11 @@ class FileSelector(BasePage):
 
     def get_selected_ids(self, components):
         mode, selected, user_id = components[0], components[1], components[2]
-        if user_id is None:
-            return []
 
+        # ## 压测debug
+        # if user_id is None:
+        #     return []
+        # 允许 user_id 为空时也能按选择的文件检索，方便压测/匿名模式
         if mode == "disabled":
             return []
         elif mode == "select":

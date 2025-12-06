@@ -31,56 +31,6 @@ if project_root not in sys.path:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# 是否使用知识库参数配置
-USE_KB = True  # 是否在部分任务中挂载知识库文件
-# 统一配置：问题模板（可按需修改）
-SIMPLE_QUESTIONS = [
-    "你好，请介绍一下你的功能。",
-    "你能帮我做什么？",
-    "请简单介绍一下你自己。",
-    "你有哪些主要功能？",
-    "如何使用这个系统？",
-]
-
-CONTEXT_TEMPLATES = [
-    {
-        "first": "患者男性，65岁，主诉胸闷3天。",
-        "second": "伴有气促，活动后加重。",
-    },
-    {
-        "first": "患者女性，45岁，血压180/100mmHg。",
-        "second": "既往有高血压病史10年，服药不规律。",
-    },
-    {
-        "first": "患者咳嗽2周，伴发热。",
-        "second": "体温38.5°C，有黄痰。",
-    },
-]
-
-# 知识库场景下的基础问题（会自动带上 @"文件名"）
-KB_SIMPLE_QUESTIONS = [
-    "请根据该文档总结主要内容。",
-    "文档中提到了什么重要信息？",
-    "请分析文档的关键观点。",
-    "这个文档的主题是什么？",
-]
-
-KB_CONTEXT_TEMPLATES = [
-    {
-        "first": "精神类疾病潜伏期大概多久",
-        "second": "这个病人有家族史吗？",
-    },
-    {
-        "first": "精神类疾病和神经类疾病有什么区别",
-        "second": "这个病人是什么类型的疾病，通过哪些诊断手段诊断处理的",
-    },
-    {
-        "first": "精神类疾病需要做哪些检查",
-        "second": "这个人住院住了多久大概需要多少钱",
-    },
-]
-
 # 导入数据库模型（延迟导入避免循环依赖）
 try:
     from libs.ktem.ktem.db.models import engine, Conversation
@@ -147,15 +97,16 @@ def _clone_selector_choices(file_choices):
 
 
 # 构造问题文本，按需附带知识库文件引用（@"filename" 语法）
-def _prepare_question(base_question, file_choices, force=USE_KB):
+def _prepare_question(base_question, file_choices, force=False, attach_ratio=0.3):
     """返回 (question_text, selector_choices_copy, kb_file_name)
 
-    force=True 时必定附带知识库；否则不附带。
+    force=True 时必定附带知识库；否则按概率 attach_ratio 添加。
     """
     if not file_choices:
         return base_question, [], None
 
-    if not force:
+    should_attach = force or random.random() < attach_ratio
+    if not should_attach:
         return base_question, [], None
 
     file_name, _ = random.choice(file_choices)
@@ -200,8 +151,8 @@ def _record_result(user_id, user_input, ai_response, submit_duration, ai_duratio
             writer = csv.writer(f)
             writer.writerow([
                 user_id,
-                user_input[:-1],
-                ai_response[:-1] if ai_response else "",
+                user_input[:100],
+                ai_response[:200] if ai_response else "",
                 f"{submit_duration:.3f}",
                 f"{ai_duration:.3f}",
                 f"{total_duration:.3f}",
@@ -316,13 +267,21 @@ class GradioUser(User):
 
     @task(3)
     def complete_simple_chat(self):
-        """任务1: 简单问答（不挂载知识库）"""
+        """任务1: 完整的简单问答流程（权重3）"""
         if not self.logged_in:
             return
+            
+        test_questions = [
+            "你好，请介绍一下你的功能。",
+            "你能帮我做什么？",
+            "请简单介绍一下你自己。",
+            "你有哪些主要功能？",
+            "如何使用这个系统？",
+        ]
 
-        base_question = random.choice(SIMPLE_QUESTIONS)
+        base_question = random.choice(test_questions)
         question, selector_choices, kb_file = _prepare_question(
-            base_question, [], force=False  # 不挂载知识库
+            base_question, self.file_choices, force=False, attach_ratio=0.3
         )
         
         # 每个任务创建新的会话名称和 ID
@@ -369,6 +328,8 @@ class GradioUser(User):
                     conv_id = str(conv_id_data)
                     
                 note = f"conv_id={conv_id}"
+                if kb_file:
+                    note += f",kb_file={kb_file}"
                 logger.debug(f"提交消息成功，conv_id: {conv_id}")
             else:
                 chat_history = [(question, None)]
@@ -463,13 +424,29 @@ class GradioUser(User):
 
     @task(2)
     def complete_context_chat(self):
-        """任务2: 多轮对话（不挂载知识库）"""
+        """任务2: 完整的多轮对话流程（权重2）"""
         if not self.logged_in:
             return
             
-        base_second = random.choice(CONTEXT_TEMPLATES)
+        conversation_templates = [
+            {
+                "first": "患者男性，65岁，主诉胸闷3天。",
+                "second": "伴有气促，活动后加重。"
+            },
+            {
+                "first": "患者女性，45岁，血压180/100mmHg。",
+                "second": "既往有高血压病史10年，服药不规律。"
+            },
+            {
+                "first": "患者咳嗽2周，伴发热。",
+                "second": "体温38.5°C，有黄痰。"
+            },
+        ]
+
+        # 为第二轮问题可选附带知识库文件
+        base_second = random.choice(conversation_templates)
         second_question, selector_choices_second, kb_file = _prepare_question(
-            base_second["second"], [], force=False  # 不挂载知识库
+            base_second["second"], self.file_choices, force=False, attach_ratio=0.3
         )
 
         template = base_second
@@ -562,10 +539,11 @@ class GradioUser(User):
             )
             submit_duration = time.time() - submit_start
             
-            # 确保第二轮用户问题写入历史
-            second_chat_history = updated_chat_history + [(second_question, None)]
-            if isinstance(second_submit_result, (list, tuple)) and len(second_submit_result) >= 2 and second_submit_result[1]:
+            # 解析结果
+            if isinstance(second_submit_result, (list, tuple)) and len(second_submit_result) >= 2:
                 second_chat_history = second_submit_result[1]
+            else:
+                second_chat_history = updated_chat_history + [(second_question, None)]
             
             # 获取第二轮 AI 回复
             ai_start = time.time()
@@ -658,49 +636,61 @@ class GradioUser(User):
             logger.error(f"✗ {self.user_id} 上下文对话失败: {str(e)}")
 
     @task(1)
-    def complete_simple_chat_with_kb(self):
-        """任务3: 简单问答（挂载知识库）"""
+    def complete_knowledge_base_chat(self):
+        """任务3: 使用知识库文件的问答流程（权重1）"""
         if not self.logged_in:
             return
-
-        if not USE_KB:
-            logger.debug("USE_KB=False，跳过知识库简单任务")
-            return
-
+            
+        # 如果没有知识库文件，跳过此任务
         if not self.file_choices:
-            logger.debug(f"{self.user_id} 没有知识库文件，跳过知识库简单对话")
+            logger.debug(f"{self.user_id} 没有知识库文件，跳过知识库测试")
             return
-
-        base_question = random.choice(KB_SIMPLE_QUESTIONS)
-        question, selector_choices, kb_file = _prepare_question(
-            base_question, self.file_choices, force=True
-        )
-
+        
+        # 随机选择一个文件
+        selected_file = random.choice(self.file_choices)
+        file_name = selected_file[0]  # (file_name, file_id)
+        file_id = selected_file[1]
+        
+        # 创建带文件引用的问题（使用 @"filename" 语法）
+        test_questions_with_file = [
+            f'请根据 @"{file_name}" 总结主要内容。',
+            f'@"{file_name}" 中提到了什么重要信息？',
+            f'请分析 @"{file_name}" 的关键观点。',
+            f'基于 @"{file_name}" 回答：这个文档的主题是什么？',
+        ]
+        
+        question = random.choice(test_questions_with_file)
+        
         # 每个任务创建新的会话名称和 ID
-        conv_name = f"压测_{self.user_id}_知识库简单_{int(time.time()*1000)}"
+        conv_name = f"压测_{self.user_id}_知识库_{int(time.time()*1000)}"
         conv_id = None
-
+        
+        # 记录总开始时间
         total_start = time.time()
         submit_duration = 0
         ai_duration = 0
         status = "success"
-        note = f"kb_file={kb_file}" if kb_file else "kb_file=unknown"
+        note = f"kb_file={file_name}"
         ai_response = ""
-
+        
         try:
+            # === 步骤1: 提交消息 (submit_msg) - 带知识库文件 ===
             submit_start = time.time()
             submit_result = self.client.predict(
                 chat_input={"text": question, "files": []},
                 chat_history=[],
                 conv_name=conv_name,
-                first_selector_choices=selector_choices,
+                first_selector_choices=_clone_selector_choices(self.file_choices),  # 传入文件列表
                 api_name="/submit_msg"
             )
             submit_duration = time.time() - submit_start
-
+            
+            # 解析 submit_msg 的返回值
             if isinstance(submit_result, (list, tuple)) and len(submit_result) >= 3:
                 chat_history = submit_result[1]
                 conv_id_data = submit_result[2]
+                
+                # 提取真实的 conv_id
                 if isinstance(conv_id_data, dict):
                     if 'value' in conv_id_data:
                         conv_id = conv_id_data['value']
@@ -712,49 +702,66 @@ class GradioUser(User):
                     conv_id = conv_id_data
                 else:
                     conv_id = str(conv_id_data)
+                    
                 note += f",conv_id={conv_id}"
+                logger.debug(f"知识库问答提交成功，conv_id: {conv_id}")
             else:
                 chat_history = [(question, None)]
-                logger.warning(f"知识库简单 submit_result 格式异常")
-
-            # 调用 chat_fn 并明确挂载文件
+                logger.warning(f"知识库 submit_result 格式异常")
+                
+            # === 步骤2: 调用 AI 生成回复 (chat_fn) ===
             ai_start = time.time()
             chat_result = self.client.predict(
                 chat_history=chat_history,
                 llm_type="",
                 use_citation="highlight",
                 language="zh",
-                param_11="select",
-                param_12=[f[1] for f in self.file_choices if f[0] == kb_file],
+                param_11="disabled",
+                param_12=[],
                 api_name="/chat_fn"
             )
             ai_duration = time.time() - ai_start
-
+            
+            # 提取 AI 回复
             ai_response = _extract_reply(chat_result)
-
+            
+            # === 步骤3: 保存到数据库 ===
             if conv_id and isinstance(chat_result, (list, tuple)) and len(chat_result) >= 1:
                 updated_chat_history = chat_result[0]
                 retrieval_msg = chat_result[1] if len(chat_result) > 1 else ""
+                
                 persist_success = _persist_to_db(conv_id, updated_chat_history, retrieval_msg)
-                note += ",persisted=yes" if persist_success else ",persisted=no"
+                if persist_success:
+                    note += ",persisted=yes"
+                else:
+                    note += ",persisted=no"
             else:
+                logger.warning(f"跳过知识库数据持久化: conv_id={conv_id}")
                 note += ",persisted=skip"
-
+            
+            # 计算总时间和速度
             total_duration = time.time() - total_start
-            chinese_chars = sum(1 for c in ai_response) if ai_response else 0
-            english_words = len([w for w in ai_response.split() if w.isascii()]) if ai_response else 0
-            estimated_tokens = chinese_chars * 1.5 + english_words
-            tokens_per_s = estimated_tokens / ai_duration if ai_duration > 0 else 0
+            
+            # 估算 tokens/s
+            if ai_response:
+                chinese_chars = sum(1 for c in ai_response if '\u4e00' <= c <= '\u9fff')
+                english_words = len([w for w in ai_response.split() if w.isascii()])
+                estimated_tokens = chinese_chars * 1.5 + english_words
+                tokens_per_s = estimated_tokens / ai_duration if ai_duration > 0 else 0
+            else:
+                tokens_per_s = 0
 
+            # 记录到 Locust
             events.request.fire(
                 request_type="gradio",
-                name="/full_workflow_kb_simple",
+                name="/full_workflow_kb",
                 response_time=total_duration * 1000,
                 response_length=len(str(ai_response)),
                 exception=None,
                 context={}
             )
 
+            # 记录到 CSV
             _record_result(
                 self.user_id, question, ai_response,
                 submit_duration, ai_duration, total_duration,
@@ -762,7 +769,8 @@ class GradioUser(User):
             )
 
             logger.info(
-                f"✓ {self.user_id} 知识库简单 | "
+                f"✓ {self.user_id} 完成知识库问答 | "
+                f"文件:{file_name[:20]} | "
                 f"提交:{submit_duration*1000:.0f}ms + AI:{ai_duration:.2f}s = "
                 f"总计:{total_duration:.2f}s | {tokens_per_s:.1f} tokens/s"
             )
@@ -771,189 +779,23 @@ class GradioUser(User):
             total_duration = time.time() - total_start
             status = "failure"
             note += f",error={str(e)[:100]}"
-
+            
             events.request.fire(
                 request_type="gradio",
-                name="/full_workflow_kb_simple",
+                name="/full_workflow_kb",
                 response_time=total_duration * 1000,
                 response_length=0,
                 exception=e,
                 context={}
             )
-
+            
             _record_result(
                 self.user_id, question, "",
                 submit_duration, ai_duration, total_duration,
                 0, status, note
             )
-
-            logger.error(f"✗ {self.user_id} 知识库简单失败: {str(e)}")
-
-    @task(1)
-    def complete_context_chat_with_kb(self):
-        """任务4: 多轮对话（挂载知识库）"""
-        if not self.logged_in:
-            return
-
-        if not USE_KB:
-            logger.debug("USE_KB=False，跳过知识库多轮任务")
-            return
-
-        if not self.file_choices:
-            logger.debug(f"{self.user_id} 没有知识库文件，跳过知识库多轮对话")
-            return
-
-        base_second = random.choice(KB_CONTEXT_TEMPLATES)
-        second_question, selector_choices_second, kb_file = _prepare_question(
-            base_second["second"], self.file_choices, force=True
-        )
-
-        template = base_second
-        conv_name = f"压测_{self.user_id}_知识库上下文_{int(time.time()*1000)}"
-        conv_id = None
-
-        try:
-            first_submit_result = self.client.predict(
-                chat_input={"text": template["first"], "files": []},
-                chat_history=[],
-                conv_name=conv_name,
-                first_selector_choices=_clone_selector_choices(self.file_choices),
-                api_name="/submit_msg"
-            )
-
-            if isinstance(first_submit_result, (list, tuple)) and len(first_submit_result) >= 3:
-                first_chat_history = first_submit_result[1]
-                conv_id_data = first_submit_result[2]
-                if isinstance(conv_id_data, dict):
-                    if 'value' in conv_id_data:
-                        conv_id = conv_id_data['value']
-                    elif 'choices' in conv_id_data and len(conv_id_data['choices']) > 0:
-                        conv_id = conv_id_data['choices'][0] if isinstance(conv_id_data['choices'][0], str) else conv_id_data['choices'][0][1]
-                    else:
-                        conv_id = str(conv_id_data)
-                elif isinstance(conv_id_data, str):
-                    conv_id = conv_id_data
-                else:
-                    conv_id = str(conv_id_data)
-            else:
-                first_chat_history = [(template["first"], None)]
-
-            first_chat_result = self.client.predict(
-                chat_history=first_chat_history,
-                llm_type="",
-                use_citation="highlight",
-                language="zh",
-                param_11="select",
-                param_12=[f[1] for f in self.file_choices if f[0] == kb_file],
-                api_name="/chat_fn"
-            )
-
-            if isinstance(first_chat_result, (list, tuple)) and len(first_chat_result) >= 1:
-                updated_chat_history = first_chat_result[0]
-                if conv_id:
-                    retrieval_msg_1 = first_chat_result[1] if len(first_chat_result) > 1 else ""
-                    _persist_to_db(conv_id, updated_chat_history, retrieval_msg_1)
-            else:
-                logger.error("第一轮对话失败")
-                return
-
-        except Exception as e:
-            logger.error(f"✗ {self.user_id} 知识库第一轮失败: {str(e)}")
-            return
-
-        total_start = time.time()
-        submit_duration = 0
-        ai_duration = 0
-        status = "success"
-        note = f"context=yes,kb_file={kb_file}"
-        ai_response = ""
-
-        try:
-            submit_start = time.time()
-            second_submit_result = self.client.predict(
-                chat_input={"text": second_question, "files": []},
-                chat_history=updated_chat_history,
-                conv_name=conv_name,
-                first_selector_choices=selector_choices_second,
-                api_name="/submit_msg"
-            )
-            submit_duration = time.time() - submit_start
-
-            # 确保第二轮用户问题写入历史
-            second_chat_history = updated_chat_history + [(second_question, None)]
-            if isinstance(second_submit_result, (list, tuple)) and len(second_submit_result) >= 2 and second_submit_result[1]:
-                second_chat_history = second_submit_result[1]
-
-            ai_start = time.time()
-            second_chat_result = self.client.predict(
-                chat_history=second_chat_history,
-                llm_type="",
-                use_citation="highlight",
-                language="zh",
-                param_11="select",
-                param_12=[f[1] for f in self.file_choices if f[0] == kb_file],
-                api_name="/chat_fn"
-            )
-            ai_duration = time.time() - ai_start
-
-            ai_response = _extract_reply(second_chat_result)
-
-            if conv_id and isinstance(second_chat_result, (list, tuple)) and len(second_chat_result) >= 1:
-                updated_chat_history = second_chat_result[0]
-                retrieval_msg = second_chat_result[1] if len(second_chat_result) > 1 else ""
-                persist_success = _persist_to_db(conv_id, updated_chat_history, retrieval_msg)
-                note += ",persisted=yes" if persist_success else ",persisted=no"
-            else:
-                note += ",persisted=skip"
-
-            total_duration = time.time() - total_start
-            chinese_chars = sum(1 for c in ai_response) if ai_response else 0
-            english_words = len([w for w in ai_response.split() if w.isascii()]) if ai_response else 0
-            estimated_tokens = chinese_chars * 1.5 + english_words
-            tokens_per_s = estimated_tokens / ai_duration if ai_duration > 0 else 0
-
-            events.request.fire(
-                request_type="gradio",
-                name="/full_workflow_kb_context",
-                response_time=total_duration * 1000,
-                response_length=len(str(ai_response)),
-                exception=None,
-                context={}
-            )
-
-            _record_result(
-                self.user_id, second_question, ai_response,
-                submit_duration, ai_duration, total_duration,
-                tokens_per_s, status, note
-            )
-
-            logger.info(
-                f"✓ {self.user_id} 知识库多轮 | "
-                f"提交:{submit_duration*1000:.0f}ms + AI:{ai_duration:.2f}s = "
-                f"总计:{total_duration:.2f}s | {tokens_per_s:.1f} tokens/s"
-            )
-
-        except Exception as e:
-            total_duration = time.time() - total_start
-            status = "failure"
-            note += f",error={str(e)[:100]}"
-
-            events.request.fire(
-                request_type="gradio",
-                name="/full_workflow_kb_context",
-                response_time=total_duration * 1000,
-                response_length=0,
-                exception=e,
-                context={}
-            )
-
-            _record_result(
-                self.user_id, second_question, "",
-                submit_duration, ai_duration, total_duration,
-                0, status, note
-            )
-
-            logger.error(f"✗ {self.user_id} 知识库多轮失败: {str(e)}")
+            
+            logger.error(f"✗ {self.user_id} 知识库问答失败: {str(e)}")
 
     def on_stop(self):
         """测试结束"""

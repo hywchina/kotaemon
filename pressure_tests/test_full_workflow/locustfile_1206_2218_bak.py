@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 # 是否使用知识库参数配置
-USE_KB = True  # 是否在部分任务中挂载知识库文件
+USE_KB = False  # 是否在部分任务中挂载知识库文件
 # 统一配置：问题模板（可按需修改）
 SIMPLE_QUESTIONS = [
     "你好，请介绍一下你的功能。",
