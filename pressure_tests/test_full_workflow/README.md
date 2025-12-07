@@ -395,6 +395,7 @@ python verify_results.py
 # 确保已上传文件到知识库
 # 然后运行测试
 locust -f locustfile.py --headless --users 5 --run-time 1m
+locust -f locustfile.py --headless --users 5 --spawn-rate 5 --run-time 1m # 默认spawn-rate=1，每秒增加1个用户
 
 # 检查日志
 # 应该看到 "知识库文件数: X"
