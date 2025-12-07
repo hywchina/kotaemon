@@ -1,3 +1,46 @@
+# 指标测试
+## 指标1:单用户核心功能平均响应时间 ≤5 秒验证（单用户、短时间观测平均）：
+locust -f locustfile.py --headless --users 1 --spawn-rate 1 --run-time 15m full_workflow_results_USE_KB_False_20251207_101752.csv
+
+总样本数: 52
+成功: 52 | 失败: 0
+成功率: 100.0%
+平均提交时间: 0.127s
+平均AI响应时间: 9.888s
+平均总时间: 10.018s
+平均生成速度: 125.45 tokens/s
+
+locust -f locustfile.py --headless --users 1 --spawn-rate 1 --run-time 15m full_workflow_results_USE_KB_True_20251207_103827.csv
+总样本数: 13 
+成功: 13 | 失败: 0
+成功率: 100.0%
+平均提交时间: 0.134s
+平均AI响应时间: 32.739s
+平均总时间: 32.877s
+平均生成速度: 27.01 tokens/s
+
+## 指标2:支持≥10个科研用户同时在线操作，且系统无卡顿，数据无丢失；支持 ≥10 个科研用户同时在线（并发 10，快速拉起，运行较长以稳定负载）：
+locust -f locustfile.py --headless --users 10 --spawn-rate 10 --run-time 60m  full_workflow_results_USE_KB_False_20251207_120632.csv
+
+AVERAGE	294 samples		0.12	84.974	85.096	16.47	294✓/0✗	success_rate=100.0%	FALSE	AVERAGE
+总样本数: 294
+成功: 294 | 失败: 0
+成功率: 100.0%
+平均提交时间: 0.12s
+平均AI响应时间: 84.974s
+平均总时间: 85.096s
+平均生成速度: 16.47 tokens/s
+
+locust -f locustfile.py --headless --users 10 --spawn-rate 10 --run-time 60m  full_workflow_results_USE_KB_True_20251207_105906.csv
+AVERAGE	84 samples		0.124	274.098	274.224	4.73	84✓/0✗	success_rate=100.0%	TRUE	AVERAGE
+总样本数: 84 
+成功: 84 | 失败: 0
+成功率: 100.0%
+平均提交时间: 0.124s
+平均AI响应时间: 274.098s
+平均总时间: 274.224s
+平均生成速度: 4.73 tokens/s
+
 # 压测代码优化总结 (2025-12-05)
 
 ## 🚀 如何运行（命令含义）
