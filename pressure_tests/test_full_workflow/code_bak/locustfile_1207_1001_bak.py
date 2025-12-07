@@ -185,10 +185,7 @@ def _prepare_question(base_question, file_choices, force=USE_KB):
 
 # 结果文件与线程安全计数器（添加时间戳）
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-# 添加创建路径的方法
-output_dir = os.path.join(os.path.dirname(__file__), "pressure_output")
-os.makedirs(output_dir, exist_ok=True)
-RESULTS_FILE = os.path.join(output_dir, f"full_workflow_results_USE_KB_{USE_KB}_{timestamp}.csv")
+RESULTS_FILE = os.path.join(os.path.dirname(__file__), f"full_workflow_results_USE_KB_{USE_KB}_{timestamp}.csv")
 _results_lock = threading.Lock()
 _stats = {
     "count": 0,
