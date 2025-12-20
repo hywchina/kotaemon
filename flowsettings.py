@@ -113,6 +113,8 @@ KH_VECTORSTORE = {  # 向量存储配置
 KH_LLMS = {}  # 语言模型配置
 KH_EMBEDDINGS = {}  # 嵌入配置
 KH_RERANKINGS = {}  # 重排序配置
+# 设置默认回答模式
+KH_CHAT_EMPTY_MSG_PLACEHOLDER = config("KH_CHAT_EMPTY_MSG_PLACEHOLDER", "(根据当前可参考的医学资料，暂无明确证据支持对此问题给出结论。为了安全起见，建议您咨询专业医生，进行进一步检查或评估。)")
 
 
 """temp settings for LLMs and embeddings"""
@@ -465,8 +467,8 @@ IS_OPENAI_DEFAULT = len(OPENAI_API_KEY) > 0 and OPENAI_API_KEY != OPENAI_DEFAULT
 KH_REASONINGS = [  # 推理配置
     "ktem.reasoning.simple.FullQAPipeline",
     "ktem.reasoning.simple.FullDecomposeQAPipeline",
-    "ktem.reasoning.react.ReactAgentPipeline",
-    "ktem.reasoning.rewoo.RewooAgentPipeline",
+    # "ktem.reasoning.react.ReactAgentPipeline",
+    # "ktem.reasoning.rewoo.RewooAgentPipeline",
 ]
 KH_REASONINGS_USE_MULTIMODAL = config("USE_MULTIMODAL", default=False, cast=bool)  # 是否使用多模态推理
 KH_VLM_ENDPOINT = "{0}/openai/deployments/{1}/chat/completions?api-version={2}".format(  # VLM端点配置

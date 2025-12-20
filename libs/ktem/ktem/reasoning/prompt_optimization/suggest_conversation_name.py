@@ -20,11 +20,11 @@ class SuggestConvNamePipeline(BaseComponent):
     #     "name without any extra."
     # )
     SUGGEST_NAME_PROMPT_TEMPLATE = (
-        "你是一位擅长为医疗诊断对话取简洁、准确、易记标题的专家。"
-        "根据上面的对话内容（医生提供患者病例，AI提供辅助诊断建议），"
-        "请生成一个合适的对话标题（最多 10 个词），"
-        "标题需准确反映病例的核心信息或诊断主题，避免使用敏感信息（如患者姓名）。"
-        "用 {lang} 回答。只输出标题，不要添加任何额外说明。"
+        "你是一位擅长为对话取好且令人印象深刻名称的专家。"
+        "基于以上的聊天记录，"
+        "请建议一个合适的对话名称（最多 10 个词）。"    
+        "请使用 {lang} 作答。"
+        "只输出对话名称本身，不要添加任何额外内容。"
     )
     prompt_template: str = SUGGEST_NAME_PROMPT_TEMPLATE
     lang: str = "Chinese"

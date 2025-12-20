@@ -75,6 +75,14 @@ class SettingsPage(BasePage):
         self._settings_dict = self._default_settings.flatten()
         self._settings_keys = list(self._settings_dict.keys())
 
+        # Exclude hidden reasoning option keys from component registration to avoid KeyError
+        hidden_reasoning_options = {"create_citation_viz", "use_multimodal"}
+        hidden_keys = set()
+        for pn in self._default_settings.reasoning.options.keys():
+            for opt in hidden_reasoning_options:
+                hidden_keys.add(f"reasoning.options.{pn}.{opt}")
+        self._settings_keys = [k for k in self._settings_keys if k not in hidden_keys]
+
         self._components = {}
         self._reasoning_mode = {}
 
@@ -337,6 +345,9 @@ class SettingsPage(BasePage):
                         info = reasoning.get_info()
                         gr.Markdown(f"**{info['name']}**: {info['description']}")
                     for n, si in sig.settings.items():
+                        # hide specific options from UI
+                        if n in ("create_citation_viz", "use_multimodal"):
+                            continue
                         obj = render_setting_item(si, si.value)
                         self._components[f"reasoning.options.{pn}.{n}"] = obj
                         if si.special_type == "llm":
