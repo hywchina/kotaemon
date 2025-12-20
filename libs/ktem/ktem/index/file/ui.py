@@ -277,7 +277,14 @@ class FileIndexPage(BasePage):
             self.group_files = gr.Dropdown(
                 label="关联文件",  # Attached files
                 multiselect=True,
+                filterable=True,
+                info="可搜索或下方一键全选",
             )
+            with gr.Row():
+                self.group_select_all_button = gr.Button(
+                    "全选",  # Select all files
+                    variant="secondary",
+                )
             self.group_save_button = gr.Button(
                 "保存",  # Save
                 variant="primary",
@@ -970,6 +977,15 @@ class FileIndexPage(BasePage):
                 self.selected_group_id,
             ],
         )
+        
+        self.group_select_all_button.click(
+            fn=lambda files: gr.update(
+                value=[item["id"] for item in files] if files else []
+            ),
+            inputs=[self.file_list_state],
+            outputs=[self.group_files],
+            show_progress="hidden",
+        )
 
         self.group_chat_button.click(
             fn=self.set_group_id_selector,
@@ -1530,7 +1546,8 @@ class FileIndexPage(BasePage):
 
     def delete_group(self, group_id):
         if not group_id:
-            raise gr.Error("No group is selected")
+            gr.Info("未选择分组")
+            return None
 
         FileGroup = self._index._resources["FileGroup"]
         with Session(engine) as session:
@@ -1563,7 +1580,13 @@ class FileIndexPage(BasePage):
     def interact_group_list(self, list_groups, ev: gr.SelectData):
         selected_id = ev.index[0]
         if (not ev.value or ev.value == "-") and selected_id == 0:
-            raise gr.Error("No group is selected")
+            gr.Info("未选择分组")
+            return (
+                "### Group Information",
+                None,
+                "",
+                [],
+            )
 
         selected_item = list_groups[selected_id]
         selected_group_id = selected_item["id"]
