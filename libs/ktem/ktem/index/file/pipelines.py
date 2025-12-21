@@ -696,12 +696,12 @@ class IndexDocumentPipeline(BaseFileIndexIndexing):
                 "value": "default",
                 "choices": [
                     ("Default (open-source)", "default"),
-                    ("Adobe API (figure+table extraction)", "adobe"),
-                    (
-                        "Azure AI Document Intelligence (figure+table extraction)",
-                        "azure-di",
-                    ),
-                    ("Docling (figure+table extraction)", "docling"),
+                    # ("Adobe API (figure+table extraction)", "adobe"),
+                    # (
+                    #     "Azure AI Document Intelligence (figure+table extraction)",
+                    #     "azure-di",
+                    # ),
+                    # ("Docling (figure+table extraction)", "docling"),
                 ],
                 "component": "dropdown",
             },
