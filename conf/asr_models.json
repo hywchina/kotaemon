@@ -1,0 +1,9 @@
+{
+  "models": [
+    {
+      "name": "fun-asr-nano-2512",
+      "model_name": "/home/huyanwei/projects/llm_cache/ms/model/Fun-ASR-Nano-2512",
+      "default": true
+    }
+  ]
+}

@@ -14,6 +14,8 @@ PID_FILE="$LOG_DIR/app.pid"
 PIPE_FILE="$LOG_DIR/app.pipe"
 ROTATE_PID_FILE="$LOG_DIR/rotate.pid"
 RERANK_PID_FILE="$RERANK_LOG_DIR/rerank.pid"
+ASR_PID_FILE="$RERANK_LOG_DIR/asr.pid"
+ASR_LATEST_FILE="$RERANK_LOG_DIR/asr.latest"
 
 DEFAULT_PORT=7860
 PORT="${2:-$DEFAULT_PORT}"
@@ -23,6 +25,12 @@ RERANK_HOST="0.0.0.0"
 RERANK_PORT="8001"
 RERANK_URL="http://127.0.0.1:${RERANK_PORT}/rerank"
 RERANK_APP="services.local_rerank_server:app"
+
+# ASR 服务配置
+ASR_HOST="0.0.0.0"
+ASR_PORT="8002"
+ASR_HEALTH_URL="http://127.0.0.1:${ASR_PORT}/health"
+ASR_APP="services.local_asr_server:app"
 
 # 环境变量配置
 export USE_GLOBAL_GRAPHRAG=False
@@ -63,6 +71,32 @@ start_rerank_service() {
     echo "[INFO] Rerank 服务已启动 (PID: $rerank_pid, 日志: $RERANK_LOG)"
 }
 
+start_asr_service() {
+    echo "[INFO] 启动 ASR 服务..."
+
+    if lsof -i:${ASR_PORT} >/dev/null 2>&1; then
+        echo "[INFO] 清理占用端口 ${ASR_PORT} 的进程..."
+        lsof -t -i:${ASR_PORT} | xargs kill -9 2>/dev/null || true
+        sleep 2
+    fi
+
+    local ASR_LOG="${RERANK_LOG_DIR}/asr_$(date '+%Y%m%d_%H%M%S').log"
+    local ASR_PIPE=$(mktemp -u)
+    mkfifo "$ASR_PIPE"
+
+    (while IFS= read -r line; do
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $line"
+    done < "$ASR_PIPE" >> "$ASR_LOG") &
+    local logger_pid=$!
+
+    nohup uvicorn "$ASR_APP" --host "$ASR_HOST" --port "$ASR_PORT" > "$ASR_PIPE" 2>&1 &
+    local asr_pid=$!
+    echo $asr_pid > "$ASR_PID_FILE"
+    echo "$ASR_LOG" > "$ASR_LATEST_FILE"
+
+    echo "[INFO] ASR 服务已启动 (PID: $asr_pid, 日志: $ASR_LOG)"
+}
+
 check_rerank_service() {
     echo "[INFO] 检查 Rerank 服务状态..."
     
@@ -96,6 +130,30 @@ check_rerank_service() {
     exit 1
 }
 
+check_asr_service() {
+    echo "[INFO] 检查 ASR 服务状态..."
+
+    local max_retry=30
+    local retry=0
+
+    while [ $retry -lt $max_retry ]; do
+        local http_code=$(curl -s -o /dev/null -w "%{http_code}" "$ASR_HEALTH_URL" --max-time 3 2>/dev/null || echo "000")
+        if [[ "$http_code" == "200" ]]; then
+            echo "[INFO] ASR 服务运行正常 ✓"
+            return 0
+        fi
+        retry=$((retry + 1))
+        if [ $retry -lt $max_retry ]; then
+            echo "[INFO] 等待 ASR 服务就绪... ($retry/$max_retry)"
+            sleep 1
+        fi
+    done
+
+    echo "[ERROR] ASR 服务启动失败或响应超时"
+    echo "[ERROR] 请检查日志: $RERANK_LOG_DIR"
+    exit 1
+}
+
 ensure_rerank_service() {
     # 检查服务是否已运行
     if lsof -i:${RERANK_PORT} >/dev/null 2>&1; then
@@ -115,6 +173,19 @@ ensure_rerank_service() {
     # 服务未运行或异常，启动服务
     start_rerank_service
     check_rerank_service
+}
+
+ensure_asr_service() {
+    if lsof -i:${ASR_PORT} >/dev/null 2>&1; then
+        local http_code=$(curl -s -o /dev/null -w "%{http_code}" "$ASR_HEALTH_URL" --max-time 3 2>/dev/null || echo "000")
+        if [[ "$http_code" == "200" ]]; then
+            echo "[INFO] ASR 服务已就绪 ✓"
+            return 0
+        fi
+    fi
+
+    start_asr_service
+    check_asr_service
 }
 
 rotate_log() {
@@ -168,8 +239,9 @@ stop_log_rotator() {
 }
 
 start_service() {
-    # 确保 Rerank 服务运行（自动启动并等待就绪）
+    # 确保 Rerank / ASR 服务运行（自动启动并等待就绪）
     ensure_rerank_service
+    ensure_asr_service
     
     if [[ -f "$PID_FILE" ]] && ps -p "$(cat "$PID_FILE")" >/dev/null 2>&1; then
         echo "[WARN] 服务已在运行中 (PID: $(cat "$PID_FILE"))"
@@ -240,6 +312,24 @@ stop_service() {
         echo "[INFO] 清理 Rerank 端口 ${RERANK_PORT}..."
         lsof -t -i:${RERANK_PORT} | xargs kill -9 2>/dev/null || true
     fi
+
+    # 停止 ASR 服务
+    if [[ -f "$ASR_PID_FILE" ]]; then
+        local asr_pid=$(cat "$ASR_PID_FILE")
+        if ps -p "$asr_pid" >/dev/null 2>&1; then
+            echo "[INFO] 停止 ASR 服务 (PID: $asr_pid)..."
+            kill "$asr_pid" 2>/dev/null || true
+            sleep 1
+            ps -p "$asr_pid" >/dev/null 2>&1 && kill -9 "$asr_pid" 2>/dev/null || true
+        fi
+        rm -f "$ASR_PID_FILE"
+    fi
+
+    # 清理 ASR 端口
+    if lsof -i:${ASR_PORT} >/dev/null 2>&1; then
+        echo "[INFO] 清理 ASR 端口 ${ASR_PORT}..."
+        lsof -t -i:${ASR_PORT} | xargs kill -9 2>/dev/null || true
+    fi
 }
 
 restart_service() {
@@ -292,6 +382,44 @@ status_service() {
     else
         echo "[INFO] Rerank 服务未运行"
     fi
+
+    echo ""
+    echo "========== ASR 服务状态 =========="
+    if [[ -f "$ASR_PID_FILE" ]]; then
+        local asr_pid=$(cat "$ASR_PID_FILE")
+        if ps -p "$asr_pid" >/dev/null 2>&1; then
+            echo "[INFO] ASR 服务正在运行 (PID: $asr_pid)"
+            echo "[INFO] 监听端口: ${ASR_PORT}"
+            echo "[INFO] 日志目录: ${RERANK_LOG_DIR}"
+
+            local http_code=$(curl -s -o /dev/null -w "%{http_code}" "$ASR_HEALTH_URL" --max-time 3 2>/dev/null || echo "000")
+            if [[ "$http_code" == "200" ]]; then
+                echo "[INFO] 健康状态: ✓ 正常"
+            else
+                echo "[WARN] 健康状态: ✗ 异常 (HTTP: $http_code)"
+            fi
+        else
+            echo "[INFO] ASR 服务未运行"
+        fi
+    else
+        echo "[INFO] ASR 服务未运行"
+    fi
+}
+
+show_asr_log() {
+    local latest_file
+    if [[ -f "$ASR_LATEST_FILE" ]]; then
+        latest_file=$(cat "$ASR_LATEST_FILE")
+    else
+        latest_file=$(ls -t "$RERANK_LOG_DIR"/asr_*.log 2>/dev/null | head -n 1 || true)
+    fi
+
+    if [[ -n "$latest_file" && -f "$latest_file" ]]; then
+        echo "[INFO] 跟踪 ASR 日志文件: $latest_file"
+        tail -n 50 -f "$latest_file"
+    else
+        echo "[INFO] 未找到 ASR 日志文件"
+    fi
 }
 
 show_log() {
@@ -326,6 +454,7 @@ case "${1:-}" in
     --restart) restart_service "${2:-}" ;;   # ✅ 修复：安全取参数
     --status) status_service ;;
     --log) show_log ;;
+    --asr-log) show_asr_log ;;
     --help|"") show_help ;;
     *)
         echo "[ERROR] 未知命令: $1"

@@ -129,15 +129,15 @@ KH_CHAT_EMPTY_MSG_PLACEHOLDER = config("KH_CHAT_EMPTY_MSG_PLACEHOLDER", "(根据
 #     "default": False,
 # }
 
-KH_LLMS["lmstudio-gpt-oss-20b"] = {  # LM Studio语言模型配置
-    "spec": {
-        "__type__": "kotaemon.llms.ChatOpenAI",
-        "base_url": "http://host.docker.internal:1234/v1",
-        "model": "openai/gpt-oss-20b",
-        "api_key": "lmstudio",
-    },
-    "default": True,
-}
+# KH_LLMS["lmstudio-gpt-oss-20b"] = {  # LM Studio语言模型配置
+#     "spec": {
+#         "__type__": "kotaemon.llms.ChatOpenAI",
+#         "base_url": "http://host.docker.internal:1234/v1",
+#         "model": "openai/gpt-oss-20b",
+#         "api_key": "lmstudio",
+#     },
+#     "default": True,
+# }
 
 
 # KH_LLMS["lmstudio-baichuan-m2-32b-mlx"] = {  # LM Studio语言模型配置
@@ -151,15 +151,15 @@ KH_LLMS["lmstudio-gpt-oss-20b"] = {  # LM Studio语言模型配置
 # }
 
 
-KH_EMBEDDINGS["lmstudio-text-embedding-bge-m3"] = {  # LM Studio嵌入配置
-    "spec": {
-        "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
-        "base_url": "http://host.docker.internal:1234/v1",
-        "model": "text-embedding-bge-m3",
-        "api_key": "lmstudio",
-    },
-    "default": True,
-}
+# KH_EMBEDDINGS["lmstudio-text-embedding-bge-m3"] = {  # LM Studio嵌入配置
+#     "spec": {
+#         "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+#         "base_url": "http://host.docker.internal:1234/v1",
+#         "model": "text-embedding-bge-m3",
+#         "api_key": "lmstudio",
+#     },
+#     "default": True,
+# }
 
 # KH_EMBEDDINGS["lmstudio-text-embedding-bge-large-zh-v1.5"] = {  # LM Studio嵌入配置
 #     "spec": {
@@ -194,29 +194,29 @@ KH_EMBEDDINGS["lmstudio-text-embedding-bge-m3"] = {  # LM Studio嵌入配置
 # }
 
 # # 类openai api llm 与 embeddings
-# KH_LLMS["无问芯穹-deepseek-r1"] = {  # OpenAI语言模型配置
-#     "spec": {
-#         "__type__": "kotaemon.llms.ChatOpenAI",
-#         "temperature": 0.5,
-#         "base_url": "https://cloud.infini-ai.com/maas/v1",
-#         "api_key": "sk-7xet3afg2b7fumjl",
-#         "model": "deepseek-r1",
-#         "timeout": 30,
-#     },
-#     "default": False,
-# }
+KH_LLMS["无问芯穹-deepseek-r1"] = {  # OpenAI语言模型配置
+    "spec": {
+        "__type__": "kotaemon.llms.ChatOpenAI",
+        "temperature": 0.5,
+        "base_url": "https://cloud.infini-ai.com/maas/v1",
+        "api_key": "sk-7xet3afg2b7fumjl",
+        "model": "deepseek-r1",
+        "timeout": 30,
+    },
+    "default": False,
+}
 
-# KH_LLMS["无问芯穹-gpt-4o"] = {  # OpenAI语言模型配置
-#     "spec": {
-#         "__type__": "kotaemon.llms.ChatOpenAI",
-#         "temperature": 0.5,
-#         "base_url": "https://cloud.infini-ai.com/maas/v1",
-#         "api_key": "sk-7xet3afg2b7fumjl",
-#         "model": "gpt-4o",
-#         "timeout": 30,
-#     },
-#     "default": False,
-# }
+KH_LLMS["无问芯穹-gpt-4o"] = {  # OpenAI语言模型配置
+    "spec": {
+        "__type__": "kotaemon.llms.ChatOpenAI",
+        "temperature": 0.5,
+        "base_url": "https://cloud.infini-ai.com/maas/v1",
+        "api_key": "sk-7xet3afg2b7fumjl",
+        "model": "gpt-4o",
+        "timeout": 30,
+    },
+    "default": True,
+}
 
 # KH_LLMS["无问芯穹-baichuan-m2-32b"] = {  # OpenAI语言模型配置
 #     "spec": {
@@ -230,17 +230,17 @@ KH_EMBEDDINGS["lmstudio-text-embedding-bge-m3"] = {  # LM Studio嵌入配置
 #     "default": False,
 # }
 
-# KH_EMBEDDINGS["无问芯穹-bge-m3"] = {  # OpenAI嵌入配置
-#     "spec": {
-#         "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
-#         "base_url": "https://cloud.infini-ai.com/maas/v1",
-#         "api_key": "sk-7xet3afg2b7fumjl",
-#         "model": "bge-m3",
-#         "timeout": 30,
-#         # "context_length": 8191, # 我也不知道
-#     },
-#     "default": False,
-# }
+KH_EMBEDDINGS["无问芯穹-bge-m3"] = {  # OpenAI嵌入配置
+    "spec": {
+        "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+        "base_url": "https://cloud.infini-ai.com/maas/v1",
+        "api_key": "sk-7xet3afg2b7fumjl",
+        "model": "bge-m3",
+        "timeout": 30,
+        # "context_length": 8191, # 我也不知道
+    },
+    "default": True,
+}
 
 # reranking model
 KH_RERANKINGS["local-bge-reranker-v2-m3"] = {  
