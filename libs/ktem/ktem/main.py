@@ -6,6 +6,7 @@ from ktem.pages.help import HelpPage
 from ktem.pages.resources import ResourcesTab
 from ktem.pages.settings import SettingsPage
 from ktem.pages.setup import SetupPage
+from ktem.pages.voice_assistant import VoiceAssistantPage
 from theflow.settings import settings as flowsettings
 
 KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
@@ -120,6 +121,17 @@ class App(BaseApp):
             ) as self._tabs["help-tab"]:
                 self.help_page = HelpPage(self)
 
+            ## 新添加 20260313 start
+            with gr.Tab(
+                label="语音助手",  # translate Voice Assistant --》语音助手
+                elem_id="voice-tab",
+                id="voice-tab",
+                visible=not self.f_user_management,
+                elem_classes=["fill-main-area-height", "scrollable"],
+            ) as self._tabs["voice-tab"]:
+                self.voice_page = VoiceAssistantPage(self)
+            ## 新添加 20260313 end
+                
         if KH_ENABLE_FIRST_SETUP:
             with gr.Column(visible=False) as self.setup_page_wrapper:
                 self.setup_page = SetupPage(self)
