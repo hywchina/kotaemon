@@ -365,14 +365,12 @@ class SettingsPage(BasePage):
         return output
 
     def load_setting(self, user_id=None):
-        settings = dict(self._settings_dict)
+        settings = self._settings_dict
         with Session(engine) as session:
             statement = select(Settings).where(Settings.user == user_id)
             result = session.exec(statement).all()
             if result:
-                saved = result[0].setting or {}
-                if isinstance(saved, dict):
-                    settings.update(saved)
+                settings = result[0].setting
 
         output = [settings]
         output += tuple(settings[name] for name in self.component_names())
@@ -385,12 +383,8 @@ class SettingsPage(BasePage):
             user_id: the user id
             args: all the values from the settings
         """
-        patch_setting = {
-            key: value for key, value in zip(self.component_names(), args)
-        }
-        setting = dict(self._settings_dict)
+        setting = {key: value for key, value in zip(self.component_names(), args)}
         if user_id is None:
-            setting.update(patch_setting)
             gr.Warning("Need to login before saving settings")
             return setting
 
@@ -398,13 +392,9 @@ class SettingsPage(BasePage):
             statement = select(Settings).where(Settings.user == user_id)
             try:
                 user_setting = session.exec(statement).one()
-                saved = user_setting.setting or {}
-                if isinstance(saved, dict):
-                    setting.update(saved)
             except Exception:
                 user_setting = Settings()
                 user_setting.user = user_id
-            setting.update(patch_setting)
             user_setting.setting = setting
             session.add(user_setting)
             session.commit()

@@ -372,10 +372,8 @@ class FullQAPipeline(BaseReasoning):
             settings[f"{prefix}.highlight_citation"] != "off"
         )
         answer_pipeline.enable_mindmap = settings[f"{prefix}.create_mindmap"]
-        answer_pipeline.enable_citation_viz = settings.get(
-            f"{prefix}.create_citation_viz", False
-        )
-        answer_pipeline.use_multimodal = settings.get(f"{prefix}.use_multimodal", False)
+        answer_pipeline.enable_citation_viz = settings[f"{prefix}.create_citation_viz"]
+        answer_pipeline.use_multimodal = settings[f"{prefix}.use_multimodal"]
         answer_pipeline.system_prompt = settings[f"{prefix}.system_prompt"]
         answer_pipeline.qa_template = settings[f"{prefix}.qa_prompt"]
         answer_pipeline.lang = SUPPORTED_LANGUAGE_MAP.get(
