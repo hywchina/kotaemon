@@ -10,16 +10,13 @@ from ktem.rerankings.manager import reranking_models_manager as rerankers
 from theflow.settings import settings as flowsettings
 
 KH_OLLAMA_URL = getattr(flowsettings, "KH_OLLAMA_URL", "http://localhost:11434/v1/")
+KH_USE_LOCAL_MODEL_PROFILE = getattr(flowsettings, "KH_USE_LOCAL_MODEL_PROFILE", False)
 DEFAULT_OLLAMA_URL = KH_OLLAMA_URL.replace("v1", "api")
 if DEFAULT_OLLAMA_URL.endswith("/"):
     DEFAULT_OLLAMA_URL = DEFAULT_OLLAMA_URL[:-1]
 
 
-DEMO_MESSAGE = (
-    "This is a public space. Please use the "
-    '"Duplicate Space" function on the top right '
-    "corner to setup your own space."
-)
+DEMO_MESSAGE = "这是公共空间，请复制应用后再配置自己的模型。"
 
 
 def pull_model(name: str, stream: bool = True):
@@ -47,7 +44,6 @@ def pull_model(name: str, stream: bool = True):
 
 
 class SetupPage(BasePage):
-
     public_events = ["onFirstSetupComplete"]
 
     def __init__(self, app):
@@ -55,23 +51,31 @@ class SetupPage(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        gr.Markdown(f"# Welcome to {self._app.app_name} first setup!")
-        self.radio_model = gr.Radio(
+        gr.Markdown(f"# 欢迎使用 {self._app.app_name}")
+        model_choices = []
+        if KH_USE_LOCAL_MODEL_PROFILE:
+            model_choices.append(("已配置的本地模型（推荐）", "lmstudio"))
+        model_choices.extend(
             [
-                ("Cohere API (*free registration*) - recommended", "cohere"),
-                ("Google API (*free registration*)", "google"),
-                ("OpenAI API (for GPT-based models)", "openai"),
-                ("Local LLM (for completely *private RAG*)", "ollama"),
-            ],
-            label="Select your model provider",
-            value="cohere",
-            info=(
-                "Note: You can change this later. "
-                "If you are not sure, go with the first option "
-                "which fits most normal users."
-            ),
+                ("Cohere API（免费注册）", "cohere"),
+                ("Google API（免费注册）", "google"),
+                ("OpenAI API", "openai"),
+                ("Ollama 本地模型", "ollama"),
+            ]
+        )
+        self.radio_model = gr.Radio(
+            model_choices,
+            label="选择模型服务",
+            value="lmstudio" if KH_USE_LOCAL_MODEL_PROFILE else "cohere",
+            info="稍后可在资源管理中修改模型配置。",
             interactive=True,
         )
+
+        with gr.Column(visible=KH_USE_LOCAL_MODEL_PROFILE) as self.lmstudio_option:
+            gr.Markdown(
+                "本地模型连接参数来自 `.env` 中的 `KH_LOCAL_*` 配置。"
+                "继续后会测试当前连接。"
+            )
 
         with gr.Column(visible=False) as self.openai_option:
             gr.Markdown(
@@ -118,11 +122,11 @@ class SetupPage(BasePage):
                 )
             )
             self.ollama_model_name = gr.Textbox(
-                label="LLM model name",
+                label="大语言模型名称",
                 value=config("LOCAL_MODEL", default="qwen2.5:7b"),
             )
             self.ollama_emb_model_name = gr.Textbox(
-                label="Embedding model name",
+                label="嵌入模型名称",
                 value=config("LOCAL_MODEL_EMBEDDINGS", default="nomic-embed-text"),
             )
 
@@ -131,10 +135,8 @@ class SetupPage(BasePage):
         )
 
         with gr.Row():
-            self.btn_finish = gr.Button("Proceed", variant="primary")
-            self.btn_skip = gr.Button(
-                "I am an advance user. Skip this.", variant="stop"
-            )
+            self.btn_finish = gr.Button("继续", variant="primary")
+            self.btn_skip = gr.Button("跳过设置", variant="stop")
 
     def on_register_events(self):
         onFirstSetupComplete = gr.on(
@@ -179,6 +181,7 @@ class SetupPage(BasePage):
             inputs=[self.radio_model],
             show_progress="hidden",
             outputs=[
+                self.lmstudio_option,
                 self.cohere_option,
                 self.openai_option,
                 self.ollama_option,
@@ -197,11 +200,13 @@ class SetupPage(BasePage):
     ):
         log_content = ""
         if not radio_model_value:
-            gr.Info("Skip setup models.")
+            gr.Info("跳过模型设置。")
             yield gr.value(visible=False)
             return
 
-        if radio_model_value == "cohere":
+        if radio_model_value == "lmstudio":
+            pass
+        elif radio_model_value == "cohere":
             if cohere_api_key:
                 llms.update(
                     name="cohere",
@@ -400,9 +405,9 @@ class SetupPage(BasePage):
         return default_settings
 
     def switch_options_view(self, radio_model_value):
-        components_visible = [gr.update(visible=False) for _ in range(4)]
+        components_visible = [gr.update(visible=False) for _ in range(5)]
 
-        values = ["cohere", "openai", "ollama", "google", None]
+        values = ["lmstudio", "cohere", "openai", "ollama", "google", None]
         assert radio_model_value in values, f"Invalid value {radio_model_value}"
 
         if radio_model_value is not None:

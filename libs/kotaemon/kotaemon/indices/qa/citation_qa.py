@@ -32,7 +32,7 @@ except ImportError:
     raise ImportError("Please install `ktem` to use this component")
 
 MAX_IMAGES = 10
-CITATION_TIMEOUT = 5.0
+CITATION_TIMEOUT = 10.0  # ori 5.0 --> 10.0
 CONTEXT_RELEVANT_WARNING_SCORE = config(
     "CONTEXT_RELEVANT_WARNING_SCORE", 0.3, cast=float
 )
@@ -388,8 +388,7 @@ class AnswerWithContextPipeline(BaseComponent):
             doc = id2docs[id_]
             doc_score = doc.metadata.get("llm_trulens_score", 0.0)
             is_open = not has_llm_score or (
-                doc_score
-                > CONTEXT_RELEVANT_WARNING_SCORE
+                doc_score > CONTEXT_RELEVANT_WARNING_SCORE
                 # and len(with_citation) == 0
             )
             without_citation.append(

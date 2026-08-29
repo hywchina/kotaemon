@@ -34,10 +34,11 @@ def is_conv_name_valid(name):
     """Check if the conversation name is valid"""
     errors = []
     if len(name) == 0:
-        errors.append("Name cannot be empty")
+        errors.append("名称不能为空")  # translate Name cannot be empty --》名称不能为空
     elif len(name) > 40:
-        errors.append("Name cannot be longer than 40 characters")
-
+        errors.append(
+            "名称长度不能超过40个字符"
+        )  # translate Name cannot be longer than 40 characters --》名称长度不能超过40个字符
     return "; ".join(errors)
 
 
@@ -51,7 +52,9 @@ class ConversationControl(BasePage):
 
     def on_building_ui(self):
         with gr.Row():
-            title_text = "Conversations" if not KH_DEMO_MODE else "Kotaemon Papers"
+            title_text = (
+                "辅助诊断记录" if not KH_DEMO_MODE else "Kotaemon 论文库"
+            )  # translate Conversations --》对话记录 | Kotaemon Papers --》Kotaemon 论文库
             gr.Markdown("## {}".format(title_text))
             self.btn_toggle_dark_mode = gr.Button(
                 value="",
@@ -90,7 +93,7 @@ class ConversationControl(BasePage):
 
         self.conversation_id = gr.State(value="")
         self.conversation = gr.Dropdown(
-            label="Chat sessions",
+            label="聊天会话",  # translate Chat sessions --》聊天会话
             choices=[],
             container=False,
             filterable=True,
@@ -102,7 +105,7 @@ class ConversationControl(BasePage):
         with gr.Row() as self._new_delete:
             self.cb_suggest_chat = gr.Checkbox(
                 value=False,
-                label="Suggest chat",
+                label="智能诊断建议",  # translate Suggest chat --》智能诊断建议
                 min_width=10,
                 scale=6,
                 elem_id="suggest-chat-checkbox",
@@ -111,7 +114,7 @@ class ConversationControl(BasePage):
             )
             self.cb_is_public = gr.Checkbox(
                 value=False,
-                label="Share this conversation",
+                label="分享当前会话",  # translate Share this conversation --》分享当前会话
                 elem_id="is-public-checkbox",
                 container=False,
                 visible=not KH_DEMO_MODE and not KH_SSO_ENABLED,
@@ -145,7 +148,7 @@ class ConversationControl(BasePage):
                 )
             else:
                 self.btn_new = gr.Button(
-                    value="New chat",
+                    value="新建会话",  # translate New chat --》新建会话
                     min_width=120,
                     size="sm",
                     scale=1,
@@ -157,7 +160,7 @@ class ConversationControl(BasePage):
         if KH_DEMO_MODE:
             with gr.Row():
                 self.btn_demo_login = gr.Button(
-                    "Sign-in to create new chat",
+                    value="请登录以创建新会话",  # translate Sign-in to create new chat --》请登录以创建新对话
                     min_width=120,
                     size="sm",
                     scale=1,
@@ -172,7 +175,7 @@ class ConversationControl(BasePage):
                 self.btn_demo_login.click(None, js=_js_redirect)
 
                 self.btn_demo_logout = gr.Button(
-                    "Sign-out",
+                    "退出登录",  # translate Sign-out --》退出登录
                     min_width=120,
                     size="sm",
                     scale=1,
@@ -181,16 +184,16 @@ class ConversationControl(BasePage):
 
         with gr.Row(visible=False) as self._delete_confirm:
             self.btn_del_conf = gr.Button(
-                value="Delete",
+                value="删除",  # translate Delete --》删除
                 variant="stop",
                 min_width=10,
             )
-            self.btn_del_cnl = gr.Button(value="Cancel", min_width=10)
+            self.btn_del_cnl = gr.Button(value="取消", min_width=10)  # Cancel
 
         with gr.Row():
             self.conversation_rn = gr.Text(
-                label="(Enter) to save",
-                placeholder="Conversation name",
+                label="(回车键)保存",  # translate (Enter) to save --》(回车键)保存
+                placeholder="会话名称",  # translate Conversation name --》会话名称
                 container=True,
                 scale=5,
                 min_width=10,
@@ -259,7 +262,9 @@ class ConversationControl(BasePage):
     def new_conv(self, user_id):
         """Create new chat"""
         if user_id is None:
-            gr.Warning("Please sign in first (Settings → User Settings)")
+            gr.Warning(
+                "请先登录（设置 → 用户设置）"
+            )  # translate Please sign in first (Settings → User Settings) --》请先登录（设置 → 用户设置）
             return None, gr.update()
         with Session(engine) as session:
             new_conv = Conversation(user=user_id)
@@ -275,11 +280,15 @@ class ConversationControl(BasePage):
     def delete_conv(self, conversation_id, user_id):
         """Delete the selected conversation"""
         if not conversation_id:
-            gr.Warning("No conversation selected.")
+            gr.Warning(
+                "未选择任何会话"
+            )  # translate No conversation selected --》未选择任何对话
             return None, gr.update()
 
         if user_id is None:
-            gr.Warning("Please sign in first (Settings → User Settings)")
+            gr.Warning(
+                "请先登录（设置 → 用户设置）"
+            )  # translate Please sign in first (Settings → User Settings) --》请先登录（设置 → 用户设置）
             return None, gr.update()
 
         with Session(engine) as session:
@@ -332,7 +341,7 @@ class ConversationControl(BasePage):
                 info_panel = (
                     retrieval_history[-1]
                     if retrieval_history
-                    else "<h5><b>No evidence found.</b></h5>"
+                    else "<h5><b>未找到相关证据。</b></h5>"  # translate No evidence found --》未找到相关证据
                 )
                 plot_data = plot_history[-1] if plot_history else None
                 state = result.data_source.get("state", STATE)
@@ -402,7 +411,7 @@ class ConversationControl(BasePage):
             session.commit()
 
         history = self.load_chat_history(user_id)
-        gr.Info("Conversation renamed.")
+        gr.Info("会话已重命名")  # translate Conversation renamed --》对话已重命名
         return (
             gr.update(choices=history),
             conversation_id,
@@ -417,11 +426,15 @@ class ConversationControl(BasePage):
             return
 
         if user_id is None:
-            gr.Warning("Please sign in first (Settings → User Settings)")
+            gr.Warning(
+                "请先登录（设置 → 用户设置）"
+            )  # translate Please sign in first (Settings → User Settings) --》请先登录（设置 → 用户设置）
             return gr.update(), ""
 
         if not conversation_id:
-            gr.Warning("No conversation selected.")
+            gr.Warning(
+                "未选中任何对话"
+            )  # translate No conversation selected --》未选中任何对话
             return gr.update(), ""
 
         with Session(engine) as session:
@@ -437,7 +450,9 @@ class ConversationControl(BasePage):
             session.add(result)
             session.commit()
 
-        gr.Info("Chat suggestions updated.")
+        gr.Info(
+            "辅助诊断建议已更新"
+        )  # translate Chat suggestions updated --》聊天建议已更新
 
     def toggle_demo_login_visibility(self, user_api_key, request: gr.Request):
         try:

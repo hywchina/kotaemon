@@ -42,7 +42,7 @@ class IndexManagement(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Tab(label="View"):
+        with gr.Tab(label="查看"):  # View
             self.index_list = gr.DataFrame(
                 headers=["id", "name", "index type"],
                 interactive=False,
@@ -54,11 +54,11 @@ class IndexManagement(BasePage):
                 with gr.Row():
                     with gr.Column():
                         self.edit_name = gr.Textbox(
-                            label="Index name",
+                            label="索引名称",  # Index name
                         )
                         self.edit_spec = gr.Textbox(
-                            label="Index config",
-                            info="Admin configuration of the Index in YAML format",
+                            label="索引配置",  # Index config
+                            info="管理员配置，使用YAML格式",  # Admin configuration of the Index in YAML format
                             lines=10,
                         )
 
@@ -69,40 +69,48 @@ class IndexManagement(BasePage):
                         )
                         with gr.Row():
                             self.btn_edit_save = gr.Button(
-                                "Save", min_width=10, variant="primary"
+                                "保存",
+                                min_width=10,
+                                variant="primary",  # Save
                             )
                             self.btn_delete = gr.Button(
-                                "Delete", min_width=10, variant="stop"
+                                "删除",
+                                min_width=10,
+                                variant="stop",  # Delete
                             )
                             with gr.Row(visible=False) as self._delete_confirm:
                                 self.btn_delete_yes = gr.Button(
-                                    "Confirm Delete",
+                                    "确认删除",  # Confirm Delete
                                     variant="stop",
                                     min_width=10,
                                 )
-                                self.btn_delete_no = gr.Button("Cancel", min_width=10)
-                            self.btn_close = gr.Button("Close", min_width=10)
+                                self.btn_delete_no = gr.Button(
+                                    "取消", min_width=10
+                                )  # Cancel
+                            self.btn_close = gr.Button("关闭", min_width=10)  # Close
 
                     with gr.Column():
-                        self.edit_spec_desc = gr.Markdown("# Spec description")
+                        self.edit_spec_desc = gr.Markdown(
+                            "# 规格描述"
+                        )  # Spec description
 
-        with gr.Tab(label="Add"):
+        with gr.Tab(label="新增") as self._add_tab:  # Add
             with gr.Row():
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
-                        label="Index name",
-                        info="Must be unique and non-empty.",
+                        label="索引名称",  # Index name
+                        info="必须唯一且非空。",  # Must be unique and non-empty.
                     )
-                    self.index_type = gr.Dropdown(label="Index type")
+                    self.index_type = gr.Dropdown(label="索引类型")  # Index type
                     self.spec = gr.Textbox(
-                        label="Specification",
-                        info="Specification of the index in YAML format.",
+                        label="配置规格",  # Specification
+                        info="索引配置，使用YAML格式",  # Specification of the index in YAML format.
                     )
                     gr.Markdown(
                         "<mark>Note</mark>: "
                         "After creating index, please restart the app"
                     )
-                    self.btn_new = gr.Button("Add", variant="primary")
+                    self.btn_new = gr.Button("添加", variant="primary")  # Add
 
                 with gr.Column(scale=3):
                     self.spec_desc = gr.Markdown(self.spec_desc_default)
@@ -141,9 +149,7 @@ class IndexManagement(BasePage):
                 self.spec,
                 self.spec_desc,
             ],
-        ).success(
-            update_current_module_atime
-        )
+        ).success(update_current_module_atime)
         self.index_list.select(
             self.select_index,
             inputs=self.index_list,
@@ -184,9 +190,11 @@ class IndexManagement(BasePage):
             inputs=[self.selected_index_id],
             outputs=[self.selected_index_id],
             show_progress="hidden",
-        ).then(self.list_indices, inputs=[], outputs=[self.index_list],).success(
-            update_current_module_atime
-        )
+        ).then(
+            self.list_indices,
+            inputs=[],
+            outputs=[self.index_list],
+        ).success(update_current_module_atime)
         self.btn_delete_no.click(
             lambda: (
                 gr.update(visible=True),
@@ -219,6 +227,84 @@ class IndexManagement(BasePage):
         self.btn_close.click(
             lambda: -1,
             outputs=[self.selected_index_id],
+        )
+
+    def on_subscribe_public_events(self):
+        # subscribe to sign in/out events to toggle index create/edit permissions
+        try:
+            self._app.subscribe_event(
+                name="onSignIn",
+                definition={
+                    "fn": self.toggle_index_permissions,
+                    "inputs": [self._app.user_id],
+                    "outputs": [
+                        # btn_new, selected panel, edit/save, delete, delete_yes, delete_no
+                        self.btn_new,
+                        self._selected_panel,
+                        self.btn_edit_save,
+                        self.btn_delete,
+                        self.btn_delete_yes,
+                        self.btn_delete_no,
+                        self._add_tab,
+                    ],
+                    "show_progress": "hidden",
+                },
+            )
+
+            self._app.subscribe_event(
+                name="onSignOut",
+                definition={
+                    "fn": self.toggle_index_permissions,
+                    "inputs": [self._app.user_id],
+                    "outputs": [
+                        self.btn_new,
+                        self._selected_panel,
+                        self.btn_edit_save,
+                        self.btn_delete,
+                        self.btn_delete_yes,
+                        self.btn_delete_no,
+                        self._add_tab,
+                    ],
+                    "show_progress": "hidden",
+                },
+            )
+        except Exception:
+            # no-op if event system not ready
+            pass
+
+    def toggle_index_permissions(self, user_id):
+        # default: hide create/edit controls
+        visible_for_admin = False
+        if not user_id:
+            visible_for_admin = False
+        else:
+            try:
+                from ktem.db.models import User, engine
+                from sqlmodel import Session, select
+
+                with Session(engine) as session:
+                    user = session.exec(select(User).where(User.id == user_id)).first()
+                    if user and user.admin:
+                        visible_for_admin = True
+            except Exception:
+                visible_for_admin = False
+
+        btn_new = gr.update(visible=visible_for_admin)
+        selected_panel = gr.update(visible=visible_for_admin)
+        btn_edit_save = gr.update(visible=visible_for_admin)
+        btn_delete = gr.update(visible=visible_for_admin)
+        btn_delete_yes = gr.update(visible=False)
+        btn_delete_no = gr.update(visible=False)
+        add_tab = gr.update(visible=visible_for_admin)
+
+        return (
+            btn_new,
+            selected_panel,
+            btn_edit_save,
+            btn_delete,
+            btn_delete_yes,
+            btn_delete_no,
+            add_tab,
         )
 
     def on_index_type_change(self, index_type: str):

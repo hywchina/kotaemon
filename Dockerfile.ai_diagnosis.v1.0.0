@@ -1,0 +1,48 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=UTF-8 \
+    TZ=Asia/Shanghai \
+    PATH=/app/.venv/bin:$PATH \
+    PDFJS_PREBUILT_DIR=/app/libs/ktem/ktem/assets/prebuilt/pdfjs-dist \
+    GRADIO_SERVER_NAME=0.0.0.0 \
+    GRADIO_SERVER_PORT=7860
+
+WORKDIR /app
+
+RUN apt-get update -qqy && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        cargo \
+        curl \
+        ffmpeg \
+        fontconfig \
+        fonts-noto-cjk \
+        fonts-wqy-microhei \
+        git \
+        libmagic-dev \
+        libpoppler-dev \
+        libreoffice \
+        poppler-utils \
+        tesseract-ocr \
+        tesseract-ocr-jpn \
+        unzip && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY scripts/download_pdfjs.sh /app/scripts/download_pdfjs.sh
+RUN bash /app/scripts/download_pdfjs.sh "$PDFJS_PREBUILT_DIR"
+
+RUN pip install --no-cache-dir uv
+
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-cache && \
+    /app/.venv/bin/python -c \
+        "from llama_index.core.readers.base import BaseReader; print(BaseReader)"
+
+EXPOSE 7860
+
+# Set KH_START_LOCAL_RERANK=true and mount the configured model directory when
+# the optional in-container reranker is required.
+CMD ["bash", "/app/run.sh", "foreground"]

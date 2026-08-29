@@ -47,6 +47,7 @@ from .report import ReportIssue
 KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_WEB_SEARCH_BACKEND = getattr(flowsettings, "KH_WEB_SEARCH_BACKEND", None)
+KH_ENABLE_URL_UPLOAD = getattr(flowsettings, "KH_ENABLE_URL_UPLOAD", False)
 WebSearch = None
 if KH_WEB_SEARCH_BACKEND:
     try:
@@ -57,11 +58,7 @@ if KH_WEB_SEARCH_BACKEND:
 REASONING_LIMITS = 2 if KH_DEMO_MODE else 10
 DEFAULT_SETTING = "(default)"
 INFO_PANEL_SCALES = {True: 8, False: 4}
-DEFAULT_QUESTION = (
-    "What is the summary of this document?"
-    if not KH_DEMO_MODE
-    else "What is the summary of this paper?"
-)
+DEFAULT_QUESTION = "请总结这份文档。" if not KH_DEMO_MODE else "请总结这篇论文。"
 
 chat_input_focus_js = """
 function() {
@@ -243,7 +240,7 @@ class ChatPage(BasePage):
                     index_name = index.name
 
                     if KH_DEMO_MODE and is_first_index:
-                        index_name = "Select from Paper Collection"
+                        index_name = "从论文库选择"
 
                     with gr.Accordion(
                         label=index_name,
@@ -278,10 +275,12 @@ class ChatPage(BasePage):
 
                 if len(self._app.index_manager.indices) > 0:
                     quick_upload_label = (
-                        "Quick Upload" if not KH_DEMO_MODE else "Or input new paper URL"
+                        "快速上传" if not KH_DEMO_MODE else "输入新论文 URL"
                     )
 
-                    with gr.Accordion(label=quick_upload_label) as _:
+                    with gr.Accordion(
+                        label=quick_upload_label
+                    ) as self.quick_upload_accordion:
                         self.quick_file_upload_status = gr.Markdown()
                         if not KH_DEMO_MODE:
                             self.quick_file_upload = File(
@@ -293,13 +292,14 @@ class ChatPage(BasePage):
                             )
                         self.quick_urls = gr.Textbox(
                             placeholder=(
-                                "Or paste URLs"
+                                "粘贴 URL"
                                 if not KH_DEMO_MODE
                                 else "Paste Arxiv URLs\n(https://arxiv.org/abs/xxx)"
                             ),
                             lines=1,
                             container=False,
                             show_label=False,
+                            visible=KH_DEMO_MODE or KH_ENABLE_URL_UPLOAD,
                             elem_id=(
                                 "quick-url" if not KH_DEMO_MODE else "quick-url-demo"
                             ),
@@ -308,7 +308,7 @@ class ChatPage(BasePage):
                 if not KH_DEMO_MODE:
                     self.report_issue = ReportIssue(self._app)
                 else:
-                    with gr.Accordion(label="Related papers", open=False):
+                    with gr.Accordion(label="相关论文", open=False):
                         self.related_papers = gr.Markdown(elem_id="related-papers")
 
                     self.hint_page = HintPage(self._app)
@@ -320,17 +320,15 @@ class ChatPage(BasePage):
                 self.chat_panel = ChatPanel(self._app)
 
                 with gr.Accordion(
-                    label="Chat settings",
+                    label="会话设置",
                     elem_id="chat-settings-expand",
                     open=False,
                     visible=not KH_DEMO_MODE,
                 ) as self.chat_settings:
                     with gr.Row(elem_id="quick-setting-labels"):
-                        gr.HTML("Reasoning method")
-                        gr.HTML(
-                            "Model", visible=not KH_DEMO_MODE and not KH_SSO_ENABLED
-                        )
-                        gr.HTML("Language")
+                        gr.HTML("推理方法")
+                        gr.HTML("模型", visible=not KH_DEMO_MODE and not KH_SSO_ENABLED)
+                        gr.HTML("语言")
 
                     with gr.Row():
                         reasoning_setting = (
@@ -378,7 +376,7 @@ class ChatPage(BasePage):
                         if not config("USE_LOW_LLM_REQUESTS", default=False, cast=bool):
                             self.use_mindmap = gr.State(value=True)
                             self.use_mindmap_check = gr.Checkbox(
-                                label="Mindmap (on)",
+                                label="思维导图（开启）",
                                 container=False,
                                 elem_id="use-mindmap-checkbox",
                                 value=True,
@@ -386,7 +384,7 @@ class ChatPage(BasePage):
                         else:
                             self.use_mindmap = gr.State(value=False)
                             self.use_mindmap_check = gr.Checkbox(
-                                label="Mindmap (off)",
+                                label="思维导图（关闭）",
                                 container=False,
                                 elem_id="use-mindmap-checkbox",
                                 value=False,
@@ -395,9 +393,7 @@ class ChatPage(BasePage):
             with gr.Column(
                 scale=INFO_PANEL_SCALES[False], elem_id="chat-info-panel"
             ) as self.info_column:
-                with gr.Accordion(
-                    label="Information panel", open=True, elem_id="info-expand"
-                ):
+                with gr.Accordion(label="信息面板", open=True, elem_id="info-expand"):
                     self.modal = gr.HTML("<div id='pdf-modal'></div>")
                     self.plot_panel = gr.Plot(visible=False)
                     self.info_panel = gr.HTML(elem_id="html-info-panel")
@@ -819,7 +815,10 @@ class ChatPage(BasePage):
             outputs=[self._reasoning_type],
         )
         self.use_mindmap_check.change(
-            lambda x: (x, gr.update(label="Mindmap " + ("(on)" if x else "(off)"))),
+            lambda x: (
+                x,
+                gr.update(label="思维导图（" + ("开启" if x else "关闭") + "）"),
+            ),
             inputs=[self.use_mindmap_check],
             outputs=[self.use_mindmap, self.use_mindmap_check],
             show_progress="hidden",
@@ -841,9 +840,7 @@ class ChatPage(BasePage):
             fn=raise_error_on_state,
             inputs=[self._use_suggestion],
             show_progress="hidden",
-        ).success(
-            **onSuggestChatEvent
-        )
+        ).success(**onSuggestChatEvent)
         self.chat_control.conversation_id.change(
             lambda: gr.update(visible=False),
             outputs=self.plot_panel,
@@ -908,7 +905,7 @@ class ChatPage(BasePage):
         mentions, chat_input_text = get_mentions_regex(chat_input_text)
 
         # check if web search command is in file_names
-        if WEB_SEARCH_COMMAND in mentions:
+        if WEB_SEARCH_COMMAND and WEB_SEARCH_COMMAND in mentions:
             used_command = WEB_SEARCH_COMMAND
 
         # get all file names in input_str
@@ -1010,7 +1007,7 @@ class ChatPage(BasePage):
 
     def on_set_public_conversation(self, is_public, convo_id):
         if not convo_id:
-            gr.Warning("No conversation selected")
+            gr.Warning("未选择会话")
             return
 
         with Session(engine) as session:
@@ -1026,9 +1023,7 @@ class ChatPage(BasePage):
                 session.add(result)
                 session.commit()
 
-                gr.Info(
-                    f"Conversation: {name} is {'public' if is_public else 'private'}."
-                )
+                gr.Info(f"会话“{name}”已设为{'公开' if is_public else '私有'}。")
 
     def on_subscribe_public_events(self):
         if self._app.f_user_management:
@@ -1063,6 +1058,29 @@ class ChatPage(BasePage):
                     "show_progress": "hidden",
                 },
             )
+
+            if hasattr(self, "quick_upload_accordion"):
+                for event_name in ("onSignIn", "onSignOut"):
+                    self._app.subscribe_event(
+                        name=event_name,
+                        definition={
+                            "fn": self.toggle_quick_upload_visibility,
+                            "inputs": [self._app.user_id],
+                            "outputs": [self.quick_upload_accordion],
+                            "show_progress": "hidden",
+                        },
+                    )
+
+    def toggle_quick_upload_visibility(self, user_id):
+        """Only administrators can add documents to the shared collection."""
+        if not user_id:
+            return gr.update(visible=False)
+
+        from ktem.db.models import User
+
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.id == user_id)).first()
+        return gr.update(visible=bool(user and user.admin))
 
     def _on_app_created(self):
         if KH_DEMO_MODE:
@@ -1237,9 +1255,9 @@ class ChatPage(BasePage):
             settings["reasoning.options.simple.create_mindmap"] = session_use_mindmap
 
         if session_use_citation not in (DEFAULT_SETTING, None):
-            settings[
-                "reasoning.options.simple.highlight_citation"
-            ] = session_use_citation
+            settings["reasoning.options.simple.highlight_citation"] = (
+                session_use_citation
+            )
 
         if session_language not in (DEFAULT_SETTING, None):
             settings["reasoning.lang"] = session_language
@@ -1247,7 +1265,7 @@ class ChatPage(BasePage):
         # get retrievers
         retrievers = []
 
-        if command_state == WEB_SEARCH_COMMAND:
+        if WEB_SEARCH_COMMAND and command_state == WEB_SEARCH_COMMAND:
             # set retriever for web search
             if not WebSearch:
                 raise ValueError("Web search back-end is not available.")
@@ -1359,7 +1377,6 @@ class ChatPage(BasePage):
                 conversation_id,
                 chat_history,
             ):
-
                 if not isinstance(response, Document):
                     continue
 

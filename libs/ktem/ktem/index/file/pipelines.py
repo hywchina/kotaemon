@@ -473,7 +473,7 @@ class IndexPipeline(BaseComponent):
             the file id if the file is indexed, otherwise None
         """
         file_name = file_path.name if isinstance(file_path, Path) else file_path
-        if self.private:
+        if self.private and not getattr(settings, "KH_SHARED_FILE_COLLECTION", False):
             cond: tuple = (
                 self.Source.name == file_name,
                 self.Source.user == self.user_id,
@@ -712,24 +712,34 @@ class IndexDocumentPipeline(BaseFileIndexIndexing):
 
     @classmethod
     def get_user_settings(cls):
+        loader_choices = [
+            ("Default (open-source)", "default"),
+            ("Adobe API (figure+table extraction)", "adobe"),
+            (
+                "Azure AI Document Intelligence (figure+table extraction)",
+                "azure-di",
+            ),
+            ("Docling (figure+table extraction)", "docling"),
+            (
+                "PaddleOCR PPStructureV3 (table+figure extraction)",
+                "paddle-struct",
+            ),
+            ("PaddleOCR-VL (VLM document parsing)", "paddle-vl"),
+        ]
+        enabled_loader_modes = {
+            item.strip()
+            for item in getattr(settings, "KH_FILE_LOADER_MODES", "default").split(",")
+            if item.strip()
+        }
+        enabled_loader_modes.add("default")
+        loader_choices = [
+            choice for choice in loader_choices if choice[1] in enabled_loader_modes
+        ]
         return {
             "reader_mode": {
                 "name": "File loader",
                 "value": "default",
-                "choices": [
-                    ("Default (open-source)", "default"),
-                    ("Adobe API (figure+table extraction)", "adobe"),
-                    (
-                        "Azure AI Document Intelligence (figure+table extraction)",
-                        "azure-di",
-                    ),
-                    ("Docling (figure+table extraction)", "docling"),
-                    (
-                        "PaddleOCR PPStructureV3 (table+figure extraction)",
-                        "paddle-struct",
-                    ),
-                    ("PaddleOCR-VL (VLM document parsing)", "paddle-vl"),
-                ],
+                "choices": loader_choices,
                 "component": "dropdown",
             },
         }
@@ -787,7 +797,7 @@ class IndexDocumentPipeline(BaseFileIndexIndexing):
                 chunk_size=chunk_size or 1024,
                 chunk_overlap=chunk_overlap or 256,
                 separator="\n\n",
-                backup_separators=["\n", ".", "\u200B"],
+                backup_separators=["\n", ".", "\u200b"],
             ),
             run_embedding_in_thread=self.run_embedding_in_thread,
             Source=self.Source,

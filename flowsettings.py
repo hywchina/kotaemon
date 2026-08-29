@@ -29,6 +29,7 @@ KH_GRADIO_SHARE = config("KH_GRADIO_SHARE", default=False, cast=bool)
 KH_ENABLE_FIRST_SETUP = config("KH_ENABLE_FIRST_SETUP", default=True, cast=bool)
 KH_DEMO_MODE = config("KH_DEMO_MODE", default=False, cast=bool)
 KH_OLLAMA_URL = config("KH_OLLAMA_URL", default="http://localhost:11434/v1/")
+KH_APP_NAME = config("KH_APP_NAME", default="AI 辅助诊断系统")
 
 # App can be ran from anywhere and it's not trivial to decide where to store app data.
 # So let's use the same directory as the flowsetting.py file.
@@ -74,6 +75,7 @@ KH_FEATURE_CHAT_SUGGESTION = config(
 KH_FEATURE_USER_MANAGEMENT = config(
     "KH_FEATURE_USER_MANAGEMENT", default=True, cast=bool
 )
+KH_SHARED_FILE_COLLECTION = config("KH_SHARED_FILE_COLLECTION", default=True, cast=bool)
 KH_USER_CAN_SEE_PUBLIC = None
 KH_FEATURE_USER_MANAGEMENT_ADMIN = str(
     config("KH_FEATURE_USER_MANAGEMENT_ADMIN", default="admin")
@@ -84,6 +86,19 @@ KH_FEATURE_USER_MANAGEMENT_PASSWORD = str(
 KH_ENABLE_ALEMBIC = False
 KH_DATABASE = f"sqlite:///{KH_USER_DATA_DIR / 'sql.db'}"
 KH_FILESTORAGE_PATH = str(KH_USER_DATA_DIR / "files")
+KH_CHAT_EMPTY_MSG_PLACEHOLDER = config(
+    "KH_CHAT_EMPTY_MSG_PLACEHOLDER",
+    default=(
+        "根据当前可参考的医学资料，暂无明确证据支持对此问题给出结论。"
+        "为了安全起见，建议您咨询专业医生，进行进一步检查或评估。"
+    ),
+)
+KH_WEB_SEARCH_COMMAND = config("KH_WEB_SEARCH_COMMAND", default="")
+KH_ENABLE_URL_UPLOAD = config("KH_ENABLE_URL_UPLOAD", default=False, cast=bool)
+KH_VOICE_ASSISTANT_URL = config(
+    "KH_VOICE_ASSISTANT_URL", default="https://localhost:17003/ws/v1/asr/test"
+)
+KH_ENABLE_VOICE_ASSISTANT = config("KH_ENABLE_VOICE_ASSISTANT", default=True, cast=bool)
 KH_WEB_SEARCH_BACKEND = (
     "kotaemon.indices.retrievers.tavily_web_search.WebSearch"
     # "kotaemon.indices.retrievers.jina_web_search.WebSearch"
@@ -316,12 +331,65 @@ KH_RERANKINGS["cohere"] = {
     "default": True,
 }
 
+# The fork is deployed with an OpenAI-compatible LM Studio endpoint and a local
+# TEI-style reranker. Keep the profile configurable and avoid embedding machine
+# paths or credentials in source control.
+KH_USE_LOCAL_MODEL_PROFILE = config(
+    "KH_USE_LOCAL_MODEL_PROFILE", default=True, cast=bool
+)
+if KH_USE_LOCAL_MODEL_PROFILE:
+    for model_group in (KH_LLMS, KH_EMBEDDINGS, KH_RERANKINGS):
+        for model_config in model_group.values():
+            model_config["default"] = False
+
+    local_model_base_url = config(
+        "KH_LOCAL_MODEL_BASE_URL", default="http://host.docker.internal:1234/v1"
+    )
+    local_model_api_key = config("KH_LOCAL_MODEL_API_KEY", default="lmstudio")
+    KH_LLMS["lmstudio"] = {
+        "spec": {
+            "__type__": "kotaemon.llms.ChatOpenAI",
+            "base_url": local_model_base_url,
+            "model": config("KH_LOCAL_CHAT_MODEL", default="openai/gpt-oss-20b"),
+            "api_key": local_model_api_key,
+        },
+        "default": True,
+    }
+    KH_EMBEDDINGS["lmstudio"] = {
+        "spec": {
+            "__type__": "kotaemon.embeddings.OpenAIEmbeddings",
+            "base_url": local_model_base_url,
+            "model": config(
+                "KH_LOCAL_EMBEDDING_MODEL", default="text-embedding-bge-m3"
+            ),
+            "api_key": local_model_api_key,
+        },
+        "default": True,
+    }
+    KH_RERANKINGS["local-bge-reranker-v2-m3"] = {
+        "spec": {
+            "__type__": "kotaemon.rerankings.TeiFastReranking",
+            "endpoint_url": config(
+                "KH_LOCAL_RERANK_URL", default="http://localhost:8001/rerank"
+            ),
+        },
+        "default": True,
+    }
+
 KH_REASONINGS = [
     "ktem.reasoning.simple.FullQAPipeline",
     "ktem.reasoning.simple.FullDecomposeQAPipeline",
-    "ktem.reasoning.react.ReactAgentPipeline",
-    "ktem.reasoning.rewoo.RewooAgentPipeline",
 ]
+if config("KH_ENABLE_AGENT_REASONINGS", default=False, cast=bool):
+    KH_REASONINGS.extend(
+        [
+            "ktem.reasoning.react.ReactAgentPipeline",
+            "ktem.reasoning.rewoo.RewooAgentPipeline",
+        ]
+    )
+KH_ENABLE_EXTERNAL_AGENT_TOOLS = config(
+    "KH_ENABLE_EXTERNAL_AGENT_TOOLS", default=False, cast=bool
+)
 KH_REASONINGS_USE_MULTIMODAL = config("USE_MULTIMODAL", default=False, cast=bool)
 KH_VLM_ENDPOINT = "{0}/openai/deployments/{1}/chat/completions?api-version={2}".format(
     config("AZURE_OPENAI_ENDPOINT", default=""),
@@ -342,7 +410,7 @@ SETTINGS_REASONING = {
     },
     "lang": {
         "name": "Language",
-        "value": "en",
+        "value": "zh",
         "choices": [(lang, code) for code, lang in SUPPORTED_LANGUAGE_MAP.items()],
         "component": "dropdown",
     },
@@ -353,10 +421,16 @@ SETTINGS_REASONING = {
     },
 }
 
-USE_GLOBAL_GRAPHRAG = config("USE_GLOBAL_GRAPHRAG", default=True, cast=bool)
+USE_GLOBAL_GRAPHRAG = config("USE_GLOBAL_GRAPHRAG", default=False, cast=bool)
 USE_NANO_GRAPHRAG = config("USE_NANO_GRAPHRAG", default=False, cast=bool)
-USE_LIGHTRAG = config("USE_LIGHTRAG", default=True, cast=bool)
-USE_MS_GRAPHRAG = config("USE_MS_GRAPHRAG", default=True, cast=bool)
+USE_LIGHTRAG = config("USE_LIGHTRAG", default=False, cast=bool)
+USE_MS_GRAPHRAG = config("USE_MS_GRAPHRAG", default=False, cast=bool)
+
+KH_SUPPORTED_FILE_TYPES = config(
+    "KH_SUPPORTED_FILE_TYPES",
+    default=".pdf, .txt, .md, .doc, .docx, .xls, .xlsx, .csv",
+)
+KH_FILE_LOADER_MODES = config("KH_FILE_LOADER_MODES", default="default")
 
 GRAPHRAG_INDEX_TYPES = []
 
@@ -377,10 +451,7 @@ GRAPHRAG_INDICES = [
         "name": graph_type.split(".")[-1].replace("Index", "")
         + " Collection",  # get last name
         "config": {
-            "supported_file_types": (
-                ".png, .jpeg, .jpg, .tiff, .tif, .pdf, .xls, .xlsx, .doc, .docx, "
-                ".pptx, .csv, .html, .mhtml, .txt, .md, .zip"
-            ),
+            "supported_file_types": KH_SUPPORTED_FILE_TYPES,
             "private": True,
         },
         "index_type": graph_type,
@@ -390,12 +461,9 @@ GRAPHRAG_INDICES = [
 
 KH_INDICES = [
     {
-        "name": "File Collection",
+        "name": "文件管理",
         "config": {
-            "supported_file_types": (
-                ".png, .jpeg, .jpg, .tiff, .tif, .pdf, .xls, .xlsx, .doc, .docx, "
-                ".pptx, .csv, .html, .mhtml, .txt, .md, .zip"
-            ),
+            "supported_file_types": KH_SUPPORTED_FILE_TYPES,
             "private": True,
         },
         "index_type": "ktem.index.file.FileIndex",

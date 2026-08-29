@@ -1,11 +1,3 @@
-# About Kotaemon
+# 关于系统
 
-An open-source tool for chatting with your documents. Built with both end users and
-developers in mind.
-
-[Source Code](https://github.com/Cinnamon/kotaemon) |
-[HF Space](https://huggingface.co/spaces/cin-model/kotaemon-demo)
-
-[Installation Guide](https://cinnamon.github.io/kotaemon/) |
-[Developer Guide](https://cinnamon.github.io/kotaemon/development/) |
-[Feedback](https://github.com/Cinnamon/kotaemon/issues)
+AI辅助诊断系统 基于RAG框架打造，专为医疗机构与临床医生设计。系统充分利用历史病例数据，结合智能检索与推理技术，能够快速定位相似病例并生成有价值的诊断参考。它不仅提升了诊断效率与准确性，还能帮助医生更全面地理解复杂病例，降低误诊风险。凭借友好的交互界面和灵活的扩展能力，该系统可无缝融入医院的临床工作流程，成为医生可靠的智能助手。

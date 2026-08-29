@@ -1,0 +1,11 @@
+{
+  "models": [
+    {
+      "name": "bge-reranker-v2-m3",
+      "model_name": "models/bge-reranker-v2-m3",
+      "batch_size": 32,
+      "max_length": 512,
+      "default": true
+    }
+  ]
+}

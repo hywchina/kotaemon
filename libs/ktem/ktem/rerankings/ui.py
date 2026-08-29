@@ -31,7 +31,7 @@ class RerankingManagement(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Tab(label="View"):
+        with gr.Tab(label="查看"):
             self.rerank_list = gr.DataFrame(
                 headers=["name", "vendor", "default"],
                 interactive=False,
@@ -43,7 +43,7 @@ class RerankingManagement(BasePage):
                 with gr.Row():
                     with gr.Column():
                         self.edit_default = gr.Checkbox(
-                            label="Set default",
+                            label="设为默认",
                             info=(
                                 "Set this Reranking model as default. This default "
                                 "Reranking will be used by other components by default "
@@ -51,21 +51,21 @@ class RerankingManagement(BasePage):
                             ),
                         )
                         self.edit_name = gr.Textbox(
-                            label="Name",
+                            label="名称",
                             info="Edit to rename this Reranking model.",
                         )
                         self.edit_spec = gr.Textbox(
-                            label="Specification",
+                            label="配置规格",
                             info="Specification of the Embedding model in YAML format",
                             lines=10,
                         )
 
                         with gr.Accordion(
-                            label="Test connection", visible=False, open=False
+                            label="测试连接", visible=False, open=False
                         ) as self._check_connection_panel:
                             with gr.Row():
                                 with gr.Column(scale=1):
-                                    self.btn_test_connection = gr.Button("Test")
+                                    self.btn_test_connection = gr.Button("测试")
                                 with gr.Column(scale=4):
                                     self.connection_logs = gr.HTML("Logs")
 
@@ -89,41 +89,41 @@ class RerankingManagement(BasePage):
                                         "Cancel", visible=False, min_width=10
                                     )
                             with gr.Column():
-                                self.btn_close = gr.Button("Close", min_width=10)
+                                self.btn_close = gr.Button("关闭", min_width=10)
 
                     with gr.Column():
-                        self.edit_spec_desc = gr.Markdown("# Spec description")
+                        self.edit_spec_desc = gr.Markdown("# 配置说明")
 
-        with gr.Tab(label="Add"):
+        with gr.Tab(label="新增"):
             with gr.Row():
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
-                        label="Name",
+                        label="重排序模型名称",
                         info=(
                             "Must be unique and non-empty. "
                             "The name will be used to identify the reranking model."
                         ),
                     )
                     self.rerank_choices = gr.Dropdown(
-                        label="Vendors",
+                        label="供应商",
                         info=(
                             "Choose the vendor of the Reranking model. Each vendor "
                             "has different specification."
                         ),
                     )
                     self.spec = gr.Textbox(
-                        label="Specification",
+                        label="配置规格",
                         info="Specification of the Embedding model in YAML format.",
                     )
                     self.default = gr.Checkbox(
-                        label="Set default",
+                        label="设为默认",
                         info=(
                             "Set this Reranking model as default. This default "
                             "Reranking will be used by other components by default "
                             "if no Reranking is specified for such components."
                         ),
                     )
-                    self.btn_new = gr.Button("Add", variant="primary")
+                    self.btn_new = gr.Button("添加重排序模型", variant="primary")
 
                 with gr.Column(scale=3):
                     self.spec_desc = gr.Markdown(self.spec_desc_default)

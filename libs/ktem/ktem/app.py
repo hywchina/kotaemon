@@ -39,7 +39,7 @@ class BaseApp:
 
     def __init__(self):
         self.dev_mode = getattr(settings, "KH_MODE", "") == "dev"
-        self.app_name = getattr(settings, "KH_APP_NAME", "Kotaemon")
+        self.app_name = getattr(settings, "KH_APP_NAME", "AI 辅助诊断系统")
         self.app_version = getattr(settings, "KH_APP_VERSION", "")
         self.f_user_management = getattr(settings, "KH_FEATURE_USER_MANAGEMENT", False)
         self._theme = KotaemonTheme()
@@ -61,7 +61,7 @@ class BaseApp:
         with (dir_assets / "js" / "svg-pan-zoom.min.js").open() as fi:
             self._svg_js = fi.read()
 
-        self._favicon = str(dir_assets / "img" / "favicon.svg")
+        self._favicon = str(dir_assets / "img" / "medicine-bottle.svg")
 
         self.default_settings = SettingGroup(
             application=BaseSettingGroup(settings=settings.SETTINGS_APP),
@@ -127,10 +127,10 @@ class BaseApp:
             if "reasoning" in functionality:
                 for rid, rdec in functionality["reasoning"].items():
                     unique_rid = f"{extension_declaration['id']}/{rid}"
-                    self.default_settings.reasoning.options[
-                        unique_rid
-                    ] = BaseSettingGroup(
-                        settings=rdec["settings"],
+                    self.default_settings.reasoning.options[unique_rid] = (
+                        BaseSettingGroup(
+                            settings=rdec["settings"],
+                        )
                     )
 
     def declare_event(self, name: str):

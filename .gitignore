@@ -5,6 +5,9 @@ activate*
 activate/*
 kotaemon-env*
 .env
+/models/
+/pressure_tests/**/pressure_output/
+/pressure_tests/**/*_results*.csv
 
 ### Emacs ###
 # -*- mode: gitignore; -*-

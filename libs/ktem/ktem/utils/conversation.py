@@ -11,8 +11,9 @@ def _normalize_mention(raw_mention: str) -> str:
     return mention
 
 
-# Quoted names, @WebSearch, or unquoted tokens (e.g. @pic**1.jpeg).
-_MENTION_PATTERN = rf"(?:(?<=\s)|^)@(?:\"[^\"]+\"|{WEB_SEARCH_COMMAND}|[^\s@]+)"
+# Quoted names, the optional web-search command, or unquoted file-name tokens.
+_web_search_pattern = rf"|{re.escape(WEB_SEARCH_COMMAND)}" if WEB_SEARCH_COMMAND else ""
+_MENTION_PATTERN = rf'(?:(?<=\s)|^)@(?:"[^"]+"{_web_search_pattern}|[^\s@]+)'
 
 _DISPLAY_MENTION_HTML_PATTERN = r"<strong>@([\s\S]*?)</strong>"
 

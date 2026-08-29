@@ -29,7 +29,7 @@ class LLMManagement(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Tab(label="View"):
+        with gr.Tab(label="查看"):  # View
             self.llm_list = gr.DataFrame(
                 headers=["name", "vendor", "default"],
                 interactive=False,
@@ -41,7 +41,7 @@ class LLMManagement(BasePage):
                 with gr.Row():
                     with gr.Column():
                         self.edit_default = gr.Checkbox(
-                            label="Set default",
+                            label="设为默认",  # Set default
                             info=(
                                 "Set this LLM as default. If no default is set, "
                                 "a random LLM will be used. "
@@ -50,21 +50,23 @@ class LLMManagement(BasePage):
                             ),
                         )
                         self.edit_name = gr.Textbox(
-                            label="Name",
+                            label="名称",
                             info="Edit to rename this LLM.",
                         )
                         self.edit_spec = gr.Textbox(
-                            label="Specification",
-                            info="Specification of the LLM in YAML format",
+                            label="配置规格",  # Specification
+                            info="YAML格式的语言模型配置",  # Specification of the LLM in YAML format
                             lines=10,
                         )
 
                         with gr.Accordion(
-                            label="Test connection", visible=False, open=False
+                            label="测试连接",
+                            visible=False,
+                            open=False,  # Test connection
                         ) as self._check_connection_panel:
                             with gr.Row():
                                 with gr.Column(scale=1):
-                                    self.btn_test_connection = gr.Button("Test")
+                                    self.btn_test_connection = gr.Button("测试")
                                 with gr.Column(scale=4):
                                     self.connection_logs = gr.HTML("Logs")
 
@@ -88,39 +90,44 @@ class LLMManagement(BasePage):
                                         "Cancel", visible=False, min_width=10
                                     )
                             with gr.Column():
-                                self.btn_close = gr.Button("Close", min_width=10)
+                                self.btn_close = gr.Button(
+                                    "关闭", min_width=10
+                                )  # Close
 
                     with gr.Column():
-                        self.edit_spec_desc = gr.Markdown("# Spec description")
+                        self.edit_spec_desc = gr.Markdown(
+                            "# 规格描述"
+                        )  # Spec description
 
-        with gr.Tab(label="Add"):
+        with gr.Tab(label="新增"):  # Add
             with gr.Row():
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
-                        label="LLM name",
+                        label="语言模型名称",  # LLM name
                         info=(
                             "Must be unique. The name will be used to identify the LLM."
                         ),
                     )
                     self.llm_choices = gr.Dropdown(
-                        label="LLM vendors",
+                        label="语言模型供应商",  # LLM vendors
                         info=(
-                            "Choose the vendor for the LLM. Each vendor has different "
-                            "specification."
+                            "选择语言模型供应商。每个供应商有不同的配置规格。"  # Choose the vendor for the LLM. Each vendor has different specification.
                         ),
                     )
                     self.spec = gr.Textbox(
-                        label="Specification",
-                        info="Specification of the LLM in YAML format",
+                        label="配置规格",  # Specification
+                        info="YAML格式的配置",  # Specification of the LLM in YAML format
                     )
                     self.default = gr.Checkbox(
-                        label="Set default",
+                        label="设为默认",  # Set default
                         info=(
-                            "Set this LLM as default. This default LLM will be used "
+                            "设为默认语言模型。该模型将用于推理。"  # Set this LLM as default. This default LLM will be used for reasoning
                             "by default across the application."
                         ),
                     )
-                    self.btn_new = gr.Button("Add LLM", variant="primary")
+                    self.btn_new = gr.Button(
+                        "添加语言模型", variant="primary"
+                    )  # Add LLM
 
                 with gr.Column(scale=3):
                     self.spec_desc = gr.Markdown(self.spec_desc_default)

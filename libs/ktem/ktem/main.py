@@ -6,11 +6,13 @@ from ktem.pages.help import HelpPage
 from ktem.pages.resources import ResourcesTab
 from ktem.pages.settings import SettingsPage
 from ktem.pages.setup import SetupPage
+from ktem.pages.voice_assistant import VoiceAssistantPage
 from theflow.settings import settings as flowsettings
 
 KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_ENABLE_FIRST_SETUP = getattr(flowsettings, "KH_ENABLE_FIRST_SETUP", False)
+KH_ENABLE_VOICE_ASSISTANT = getattr(flowsettings, "KH_ENABLE_VOICE_ASSISTANT", True)
 KH_APP_DATA_EXISTS = getattr(flowsettings, "KH_APP_DATA_EXISTS", True)
 
 # override first setup setting
@@ -48,12 +50,14 @@ class App(BaseApp):
                 from ktem.pages.login import LoginPage
 
                 with gr.Tab(
-                    "Welcome", elem_id="login-tab", id="login-tab"
+                    "欢迎",
+                    elem_id="login-tab",
+                    id="login-tab",  # translate Welcome --》欢迎
                 ) as self._tabs["login-tab"]:
                     self.login_page = LoginPage(self)
 
             with gr.Tab(
-                "Chat",
+                "辅助诊断",  # translate Chat --》辅助诊断
                 elem_id="chat-tab",
                 id="chat-tab",
                 visible=not self.f_user_management,
@@ -77,7 +81,7 @@ class App(BaseApp):
                         setattr(self, f"_index_{index.id}", page)
             elif len(self.index_manager.indices) > 1:
                 with gr.Tab(
-                    "Files",
+                    "文件管理",  # translate Files --》文件管理
                     elem_id="indices-tab",
                     elem_classes=["fill-main-area-height", "scrollable", "indices-tab"],
                     id="indices-tab",
@@ -94,7 +98,7 @@ class App(BaseApp):
             if not KH_DEMO_MODE:
                 if not KH_SSO_ENABLED:
                     with gr.Tab(
-                        "Resources",
+                        "资源管理",  # translate Resources --》资源管理
                         elem_id="resources-tab",
                         id="resources-tab",
                         visible=not self.f_user_management,
@@ -103,7 +107,7 @@ class App(BaseApp):
                         self.resources_page = ResourcesTab(self)
 
                 with gr.Tab(
-                    "Settings",
+                    "系统设置",  # translate Settings --》系统设置
                     elem_id="settings-tab",
                     id="settings-tab",
                     visible=not self.f_user_management,
@@ -112,13 +116,23 @@ class App(BaseApp):
                     self.settings_page = SettingsPage(self)
 
             with gr.Tab(
-                "Help",
+                "帮助中心",  # translate Help --》帮助中心
                 elem_id="help-tab",
                 id="help-tab",
                 visible=not self.f_user_management,
                 elem_classes=["fill-main-area-height", "scrollable"],
             ) as self._tabs["help-tab"]:
                 self.help_page = HelpPage(self)
+
+            if KH_ENABLE_VOICE_ASSISTANT:
+                with gr.Tab(
+                    label="语音助手",
+                    elem_id="voice-tab",
+                    id="voice-tab",
+                    visible=not self.f_user_management,
+                    elem_classes=["fill-main-area-height", "scrollable"],
+                ) as self._tabs["voice-tab"]:
+                    self.voice_page = VoiceAssistantPage(self)
 
         if KH_ENABLE_FIRST_SETUP:
             with gr.Column(visible=False) as self.setup_page_wrapper:
@@ -151,15 +165,23 @@ class App(BaseApp):
                                 else gr.update(visible=False)
                             )
                             for k in self._tabs.keys()
-                        )
+                        ) + [gr.update(selected="login-tab")]
 
                     is_admin = user.admin
+
+                # determine which tabs belong to index management
+                index_keys = {f"{index.id}-tab" for index in self.index_manager.indices}
+                index_group_key = "indices-tab"
 
                 tabs_update = []
                 for k in self._tabs.keys():
                     if k == "login-tab":
                         tabs_update.append(gr.update(visible=False))
                     elif k == "resources-tab":
+                        # 资源管理 仅 admin 可见
+                        tabs_update.append(gr.update(visible=is_admin))
+                    elif k == index_group_key or k in index_keys:
+                        # 文件管理 仅 admin 可见
                         tabs_update.append(gr.update(visible=is_admin))
                     else:
                         tabs_update.append(gr.update(visible=True))

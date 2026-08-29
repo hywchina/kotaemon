@@ -3,6 +3,7 @@ import logging
 from difflib import SequenceMatcher
 from typing import AnyStr, Generator, Optional, Type
 
+from decouple import config
 from ktem.llms.manager import llms
 from ktem.mcp.manager import MCP_TOOL_PREFIX, mcp_manager
 from ktem.reasoning.base import BaseReasoning
@@ -334,7 +335,11 @@ class RewooAgentPipeline(BaseReasoning):
         return outputs
 
     async def ainvoke(  # type: ignore
-        self, message, conv_id: str, history: list, **kwargs  # type: ignore
+        self,
+        message,
+        conv_id: str,
+        history: list,
+        **kwargs,  # type: ignore
     ) -> Document:
         answer = self.agent(message, use_citation=True)
         self.report_output(Document(content=answer.text, channel="chat"))
@@ -347,7 +352,11 @@ class RewooAgentPipeline(BaseReasoning):
         return answer
 
     def stream(  # type: ignore
-        self, message, conv_id: str, history: list, **kwargs  # type: ignore
+        self,
+        message,
+        conv_id: str,
+        history: list,
+        **kwargs,  # type: ignore
     ) -> Generator[Document, None, Document] | None:
         if self.use_rewrite:
             rewrite = self.rewrite_pipeline(question=message)
@@ -443,7 +452,6 @@ class RewooAgentPipeline(BaseReasoning):
 
     @classmethod
     def get_user_settings(cls) -> dict:
-
         llm = ""
         llm_choices = [("(default)", "")]
         try:
@@ -451,7 +459,9 @@ class RewooAgentPipeline(BaseReasoning):
         except Exception as e:
             logger.exception(f"Failed to get LLM options: {e}")
 
-        tool_choices = ["Wikipedia", "Google", "LLM", "SearchDoc"]
+        tool_choices = ["LLM", "SearchDoc"]
+        if config("KH_ENABLE_EXTERNAL_AGENT_TOOLS", default=False, cast=bool):
+            tool_choices = ["Wikipedia", "Google", *tool_choices]
         try:
             tool_choices += mcp_manager.list_registered_mcp_servers()
         except Exception as e:
