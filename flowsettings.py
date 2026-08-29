@@ -52,8 +52,12 @@ if KH_HOSPITAL_MODE:
     os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
     os.environ.setdefault("CHROMA_TELEMETRY_IMPL", "")
     os.environ.setdefault("HAYSTACK_TELEMETRY_ENABLED", "False")
+    os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
     os.environ.setdefault("SCARF_NO_ANALYTICS", "true")
     os.environ.setdefault("DO_NOT_TRACK", "1")
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
     os.environ.setdefault("KH_DISABLE_TOKENIZER_DOWNLOADS", "true")
     os.environ.setdefault(
         "NLTK_DATA", str(this_dir / "libs/ktem/ktem/assets/nltk_data")

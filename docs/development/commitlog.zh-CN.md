@@ -115,3 +115,14 @@
 - **安全与运维**：容器使用宿主当前 UID/GID、丢弃 Linux capabilities、禁止权限
   提升并内置健康检查。新增中文手册说明联网构建/内网运行边界、镜像校验、模型
   切换、故障编号、备份、升级、回滚和上线验收清单。
+
+## `fix: disable framework network checks`
+
+- **改造动机**：完全断网启动回归发现，虽然业务功能和静态资源均已离线化，Gradio
+  仍会在后台线程获取官方提示文案；Hugging Face/Transformers 组件在缓存缺失时也
+  可能尝试下载模型或数据集。
+- **改动范围**：医院模式在任何 Gradio 页面构建前关闭 Analytics/在线文案更新，
+  同时启用 Hugging Face Hub、Datasets 和 Transformers 离线开关；Docker 运行镜像
+  也显式固定相同环境变量，避免入口脚本差异绕过设置。
+- **验证结果**：使用 Socket 拦截器构建完整 UI（423 个组件、247 条依赖）时，模型
+  池仅保留 GeekAI 配置、MCP 关闭、页面 Head 不含公网 URL，后台网络连接尝试为 0。
