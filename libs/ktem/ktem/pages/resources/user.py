@@ -133,17 +133,23 @@ class UserManagement(BasePage):
         self._app = app
 
         self.on_building_ui()
-        if hasattr(flowsettings, "KH_FEATURE_USER_MANAGEMENT_ADMIN") and hasattr(
-            flowsettings, "KH_FEATURE_USER_MANAGEMENT_PASSWORD"
-        ):
-            usn = flowsettings.KH_FEATURE_USER_MANAGEMENT_ADMIN
-            pwd = flowsettings.KH_FEATURE_USER_MANAGEMENT_PASSWORD
+        usn = getattr(flowsettings, "KH_FEATURE_USER_MANAGEMENT_ADMIN", "").strip()
+        pwd = getattr(flowsettings, "KH_FEATURE_USER_MANAGEMENT_PASSWORD", "")
+        if usn and pwd:
 
             is_created = create_user(usn, pwd)
             if is_created:
                 gr.Info(
                     f'用户"{usn}"创建成功'
                 )  # translate User "{usn}" created successfully --》用户"{usn}"创建成功
+        elif not getattr(flowsettings, "KH_SSO_ENABLED", False):
+            with Session(engine) as session:
+                has_user = session.exec(select(User.id)).first() is not None
+            if not has_user:
+                raise RuntimeError(
+                    "首次启动必须设置 KH_FEATURE_USER_MANAGEMENT_ADMIN 和 "
+                    "KH_FEATURE_USER_MANAGEMENT_PASSWORD"
+                )
 
     def on_building_ui(self):
         with gr.Tab(label="用户列表"):  # translate User list --》用户列表

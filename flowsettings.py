@@ -4,6 +4,7 @@ from inspect import currentframe, getframeinfo
 from pathlib import Path
 
 from decouple import config
+from ktem.utils.deployment import normalize_deployment_mode, validate_model_endpoint
 from ktem.utils.lang import SUPPORTED_LANGUAGE_MAP
 from theflow.settings.default import *  # noqa
 
@@ -30,6 +31,33 @@ KH_ENABLE_FIRST_SETUP = config("KH_ENABLE_FIRST_SETUP", default=True, cast=bool)
 KH_DEMO_MODE = config("KH_DEMO_MODE", default=False, cast=bool)
 KH_OLLAMA_URL = config("KH_OLLAMA_URL", default="http://localhost:11434/v1/")
 KH_APP_NAME = config("KH_APP_NAME", default="AI 辅助诊断系统")
+KH_DEPLOYMENT_MODE = normalize_deployment_mode(
+    config("KH_DEPLOYMENT_MODE", default="hospital-external")
+)
+KH_HOSPITAL_MODE = KH_DEPLOYMENT_MODE.startswith("hospital-")
+KH_OFFLINE_MODE = KH_DEPLOYMENT_MODE == "hospital-offline"
+KH_ENABLE_MCP = config("KH_ENABLE_MCP", default=not KH_HOSPITAL_MODE, cast=bool)
+KH_ALLOW_REMOTE_HELP = config(
+    "KH_ALLOW_REMOTE_HELP", default=not KH_HOSPITAL_MODE, cast=bool
+)
+KH_MODEL_HOST_ALLOWLIST = {
+    host.strip().lower()
+    for host in config("KH_MODEL_HOST_ALLOWLIST", default="geekai.co").split(",")
+    if host.strip()
+}
+
+if KH_HOSPITAL_MODE:
+    KH_GRADIO_SHARE = False
+    KH_ENABLE_FIRST_SETUP = False
+    os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
+    os.environ.setdefault("CHROMA_TELEMETRY_IMPL", "")
+    os.environ.setdefault("HAYSTACK_TELEMETRY_ENABLED", "False")
+    os.environ.setdefault("SCARF_NO_ANALYTICS", "true")
+    os.environ.setdefault("DO_NOT_TRACK", "1")
+    os.environ.setdefault("KH_DISABLE_TOKENIZER_DOWNLOADS", "true")
+    os.environ.setdefault(
+        "NLTK_DATA", str(this_dir / "libs/ktem/ktem/assets/nltk_data")
+    )
 
 # App can be ran from anywhere and it's not trivial to decide where to store app data.
 # So let's use the same directory as the flowsetting.py file.
@@ -81,7 +109,7 @@ KH_FEATURE_USER_MANAGEMENT_ADMIN = str(
     config("KH_FEATURE_USER_MANAGEMENT_ADMIN", default="admin")
 )
 KH_FEATURE_USER_MANAGEMENT_PASSWORD = str(
-    config("KH_FEATURE_USER_MANAGEMENT_PASSWORD", default="admin")
+    config("KH_FEATURE_USER_MANAGEMENT_PASSWORD", default="")
 )
 KH_ENABLE_ALEMBIC = False
 KH_DATABASE = f"sqlite:///{KH_USER_DATA_DIR / 'sql.db'}"
@@ -95,11 +123,14 @@ KH_CHAT_EMPTY_MSG_PLACEHOLDER = config(
 )
 KH_WEB_SEARCH_COMMAND = config("KH_WEB_SEARCH_COMMAND", default="")
 KH_ENABLE_URL_UPLOAD = config("KH_ENABLE_URL_UPLOAD", default=False, cast=bool)
+if KH_HOSPITAL_MODE:
+    KH_WEB_SEARCH_COMMAND = ""
+    KH_ENABLE_URL_UPLOAD = False
 KH_VOICE_ASSISTANT_URL = config(
     "KH_VOICE_ASSISTANT_URL", default="https://localhost:17003/ws/v1/asr/test"
 )
 KH_ENABLE_VOICE_ASSISTANT = config("KH_ENABLE_VOICE_ASSISTANT", default=True, cast=bool)
-KH_WEB_SEARCH_BACKEND = (
+KH_WEB_SEARCH_BACKEND = None if KH_HOSPITAL_MODE else (
     "kotaemon.indices.retrievers.tavily_web_search.WebSearch"
     # "kotaemon.indices.retrievers.jina_web_search.WebSearch"
 )
@@ -355,6 +386,11 @@ if KH_USE_GEEKAI_MODEL_PROFILE:
     geekai_api_base = config(
         "GEEKAI_API_BASE_URL", default="https://geekai.co/api/v1"
     ).rstrip("/")
+    validate_model_endpoint(
+        KH_DEPLOYMENT_MODE,
+        geekai_api_base,
+        external_hosts=KH_MODEL_HOST_ALLOWLIST,
+    )
     geekai_api_key = config("GEEKAI_API_KEY", default="your-geekai-api-key")
     KH_LLMS["geekai"] = {
         "spec": {
@@ -399,6 +435,7 @@ if KH_USE_LOCAL_MODEL_PROFILE:
     local_model_base_url = config(
         "KH_LOCAL_MODEL_BASE_URL", default="http://host.docker.internal:1234/v1"
     )
+    validate_model_endpoint(KH_DEPLOYMENT_MODE, local_model_base_url)
     local_model_api_key = config("KH_LOCAL_MODEL_API_KEY", default="lmstudio")
     KH_LLMS["lmstudio"] = {
         "spec": {
@@ -430,11 +467,38 @@ if KH_USE_LOCAL_MODEL_PROFILE:
         "default": True,
     }
 
+if KH_HOSPITAL_MODE:
+    if KH_MODEL_PROFILE == "official":
+        raise ValueError("The official public-provider profile is disabled in hospital mode")
+    allowed_model_names = {
+        "geekai" if KH_USE_GEEKAI_MODEL_PROFILE else "lmstudio"
+    }
+    allowed_rerank_names = (
+        {"geekai"}
+        if KH_USE_GEEKAI_MODEL_PROFILE
+        else {"local-bge-reranker-v2-m3"}
+    )
+    KH_LLMS = {
+        name: value for name, value in KH_LLMS.items() if name in allowed_model_names
+    }
+    KH_EMBEDDINGS = {
+        name: value
+        for name, value in KH_EMBEDDINGS.items()
+        if name in allowed_model_names
+    }
+    KH_RERANKINGS = {
+        name: value
+        for name, value in KH_RERANKINGS.items()
+        if name in allowed_rerank_names
+    }
+
 KH_REASONINGS = [
     "ktem.reasoning.simple.FullQAPipeline",
     "ktem.reasoning.simple.FullDecomposeQAPipeline",
 ]
-if config("KH_ENABLE_AGENT_REASONINGS", default=False, cast=bool):
+if not KH_HOSPITAL_MODE and config(
+    "KH_ENABLE_AGENT_REASONINGS", default=False, cast=bool
+):
     KH_REASONINGS.extend(
         [
             "ktem.reasoning.react.ReactAgentPipeline",
@@ -443,7 +507,7 @@ if config("KH_ENABLE_AGENT_REASONINGS", default=False, cast=bool):
     )
 KH_ENABLE_EXTERNAL_AGENT_TOOLS = config(
     "KH_ENABLE_EXTERNAL_AGENT_TOOLS", default=False, cast=bool
-)
+) and not KH_HOSPITAL_MODE
 KH_REASONINGS_USE_MULTIMODAL = config("USE_MULTIMODAL", default=False, cast=bool)
 KH_VLM_ENDPOINT = "{0}/openai/deployments/{1}/chat/completions?api-version={2}".format(
     config("AZURE_OPENAI_ENDPOINT", default=""),

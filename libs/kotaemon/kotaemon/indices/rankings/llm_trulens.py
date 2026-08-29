@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import re
 from concurrent.futures import ThreadPoolExecutor
-from functools import partial
-
-import tiktoken
 
 from kotaemon.base import Document, HumanMessage, SystemMessage
 from kotaemon.indices.splitters import TokenSplitter
 from kotaemon.llms import BaseLLM, PromptTemplate
+from kotaemon.utils.tokenization import get_tokenizer
 
 from .llm import LLMReranking
 
@@ -103,11 +101,7 @@ class LLMTrulensScoring(LLMReranking):
         chunk_size=MAX_CONTEXT_LEN,
         chunk_overlap=0,
         separator=" ",
-        tokenizer=partial(
-            tiktoken.encoding_for_model("gpt-3.5-turbo").encode,
-            allowed_special=set(),
-            disallowed_special="all",
-        ),
+        tokenizer=get_tokenizer(),
     )
 
     def run(

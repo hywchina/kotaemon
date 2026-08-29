@@ -158,7 +158,11 @@ function() {
         if (mindmap_el) {
             function on_svg_export(event) {
                 html = "{html_template}";
-                html = html.replace("{markmap_div}", markmap_div_html);
+                var renderedMarkmap = document.querySelector("div.markmap");
+                html = html.replace(
+                    "{markmap_div}",
+                    renderedMarkmap ? renderedMarkmap.outerHTML : markmap_div_html
+                );
                 spawnDocument(html, {window: "width=1000,height=1000"});
             }
 

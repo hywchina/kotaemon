@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Type
 
 from sqlalchemy import select
@@ -6,8 +7,11 @@ from theflow.settings import settings as flowsettings
 from theflow.utils.modules import deserialize
 
 from kotaemon.embeddings.base import BaseEmbeddings
+from ktem.utils.deployment import validate_model_spec
 
 from .db import EmbeddingTable, engine
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingManager:
@@ -18,26 +22,42 @@ class EmbeddingManager:
         self._info: dict[str, dict] = {}
         self._default: str = ""
         self._vendors: list[Type] = []
+        self._hospital_mode = getattr(flowsettings, "KH_HOSPITAL_MODE", False)
+        self._allowed_names = (
+            set(getattr(flowsettings, "KH_EMBEDDINGS", {}))
+            if self._hospital_mode
+            else None
+        )
 
         # Add newly configured providers without discarding existing user models.
         if hasattr(flowsettings, "KH_EMBEDDINGS"):
             for name, model in flowsettings.KH_EMBEDDINGS.items():
-                with Session(engine) as sess:
-                    exists = sess.query(EmbeddingTable).filter_by(name=name).first()
-                    if (
-                        exists
-                        and model.get("managed", False)
-                        and exists.spec != model["spec"]
-                    ):
-                        exists.spec = model["spec"]
-                        sess.add(exists)
-                        sess.commit()
-                if not exists:
-                    self.add(
-                        name=name,
-                        spec=model["spec"],
-                        default=model.get("default", False),
-                    )
+                with Session(engine) as session:
+                    item = session.query(EmbeddingTable).filter_by(name=name).first()
+                    managed = model.get("managed", False) or self._hospital_mode
+                    if item and managed:
+                        if item.spec != model["spec"] or item.default != model.get(
+                            "default", False
+                        ):
+                            item.spec = model["spec"]
+                            item.default = model.get("default", False)
+                            if item.default:
+                                session.query(EmbeddingTable).filter(
+                                    EmbeddingTable.name != name
+                                ).update({"default": False})
+                            session.add(item)
+                            session.commit()
+                    elif not item:
+                        if model.get("default", False):
+                            session.query(EmbeddingTable).update({"default": False})
+                        session.add(
+                            EmbeddingTable(
+                                name=name,
+                                spec=model["spec"],
+                                default=model.get("default", False),
+                            )
+                        )
+                        session.commit()
 
         self.load()
         self.load_vendors()
@@ -50,7 +70,13 @@ class EmbeddingManager:
             items = sess.execute(stmt)
 
             for (item,) in items:
-                self._models[item.name] = deserialize(item.spec, safe=False)
+                if self._allowed_names is not None and item.name not in self._allowed_names:
+                    continue
+                try:
+                    self._models[item.name] = deserialize(item.spec, safe=False)
+                except Exception:
+                    logger.exception("Unable to load embedding model: %s", item.name)
+                    continue
                 self._info[item.name] = {
                     "name": item.name,
                     "spec": item.spec,
@@ -74,18 +100,21 @@ class EmbeddingManager:
             VoyageAIEmbeddings,
         )
 
-        self._vendors = [
-            AzureOpenAIEmbeddings,
-            OpenAIEmbeddings,
-            FastEmbedEmbeddings,
-            GeekAIEmbeddings,
-            LCCohereEmbeddings,
-            LCHuggingFaceEmbeddings,
-            LCGoogleEmbeddings,
-            LCMistralEmbeddings,
-            TeiEndpointEmbeddings,
-            VoyageAIEmbeddings,
-        ]
+        if self._hospital_mode:
+            self._vendors = [OpenAIEmbeddings, GeekAIEmbeddings]
+        else:
+            self._vendors = [
+                AzureOpenAIEmbeddings,
+                OpenAIEmbeddings,
+                FastEmbedEmbeddings,
+                GeekAIEmbeddings,
+                LCCohereEmbeddings,
+                LCHuggingFaceEmbeddings,
+                LCGoogleEmbeddings,
+                LCMistralEmbeddings,
+                TeiEndpointEmbeddings,
+                VoyageAIEmbeddings,
+            ]
 
     def __getitem__(self, key: str) -> BaseEmbeddings:
         """Get model by name"""
@@ -138,6 +167,8 @@ class EmbeddingManager:
         if not self._models:
             raise ValueError("No models in pool")
 
+        if not self._default and self._hospital_mode:
+            raise ValueError("No default embedding model is configured")
         if not self._default:
             return self.get_random_name()
 
@@ -166,6 +197,12 @@ class EmbeddingManager:
         """Add a new model to the pool"""
         if not name:
             raise ValueError("Name must not be empty")
+        if self._hospital_mode:
+            validate_model_spec(
+                flowsettings.KH_DEPLOYMENT_MODE,
+                spec,
+                external_hosts=flowsettings.KH_MODEL_HOST_ALLOWLIST,
+            )
 
         try:
             with Session(engine) as sess:
@@ -198,6 +235,12 @@ class EmbeddingManager:
         """Update a model in the pool, optionally renaming it."""
         if not name:
             raise ValueError("Name must not be empty")
+        if self._hospital_mode:
+            validate_model_spec(
+                flowsettings.KH_DEPLOYMENT_MODE,
+                spec,
+                external_hosts=flowsettings.KH_MODEL_HOST_ALLOWLIST,
+            )
 
         # If update name
         if new_name and new_name != name:

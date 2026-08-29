@@ -43,3 +43,21 @@
   用户浏览器执行。
 - **注意事项**：本提交不改变现有用户名和用户 ID，也不会在日志中记录明文密码；
   SSO 创建的无本地密码账号仍只能通过 SSO 登录。
+
+## `feat: add hospital deployment profiles`
+
+- **改造动机**：医院环境不能依赖公网 CDN、GitHub、NLTK/tiktoken 临时下载或
+  Chroma 遥测；数据库中历史公共 Provider 即使不再显示，也会在启动时被模型
+  Manager 反序列化并可能联网。
+- **部署档位**：新增 `hospital-external` 和 `hospital-offline`。前者仅允许白名单
+  HTTPS 模型域名和内网地址，后者仅允许回环、私网 IP、单标签服务名及
+  `.local/.internal/.lan` 地址。医院档强制关闭 MCP、网页抓取、外部 Agent、远程
+  帮助、Gradio API 展示和遥测。
+- **资源本地化**：固定并内置 Tribute、MiniSearch、D3、Markmap 依赖；PDF 预览
+  改用随包 PDF.js，首次运行只解压本地归档；内置 LlamaIndex 所需 NLTK 英文数据，
+  同时提供不下载词表的本地 Token 估算器。
+- **模型白名单**：医院模式只加载当前配置档声明的 LLM、Embedding 和 Rerank。
+  旧公共 Provider 记录保留在数据库但不实例化；管理员新增模型时同样执行地址
+  策略校验，避免通过自定义 Base URL 绕过出口限制。
+- **配置模板**：新增 `.env.hospital.example`，分别给出 GeekAI 过渡档和最终内网
+  OpenAI-compatible 模型网关配置。真实密钥和管理员密码不得提交到 Git。

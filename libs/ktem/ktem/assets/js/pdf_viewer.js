@@ -17,8 +17,7 @@ function onBlockLoad() {
                 <span class="close" id="modal-expand">&#x26F6;</span>
               </div>
               <div class="modal-body">
-                <pdfjs-viewer-element id="pdf-viewer" viewer-path="GR_FILE_ROOT_PATH/file=PDFJS_PREBUILT_DIR" locale="en" phrase="true">
-                </pdfjs-viewer-element>
+                <iframe id="pdf-viewer" title="PDF 原文预览" data-viewer-url="GR_FILE_ROOT_PATH/file=PDFJS_PREBUILT_DIR/web/viewer.html"></iframe>
               </div>
             </div>
           `;
@@ -147,13 +146,12 @@ function onBlockLoad() {
 
     var pdfViewer = document.getElementById("pdf-viewer");
 
-    current_src = pdfViewer.getAttribute("src");
-    if (current_src != src) {
-      pdfViewer.setAttribute("src", src);
+    var viewerUrl = pdfViewer.getAttribute("data-viewer-url");
+    var targetUrl =
+      viewerUrl + "?file=" + encodeURIComponent(src) + "#page=" + page;
+    if (pdfViewer.getAttribute("src") != targetUrl) {
+      pdfViewer.setAttribute("src", targetUrl);
     }
-    // pdfViewer.setAttribute("phrase", phrase);
-    // pdfViewer.setAttribute("search", search);
-    pdfViewer.setAttribute("page", page);
 
     var scrollableDiv = document.getElementById("chat-info-panel");
     infor_panel_scroll_pos = scrollableDiv.scrollTop;

@@ -1,4 +1,3 @@
-from importlib.metadata import version
 from pathlib import Path
 
 import gradio as gr
@@ -7,12 +6,13 @@ from decouple import config
 from theflow.settings import settings
 
 KH_DEMO_MODE = getattr(settings, "KH_DEMO_MODE", False)
+KH_ALLOW_REMOTE_HELP = getattr(settings, "KH_ALLOW_REMOTE_HELP", False)
 HF_SPACE_URL = config("HF_SPACE_URL", default="")
 
 
 def get_remote_doc(url: str) -> str:
     try:
-        res = requests.get(url)
+        res = requests.get(url, timeout=5)
         res.raise_for_status()
         return res.text
     except Exception as e:
@@ -24,7 +24,7 @@ def get_remote_doc(url: str) -> str:
 
 def download_changelogs(release_url: str) -> str:
     try:
-        res = requests.get(release_url).json()
+        res = requests.get(release_url, timeout=5).json()
         changelogs = res.get("body", "")
 
         return changelogs
@@ -58,10 +58,12 @@ class HelpPage:
         if about_md_dir.exists():
             with (self.doc_dir / "about.md").open(encoding="utf-8") as fi:
                 about_md = fi.read()
-        else:  # fetch from remote
+        elif KH_ALLOW_REMOTE_HELP:  # fetch from remote
             about_md = get_remote_doc(
                 f"{self.remote_content_url}/v{self.app_version}/docs/about.md"
             )
+        else:
+            about_md = "系统说明文件未随安装包提供，请联系管理员。"
         if about_md:
             with gr.Accordion("关于系统"):
                 if self.app_version:
@@ -86,10 +88,12 @@ class HelpPage:
         if user_guide_md_dir.exists():
             with (self.doc_dir / "usage.md").open(encoding="utf-8") as fi:
                 user_guide_md = fi.read()
-        else:  # fetch from remote
+        elif KH_ALLOW_REMOTE_HELP:  # fetch from remote
             user_guide_md = get_remote_doc(
                 f"{self.remote_content_url}/v{self.app_version}/docs/usage.md"
             )
+        else:
+            user_guide_md = "用户指南未随安装包提供，请联系管理员。"
         if user_guide_md:
             with gr.Accordion(
                 "用户指南", open=not KH_DEMO_MODE
@@ -100,10 +104,16 @@ class HelpPage:
             # try retrieve from cache
             changelogs = ""
 
-            if (self.changelogs_cache_dir / f"{version}.md").exists():
-                with open(self.changelogs_cache_dir / f"{version}.md", "r") as fi:
+            cache_file = self.changelogs_cache_dir / f"{self.app_version}.md"
+            bundled_changelog = (
+                Path(__file__).parents[1] / "assets" / "md" / "changelogs.md"
+            )
+            if cache_file.exists():
+                with cache_file.open(encoding="utf-8") as fi:
                     changelogs = fi.read()
-            else:
+            elif bundled_changelog.exists():
+                changelogs = bundled_changelog.read_text(encoding="utf-8")
+            elif KH_ALLOW_REMOTE_HELP:
                 release_url_base = (
                     "https://api.github.com/repos/Cinnamon/kotaemon/releases"
                 )
@@ -114,9 +124,7 @@ class HelpPage:
                 # cache the changelogs
                 if not self.changelogs_cache_dir.exists():
                     self.changelogs_cache_dir.mkdir(parents=True, exist_ok=True)
-                with open(
-                    self.changelogs_cache_dir / f"{self.app_version}.md", "w"
-                ) as fi:
+                with cache_file.open("w", encoding="utf-8") as fi:
                     fi.write(changelogs)
 
             if changelogs:

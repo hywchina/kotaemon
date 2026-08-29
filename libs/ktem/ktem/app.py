@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 import gradio as gr
 import pluggy
@@ -176,27 +177,41 @@ class BaseApp:
         """Called when the app is created"""
 
     def make(self):
-        markmap_js = """
+        dir_assets = Path(__file__).parent / "assets"
+        vendor_dir = dir_assets / "vendor"
+
+        def asset_url(file_name: str) -> str:
+            path = quote(str(vendor_dir / file_name), safe="/:")
+            return f"{BASE_PATH}/file={path}"
+
+        markmap_config = """
         <script>
-            window.markmap = {
-                /** @type AutoLoaderOptions */
-                autoLoader: {
-                    toolbar: true, // Enable toolbar
-                },
+            window.markmap = window.markmap || {};
+            window.markmap.autoLoader = {
+                baseJs: [],
+                baseCss: [],
+                transformPlugins: [],
+                toolbar: true,
             };
         </script>
         """
-        external_js = (
-            "<script type='module' "
-            "src='https://cdn.skypack.dev/pdfjs-viewer-element'>"
-            "</script>"
-            "<script type='module' "
-            "src='https://cdnjs.cloudflare.com/ajax/libs/tributejs/5.1.3/tribute.min.js'>"  # noqa
-            f"{markmap_js}"
-            "<script src='https://cdn.jsdelivr.net/npm/markmap-autoloader@0.16'></script>"  # noqa
-            "<script src='https://cdn.jsdelivr.net/npm/minisearch@7.1.1/dist/umd/index.min.js'></script>"  # noqa
-            "</script>"
-            "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/tributejs/5.1.3/tribute.css'/>"  # noqa
+        scripts = (
+            "d3-7.8.5.min.js",
+            "markmap-lib-0.16.1.min.js",
+            "markmap-view-0.16.0.min.js",
+            "markmap-toolbar-0.16.0.min.js",
+        )
+        head_assets = "".join(
+            f"<script src='{asset_url(file_name)}'></script>" for file_name in scripts
+        )
+        head_assets += markmap_config
+        head_assets += (
+            f"<script src='{asset_url('markmap-autoloader-0.16.1.min.js')}'></script>"
+            f"<script src='{asset_url('minisearch-7.1.1.min.js')}'></script>"
+            f"<script src='{asset_url('tribute-5.1.3.min.js')}'></script>"
+            f"<link rel='stylesheet' "
+            f"href='{asset_url('markmap-toolbar-0.16.0.css')}'/>"
+            f"<link rel='stylesheet' href='{asset_url('tribute-5.1.3.css')}'/>"
         )
 
         with gr.Blocks(
@@ -205,7 +220,7 @@ class BaseApp:
             title=self.app_name,
             analytics_enabled=False,
             js=self._js,
-            head=external_js,
+            head=head_assets,
         ) as demo:
             self.app = demo
             self.settings_state.render()

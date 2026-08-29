@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Type
 
 from sqlalchemy import select
@@ -6,8 +7,11 @@ from theflow.settings import settings as flowsettings
 from theflow.utils.modules import deserialize
 
 from kotaemon.rerankings.base import BaseReranking
+from ktem.utils.deployment import validate_model_spec
 
 from .db import RerankingTable, engine
+
+logger = logging.getLogger(__name__)
 
 
 class RerankingManager:
@@ -18,26 +22,42 @@ class RerankingManager:
         self._info: dict[str, dict] = {}
         self._default: str = ""
         self._vendors: list[Type] = []
+        self._hospital_mode = getattr(flowsettings, "KH_HOSPITAL_MODE", False)
+        self._allowed_names = (
+            set(getattr(flowsettings, "KH_RERANKINGS", {}))
+            if self._hospital_mode
+            else None
+        )
 
         # Add newly configured providers without discarding existing user models.
         if hasattr(flowsettings, "KH_RERANKINGS"):
             for name, model in flowsettings.KH_RERANKINGS.items():
-                with Session(engine) as sess:
-                    exists = sess.query(RerankingTable).filter_by(name=name).first()
-                    if (
-                        exists
-                        and model.get("managed", False)
-                        and exists.spec != model["spec"]
-                    ):
-                        exists.spec = model["spec"]
-                        sess.add(exists)
-                        sess.commit()
-                if not exists:
-                    self.add(
-                        name=name,
-                        spec=model["spec"],
-                        default=model.get("default", False),
-                    )
+                with Session(engine) as session:
+                    item = session.query(RerankingTable).filter_by(name=name).first()
+                    managed = model.get("managed", False) or self._hospital_mode
+                    if item and managed:
+                        if item.spec != model["spec"] or item.default != model.get(
+                            "default", False
+                        ):
+                            item.spec = model["spec"]
+                            item.default = model.get("default", False)
+                            if item.default:
+                                session.query(RerankingTable).filter(
+                                    RerankingTable.name != name
+                                ).update({"default": False})
+                            session.add(item)
+                            session.commit()
+                    elif not item:
+                        if model.get("default", False):
+                            session.query(RerankingTable).update({"default": False})
+                        session.add(
+                            RerankingTable(
+                                name=name,
+                                spec=model["spec"],
+                                default=model.get("default", False),
+                            )
+                        )
+                        session.commit()
 
         self.load()
         self.load_vendors()
@@ -50,7 +70,13 @@ class RerankingManager:
             items = sess.execute(stmt)
 
             for (item,) in items:
-                self._models[item.name] = deserialize(item.spec, safe=False)
+                if self._allowed_names is not None and item.name not in self._allowed_names:
+                    continue
+                try:
+                    self._models[item.name] = deserialize(item.spec, safe=False)
+                except Exception:
+                    logger.exception("Unable to load reranking model: %s", item.name)
+                    continue
                 self._info[item.name] = {
                     "name": item.name,
                     "spec": item.spec,
@@ -67,12 +93,15 @@ class RerankingManager:
             VoyageAIReranking,
         )
 
-        self._vendors = [
-            TeiFastReranking,
-            CohereReranking,
-            GeekAIReranking,
-            VoyageAIReranking,
-        ]
+        if self._hospital_mode:
+            self._vendors = [TeiFastReranking, GeekAIReranking]
+        else:
+            self._vendors = [
+                TeiFastReranking,
+                CohereReranking,
+                GeekAIReranking,
+                VoyageAIReranking,
+            ]
 
     def __getitem__(self, key: str) -> BaseReranking:
         """Get model by name"""
@@ -125,6 +154,8 @@ class RerankingManager:
         if not self._models:
             raise ValueError("No models in pool")
 
+        if not self._default and self._hospital_mode:
+            raise ValueError("No default reranking model is configured")
         if not self._default:
             return self.get_random_name()
 
@@ -152,6 +183,12 @@ class RerankingManager:
     def add(self, name: str, spec: dict, default: bool):
         if not name:
             raise ValueError("Name must not be empty")
+        if self._hospital_mode:
+            validate_model_spec(
+                flowsettings.KH_DEPLOYMENT_MODE,
+                spec,
+                external_hosts=flowsettings.KH_MODEL_HOST_ALLOWLIST,
+            )
 
         try:
             with Session(engine) as sess:
@@ -184,6 +221,12 @@ class RerankingManager:
         """Update a model in the pool, optionally renaming it."""
         if not name:
             raise ValueError("Name must not be empty")
+        if self._hospital_mode:
+            validate_model_spec(
+                flowsettings.KH_DEPLOYMENT_MODE,
+                spec,
+                external_hosts=flowsettings.KH_MODEL_HOST_ALLOWLIST,
+            )
 
         if new_name and new_name != name:
             if new_name in self._info:

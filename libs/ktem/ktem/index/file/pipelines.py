@@ -13,7 +13,6 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Generator, Optional, Sequence
 
-import tiktoken
 from decouple import config
 from ktem.db.models import engine
 from ktem.embeddings.manager import embedding_models_manager
@@ -48,6 +47,7 @@ from kotaemon.indices.ingests.files import (
 )
 from kotaemon.indices.rankings import BaseReranking, LLMReranking, LLMTrulensScoring
 from kotaemon.indices.splitters import BaseSplitter, TokenSplitter
+from kotaemon.utils.tokenization import get_tokenizer
 
 from .base import BaseFileIndexIndexing, BaseFileIndexRetriever
 
@@ -76,7 +76,7 @@ def dev_settings():
     return file_extractors, chunk_size, chunk_overlap
 
 
-_default_token_func = tiktoken.encoding_for_model("gpt-3.5-turbo").encode
+_default_token_func = get_tokenizer()
 
 
 class DocumentRetrievalPipeline(BaseFileIndexRetriever):
@@ -798,6 +798,7 @@ class IndexDocumentPipeline(BaseFileIndexIndexing):
                 chunk_overlap=chunk_overlap or 256,
                 separator="\n\n",
                 backup_separators=["\n", ".", "\u200b"],
+                tokenizer=get_tokenizer(),
             ),
             run_embedding_in_thread=self.run_embedding_in_thread,
             Source=self.Source,

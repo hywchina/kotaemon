@@ -1,14 +1,19 @@
 import gradio as gr
+from sqlmodel import Session, select
+
 from ktem.app import BasePage
 from ktem.db.models import User, engine
 from ktem.embeddings.ui import EmbeddingManagement
 from ktem.index.ui import IndexManagement
 from ktem.llms.ui import LLMManagement
-from ktem.mcp.ui import MCPManagement
 from ktem.rerankings.ui import RerankingManagement
-from sqlmodel import Session, select
+from theflow.settings import settings as flowsettings
 
 from .user import UserManagement
+
+KH_ENABLE_MCP = getattr(flowsettings, "KH_ENABLE_MCP", False)
+if KH_ENABLE_MCP:
+    from ktem.mcp.ui import MCPManagement
 
 
 class ResourcesTab(BasePage):
@@ -37,8 +42,9 @@ class ResourcesTab(BasePage):
         ) as self.rerank_management_tab:  # translate Rerankings --》重排序模型
             self.rerank_management = RerankingManagement(self._app)
 
-        with gr.Tab("MCP 服务") as self.mcp_management_tab:
-            self.mcp_management = MCPManagement(self._app)
+        if KH_ENABLE_MCP:
+            with gr.Tab("MCP 服务") as self.mcp_management_tab:
+                self.mcp_management = MCPManagement(self._app)
 
         if self._app.f_user_management:
             with gr.Tab(

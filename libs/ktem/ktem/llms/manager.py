@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Type, overload
 
 from sqlalchemy import select
@@ -6,8 +7,11 @@ from theflow.settings import settings as flowsettings
 from theflow.utils.modules import deserialize, import_dotted_string
 
 from kotaemon.llms import ChatLLM
+from ktem.utils.deployment import validate_model_spec
 
 from .db import LLMTable, engine
+
+logger = logging.getLogger(__name__)
 
 
 class LLMManager:
@@ -18,15 +22,29 @@ class LLMManager:
         self._info: dict[str, dict] = {}
         self._default: str = ""
         self._vendors: list[Type] = []
+        self._hospital_mode = getattr(flowsettings, "KH_HOSPITAL_MODE", False)
+        self._allowed_names = (
+            set(getattr(flowsettings, "KH_LLMS", {}))
+            if self._hospital_mode
+            else None
+        )
 
         if hasattr(flowsettings, "KH_LLMS"):
             for name, model in flowsettings.KH_LLMS.items():
                 with Session(engine) as session:
                     stmt = select(LLMTable).where(LLMTable.name == name)
                     item = session.execute(stmt).scalar_one_or_none()
-                    if item and model.get("managed", False):
-                        if item.spec != model["spec"]:
+                    managed = model.get("managed", False) or self._hospital_mode
+                    if item and managed:
+                        if item.spec != model["spec"] or item.default != model.get(
+                            "default", False
+                        ):
                             item.spec = model["spec"]
+                            item.default = model.get("default", False)
+                            if item.default:
+                                session.query(LLMTable).filter(
+                                    LLMTable.name != name
+                                ).update({"default": False})
                             session.add(item)
                             session.commit()
                     elif not item:
@@ -51,7 +69,13 @@ class LLMManager:
             items = session.execute(stmt)
 
             for (item,) in items:
-                self._models[item.name] = deserialize(item.spec, safe=False)
+                if self._allowed_names is not None and item.name not in self._allowed_names:
+                    continue
+                try:
+                    self._models[item.name] = deserialize(item.spec, safe=False)
+                except Exception:
+                    logger.exception("Unable to load LLM model: %s", item.name)
+                    continue
                 self._info[item.name] = {
                     "name": item.name,
                     "spec": item.spec,
@@ -71,15 +95,18 @@ class LLMManager:
             LlamaCppChat,
         )
 
-        self._vendors = [
-            ChatOpenAI,
-            AzureChatOpenAI,
-            LCAnthropicChat,
-            LCGeminiChat,
-            LCCohereChat,
-            LCOllamaChat,
-            LlamaCppChat,
-        ]
+        if self._hospital_mode:
+            self._vendors = [ChatOpenAI]
+        else:
+            self._vendors = [
+                ChatOpenAI,
+                AzureChatOpenAI,
+                LCAnthropicChat,
+                LCGeminiChat,
+                LCCohereChat,
+                LCOllamaChat,
+                LlamaCppChat,
+            ]
 
         for extra_vendor in getattr(flowsettings, "KH_LLM_EXTRA_VENDORS", []):
             self._vendors.append(import_dotted_string(extra_vendor, safe=False))
@@ -139,6 +166,8 @@ class LLMManager:
         if not self._models:
             raise ValueError("No models in pool")
 
+        if not self._default and self._hospital_mode:
+            raise ValueError("No default LLM is configured")
         if not self._default:
             return self.get_random_name()
 
@@ -167,6 +196,12 @@ class LLMManager:
         """Add a new model to the pool"""
         if not name:
             raise ValueError("Name must not be empty")
+        if self._hospital_mode:
+            validate_model_spec(
+                flowsettings.KH_DEPLOYMENT_MODE,
+                spec,
+                external_hosts=flowsettings.KH_MODEL_HOST_ALLOWLIST,
+            )
 
         try:
             with Session(engine) as session:
@@ -199,6 +234,12 @@ class LLMManager:
         """Update a model in the pool, optionally renaming it."""
         if not name:
             raise ValueError("Name must not be empty")
+        if self._hospital_mode:
+            validate_model_spec(
+                flowsettings.KH_DEPLOYMENT_MODE,
+                spec,
+                external_hosts=flowsettings.KH_MODEL_HOST_ALLOWLIST,
+            )
 
         if new_name and new_name != name:
             # Check uniqueness before destructive delete

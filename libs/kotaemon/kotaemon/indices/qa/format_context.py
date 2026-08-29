@@ -1,10 +1,8 @@
 import html
-from functools import partial
-
-import tiktoken
 
 from kotaemon.base import BaseComponent, Document, RetrievedDocument
 from kotaemon.indices.splitters import TokenSplitter
+from kotaemon.utils.tokenization import get_tokenizer
 
 EVIDENCE_MODE_TEXT = 0
 EVIDENCE_MODE_TABLE = 1
@@ -38,11 +36,7 @@ class PrepareEvidencePipeline(BaseComponent):
                 chunk_size=self.max_context_length,
                 chunk_overlap=0,
                 separator=" ",
-                tokenizer=partial(
-                    tiktoken.encoding_for_model("gpt-3.5-turbo").encode,
-                    allowed_special=set(),
-                    disallowed_special="all",
-                ),
+                tokenizer=get_tokenizer(),
             )
         )
 
