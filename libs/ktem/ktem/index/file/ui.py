@@ -1,5 +1,6 @@
 import html
 import json
+import logging
 import os
 import shutil
 import tempfile
@@ -14,6 +15,8 @@ from gradio.data_classes import FileData
 from gradio.utils import NamedString
 from ktem.app import BasePage
 from ktem.db.engine import engine
+from ktem.utils.file_upload import safe_extract_zip
+from ktem.utils.notifications import UserFacingError, notify_exception
 from ktem.utils.render import Render
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,6 +30,8 @@ KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_SHARED_FILE_COLLECTION = getattr(flowsettings, "KH_SHARED_FILE_COLLECTION", False)
 KH_ENABLE_URL_UPLOAD = getattr(flowsettings, "KH_ENABLE_URL_UPLOAD", False)
+ZIP_MAX_FILES = int(os.getenv("KH_ZIP_MAX_FILES", "200"))
+ZIP_MAX_UNCOMPRESSED_BYTES = int(os.getenv("KH_ZIP_MAX_SIZE_MB", "500")) * 1024 * 1024
 DOWNLOAD_MESSAGE = "下载文件"
 MAX_FILENAME_LENGTH = 20
 MAX_FILE_COUNT = 200
@@ -50,6 +55,8 @@ CHUNK_TYPE_LABELS = {
     "image": "图片",
     "thumbnail": "缩略图",
 }
+
+logger = logging.getLogger(__name__)
 
 chat_input_focus_js = """
 function() {
@@ -1238,38 +1245,46 @@ class FileIndexPage(BasePage):
         )
 
     def _may_extract_zip(self, files, zip_dir: str):
-        """Handle zip files"""
-        zip_files = [file for file in files if file.endswith(".zip")]
-        remaining_files = [file for file in files if not file.endswith("zip")]
+        """Extract uploaded archives into an isolated, quota-limited directory."""
+        zip_files = [file for file in files if str(file).lower().endswith(".zip")]
+        remaining_files = [
+            file for file in files if not str(file).lower().endswith(".zip")
+        ]
         errors: list[str] = []
 
-        # Clean-up <zip_dir> before unzip to remove old files
-        shutil.rmtree(zip_dir, ignore_errors=True)
+        if not zip_files:
+            return remaining_files, errors, None
 
-        # Unzip
-        for zip_file in zip_files:
-            # Prepare new zip output dir, separated for each files
+        Path(zip_dir).mkdir(parents=True, exist_ok=True)
+        request_dir = tempfile.mkdtemp(prefix="upload-", dir=zip_dir)
+        for position, zip_file in enumerate(zip_files):
             basename = os.path.splitext(os.path.basename(zip_file))[0]
-            zip_out_dir = os.path.join(zip_dir, basename)
-            os.makedirs(zip_out_dir, exist_ok=True)
-
-            with zipfile.ZipFile(zip_file, "r") as zip_ref:
-                zip_ref.extractall(zip_out_dir)
+            zip_out_dir = os.path.join(request_dir, f"{position}-{basename}")
+            try:
+                safe_extract_zip(
+                    zip_file,
+                    zip_out_dir,
+                    max_files=ZIP_MAX_FILES,
+                    max_uncompressed_bytes=ZIP_MAX_UNCOMPRESSED_BYTES,
+                )
+            except UserFacingError as exc:
+                errors.append(f"{os.path.basename(zip_file)}：{exc}")
+            except (OSError, RuntimeError, zipfile.BadZipFile):
+                logger.warning("Unable to extract uploaded ZIP: %s", zip_file)
+                errors.append(f"{os.path.basename(zip_file)}：压缩包无法读取或已损坏。")
 
         n_zip_file = 0
-        for root, dirs, files in os.walk(zip_dir):
+        for root, dirs, files in os.walk(request_dir):
             for file in files:
-                ext = os.path.splitext(file)[1]
+                ext = os.path.splitext(file)[1].lower()
 
                 # only allow supported file-types ( not zip )
                 if ext not in [".zip"] and ext in self._supported_file_types:
                     remaining_files += [os.path.join(root, file)]
                     n_zip_file += 1
 
-        if n_zip_file > 0:
-            print(f"Update zip files: {n_zip_file}")
-
-        return remaining_files, errors
+        logger.info("Extracted %s supported files from uploaded ZIPs", n_zip_file)
+        return remaining_files, errors, request_dir
 
     def index_fn(
         self, files, urls, reindex: bool, settings, user_id
@@ -1283,6 +1298,7 @@ class FileIndexPage(BasePage):
             selected_files: the list of files already selected
             settings: the settings of the app
         """
+        extraction_dir = None
         if urls:
             files = [it.strip() for it in urls.split("\n")]
             errors = self.validate_urls(files)
@@ -1291,7 +1307,7 @@ class FileIndexPage(BasePage):
                 gr.Info("请先选择要上传的文件。")
                 yield "", ""
                 return
-            files, unzip_errors = self._may_extract_zip(
+            files, unzip_errors, extraction_dir = self._may_extract_zip(
                 files, flowsettings.KH_ZIP_INPUT_DIR
             )
             errors = self.validate_files(files)
@@ -1299,18 +1315,17 @@ class FileIndexPage(BasePage):
 
         if errors:
             gr.Warning(", ".join(errors))
+            if extraction_dir:
+                shutil.rmtree(extraction_dir, ignore_errors=True)
             yield "", ""
             return
 
         gr.Info(f"开始处理 {len(files)} 个文件，请勿关闭页面。")
 
-        # get the pipeline
-        indexing_pipeline = self._index.get_indexing_pipeline(settings, user_id)
-
         outputs, debugs = [], []
-        # stream the output
-        output_stream = indexing_pipeline.stream(files, reindex=reindex)
         try:
+            indexing_pipeline = self._index.get_indexing_pipeline(settings, user_id)
+            output_stream = indexing_pipeline.stream(files, reindex=reindex)
             while True:
                 response = next(output_stream)
                 if response is None:
@@ -1328,15 +1343,24 @@ class FileIndexPage(BasePage):
                 yield "\n".join(outputs), "\n".join(debugs)
         except StopIteration as e:
             results, index_errors, docs = e.value
-        except Exception as e:
-            debugs.append(f"Error: {e}")
+        except Exception as exc:
+            notification = notify_exception(
+                "index uploaded files",
+                exc,
+                logger=logger,
+                fallback_message="文件处理未完成，请稍后重试或联系管理员。",
+            )
+            debugs.append(notification.display_message)
             yield "\n".join(outputs), "\n".join(debugs)
             return
+        finally:
+            if extraction_dir:
+                shutil.rmtree(extraction_dir, ignore_errors=True)
 
         n_successes = len([_ for _ in results if _])
         if n_successes:
             gr.Info(f"已成功处理 {n_successes} 个文件。")
-        n_errors = len([_ for _ in errors if _])
+        n_errors = len([error for error in index_errors if error])
         if n_errors:
             gr.Warning(f"有 {n_errors} 个文件处理失败，请查看上传结果。")
 
@@ -1378,7 +1402,7 @@ class FileIndexPage(BasePage):
                 while next(_iter):
                     pass
             except StopIteration as e:
-                returned_ids = e.value
+                returned_ids = e.value or []
 
         return exist_ids + returned_ids
 
@@ -1432,7 +1456,7 @@ class FileIndexPage(BasePage):
                     while next(_iter):
                         pass
                 except StopIteration as e:
-                    returned_ids = e.value
+                    returned_ids = e.value or []
 
             returned_ids = exist_ids + returned_ids
         else:
@@ -1442,7 +1466,7 @@ class FileIndexPage(BasePage):
                     while next(_iter):
                         pass
                 except StopIteration as e:
-                    returned_ids = e.value
+                    returned_ids = e.value or []
 
         return returned_ids
 

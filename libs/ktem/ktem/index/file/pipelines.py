@@ -18,6 +18,7 @@ from ktem.db.models import engine
 from ktem.embeddings.manager import embedding_models_manager
 from ktem.llms.manager import llms
 from ktem.rerankings.manager import reranking_models_manager
+from ktem.utils.notifications import report_exception
 from llama_index.core.readers.base import BaseReader
 from llama_index.core.readers.file.base import default_file_metadata_func
 from llama_index.core.vector_stores import (
@@ -861,15 +862,20 @@ class IndexDocumentPipeline(BaseFileIndexIndexing):
                     channel="index",
                 )
             except Exception as e:
-                logger.exception(e)
+                notification = report_exception(
+                    "index file",
+                    e,
+                    logger=logger,
+                    fallback_message="文件解析或写入索引失败，请联系管理员检查日志。",
+                )
                 file_ids.append(None)
-                errors.append(str(e))
+                errors.append(notification.display_message)
                 yield Document(
                     content={
                         "file_path": file_path,
                         "file_name": file_name,
                         "status": "failed",
-                        "message": str(e),
+                        "message": notification.display_message,
                     },
                     channel="index",
                 )
