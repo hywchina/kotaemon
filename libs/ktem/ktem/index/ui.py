@@ -3,6 +3,7 @@ import pandas as pd
 import yaml
 from ktem.app import BasePage
 from ktem.utils.file import YAMLNoDateSafeLoader
+from ktem.utils.i18n import translate_ui_text
 
 from .manager import IndexManager
 
@@ -123,7 +124,8 @@ class IndexManagement(BasePage):
         self._app.app.load(
             lambda: gr.update(
                 choices=[
-                    (key.split(".")[-1], key) for key in self.manager.index_types.keys()
+                    (translate_ui_text(key.split(".")[-1]), key)
+                    for key in self.manager.index_types.keys()
                 ]
             ),
             outputs=[self.index_type],
@@ -349,7 +351,7 @@ class IndexManagement(BasePage):
             record = {}
             record["ID"] = item.id
             record["名称"] = item.name
-            record["索引类型"] = item.__class__.__name__
+            record["索引类型"] = translate_ui_text(item.__class__.__name__)
             items.append(record)
 
         if items:

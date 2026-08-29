@@ -25,7 +25,6 @@ from kotaemon.base import (
 )
 from kotaemon.indices.qa.citation_qa import (
     CONTEXT_RELEVANT_WARNING_SCORE,
-    DEFAULT_QA_TEXT_PROMPT,
     AnswerWithContextPipeline,
 )
 from kotaemon.indices.qa.citation_qa_inline import AnswerWithInlineCitation
@@ -37,6 +36,21 @@ from ..utils import SUPPORTED_LANGUAGE_MAP
 from .base import BaseReasoning
 
 logger = logging.getLogger(__name__)
+
+HOSPITAL_SYSTEM_PROMPT = "你是一个基于知识库回答问题的辅助问答系统。"
+HOSPITAL_QA_TEXT_PROMPT = (
+    "请根据以下上下文详细回答问题，并给出清晰说明。"
+    "如果上下文不足以确定答案，请明确说明不知道，不要编造信息。"
+    "请使用 {lang} 作答。\n\n"
+    "{context}\n"
+    "问题：{question}\n"
+    "回答："
+)
+HOSPITAL_DECOMPOSE_PROMPT = (
+    "请将用户提出的复杂问题拆分为有助于回答原问题的具体子问题，最多拆分为 3 个。"
+    "每个子问题只涉及一个概念、事实或观点。遇到不熟悉的缩写或术语时，请保留原文，"
+    "不要自行改写。请通过提供的函数调用返回结果。"
+)
 
 
 class AddQueryContextPipeline(BaseComponent):
@@ -460,11 +474,11 @@ class FullQAPipeline(BaseReasoning):
             },
             "system_prompt": {
                 "name": "System Prompt",
-                "value": ("This is a question answering system."),
+                "value": HOSPITAL_SYSTEM_PROMPT,
             },
             "qa_prompt": {
                 "name": "QA Prompt (contains {context}, {question}, {lang})",
-                "value": DEFAULT_QA_TEXT_PROMPT,
+                "value": HOSPITAL_QA_TEXT_PROMPT,
             },
             "n_last_interactions": {
                 "name": "Number of interactions to include",
@@ -489,11 +503,8 @@ class FullQAPipeline(BaseReasoning):
             "id": "simple",
             "name": "Simple QA",
             "description": (
-                # "Simple RAG-based question answering pipeline. This pipeline can "
-                # "perform both keyword search and similarity search to retrieve the "
-                # "context. After that it includes that context to generate the answer."
-                "基于 RAG（Retrieval-Augmented Generation）的简易问答流水线。"
-                "该流水线能够执行关键词检索（keyword search）与相似度检索（similarity search）以获取上下文，"
+                "基于检索增强生成（RAG）的常规问答流程。"
+                "系统会通过关键词检索与相似度检索获取上下文，"
                 "随后将检索到的上下文纳入答案生成过程。"
             ),
         }
@@ -599,7 +610,7 @@ class FullDecomposeQAPipeline(FullQAPipeline):
         user_settings = super().get_user_settings()
         user_settings["decompose_prompt"] = {
             "name": "Decompose Prompt",
-            "value": DecomposeQuestionPipeline.DECOMPOSE_SYSTEM_PROMPT_TEMPLATE,
+            "value": HOSPITAL_DECOMPOSE_PROMPT,
         }
         return user_settings
 
@@ -620,12 +631,8 @@ class FullDecomposeQAPipeline(FullQAPipeline):
             "id": "complex",
             "name": "Complex QA",
             "description": (
-                # "Use multi-step reasoning to decompose a complex question into "
-                # "multiple sub-questions. This pipeline can "
-                # "perform both keyword search and similarity search to retrieve the "
-                # "context. After that it includes that context to generate the answer."
-                "采用多步推理（multi-step reasoning）将复杂问题分解为多个子问题。"
-                "该处理流水线（pipeline）能够同时执行关键词检索（keyword search）和相似度检索（similarity search）以获取上下文。"
+                "采用多步推理将复杂问题分解为多个子问题。"
+                "系统会同时执行关键词检索和相似度检索以获取上下文，"
                 "随后将检索到的上下文纳入生成答案的过程。"
             ),
         }

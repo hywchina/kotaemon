@@ -5,6 +5,7 @@ import pandas as pd
 import yaml
 from ktem.app import BasePage
 from ktem.utils.file import YAMLNoDateSafeLoader
+from ktem.utils.i18n import translate_ui_text
 from theflow.utils.modules import deserialize
 
 from kotaemon.base import Document
@@ -122,7 +123,12 @@ class RerankingManagement(BasePage):
             outputs=[self.rerank_list],
         )
         self._app.app.load(
-            lambda: gr.update(choices=list(reranking_models_manager.vendors().keys())),
+            lambda: gr.update(
+                choices=[
+                    (translate_ui_text(vendor), vendor)
+                    for vendor in reranking_models_manager.vendors().keys()
+                ]
+            ),
             outputs=[self.rerank_choices],
         )
 
@@ -255,8 +261,9 @@ class RerankingManagement(BasePage):
         for item in reranking_models_manager.info().values():
             record = {}
             record["名称"] = item["name"]
-            record["供应商"] = item["spec"].get("__type__", "-").split(".")[-1]
-            record["是否默认"] = item["default"]
+            vendor = item["spec"].get("__type__", "-").split(".")[-1]
+            record["供应商"] = translate_ui_text(vendor)
+            record["是否默认"] = translate_ui_text(str(bool(item["default"])))
             items.append(record)
 
         if items:
