@@ -1,9 +1,8 @@
-import hashlib
-
 import gradio as gr
 import pandas as pd
 from ktem.app import BasePage
 from ktem.db.models import User, engine
+from ktem.utils.passwords import hash_password
 from sqlmodel import Session, select
 from theflow.settings import settings as flowsettings
 
@@ -116,12 +115,11 @@ def create_user(usn, pwd, user_id=None, is_admin=True) -> bool:
             return False
 
         else:
-            hashed_password = hashlib.sha256(pwd.encode()).hexdigest()
             user = User(
                 id=user_id,
                 username=usn,
                 username_lower=usn.lower(),
-                password=hashed_password,
+                password=hash_password(pwd),
                 admin=is_admin,
             )
             session.add(user)
@@ -333,9 +331,10 @@ class UserManagement(BasePage):
                 )  # translate Username "{usn}" already exists --》用户名"{usn}"已存在
                 return
 
-            hashed_password = hashlib.sha256(pwd.encode()).hexdigest()
             user = User(
-                username=usn, username_lower=usn.lower(), password=hashed_password
+                username=usn,
+                username_lower=usn.lower(),
+                password=hash_password(pwd),
             )
             session.add(user)
             session.commit()
@@ -480,7 +479,7 @@ class UserManagement(BasePage):
             user.username_lower = usn.lower()
             user.admin = admin
             if pwd:
-                user.password = hashlib.sha256(pwd.encode()).hexdigest()
+                user.password = hash_password(pwd)
             session.commit()
             gr.Info(
                 f'用户"{usn}"更新成功'

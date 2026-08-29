@@ -1,3 +1,4 @@
+import html
 import os
 
 import markdown
@@ -32,7 +33,7 @@ def get_header(doc: RetrievedDocument) -> str:
         header += f" [第 {doc.metadata['page_label']} 页]"
 
     header += f" {doc.metadata.get('file_name', '<evidence>')}"
-    return header.strip()
+    return html.escape(header.strip())
 
 
 class Render:
@@ -51,7 +52,7 @@ class Render:
     @staticmethod
     def table(text: str) -> str:
         """Render table from markdown format into HTML"""
-        text = replace_mardown_header(text)
+        text = replace_mardown_header(html.escape(text, quote=False))
         return markdown.markdown(
             text,
             extensions=[
@@ -64,7 +65,7 @@ class Render:
     def table_preserve_linebreaks(text: str) -> str:
         """Render table from markdown format into HTML"""
         return markdown.markdown(
-            text,
+            html.escape(text, quote=False),
             extensions=[
                 "markdown.extensions.tables",
                 "markdown.extensions.fenced_code",
@@ -115,9 +116,11 @@ class Render:
         else:
             phrase = "true"
 
+        safe_pdf_src = html.escape(f"{BASE_PATH}/file={pdf_path}", quote=True)
+        safe_highlight = html.escape(str(highlight_text or ""), quote=True)
         return f"""
         {html_content}
-        <a href="#" class="pdf-link" data-src="{BASE_PATH}/file={pdf_path}" data-page="{page_idx}" data-search="{highlight_text}" data-phrase="{phrase}">
+        <a href="#" class="pdf-link" data-src="{safe_pdf_src}" data-page="{page_idx}" data-search="{safe_highlight}" data-phrase="{phrase}">
             [查看原文]
         </a>
         """  # noqa
@@ -125,15 +128,16 @@ class Render:
     @staticmethod
     def highlight(text: str, elem_id: str | None = None) -> str:
         """Highlight text"""
-        id_text = f" id='mark-{elem_id}'" if elem_id else ""
-        return f"<mark{id_text}>{text}</mark>"
+        safe_id = html.escape(str(elem_id), quote=True) if elem_id else ""
+        id_text = f" id='mark-{safe_id}'" if safe_id else ""
+        return f"<mark{id_text}>{html.escape(text)}</mark>"
 
     @staticmethod
     def image(url: str, text: str = "") -> str:
         """Render an image"""
-        img = f'<img src="{url}"><br>'
+        img = f'<img src="{html.escape(url, quote=True)}"><br>'
         if text:
-            caption = f"<p>{text}</p>"
+            caption = f"<p>{html.escape(text)}</p>"
             return f"<figure>{img}{caption}</figure><br>"
         return img
 

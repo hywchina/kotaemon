@@ -1,23 +1,22 @@
-import hashlib
-
 import gradio as gr
 from ktem.app import BasePage
 from ktem.db.models import User, engine
 from ktem.pages.resources.user import create_user
+from ktem.utils.passwords import verify_and_upgrade
 from sqlmodel import Session, select
 
 fetch_creds = """
 function() {
     const username = getStorage('username', '')
-    const password = getStorage('password', '')
-    return [username, password, null];
+    removeFromStorage('password');
+    return [username, '', null];
 }
 """
 
 signin_js = """
 function(usn, pwd) {
     setStorage('username', usn);
-    setStorage('password', pwd);
+    removeFromStorage('password');
     return [usn, pwd];
 }
 """
@@ -123,15 +122,19 @@ class LoginPage(BasePage):
             if not usn or not pwd:
                 return None, usn, pwd
 
-            hashed_password = hashlib.sha256(pwd.encode()).hexdigest()
             with Session(engine) as session:
                 stmt = select(User).where(
                     User.username_lower == usn.lower().strip(),
-                    User.password == hashed_password,
                 )
-                result = session.exec(stmt).all()
-                if result:
-                    return result[0].id, "", ""
+                user = session.exec(stmt).one_or_none()
+                if user:
+                    valid, upgraded_hash = verify_and_upgrade(pwd, user.password)
+                    if valid:
+                        if upgraded_hash:
+                            user.password = upgraded_hash
+                            session.add(user)
+                            session.commit()
+                        return user.id, "", ""
 
                 gr.Warning(
                     "用户名或密码无效"

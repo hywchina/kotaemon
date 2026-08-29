@@ -1,11 +1,10 @@
-import hashlib
-
 import gradio as gr
 from ktem.app import BasePage
 from ktem.components import reasonings
 from ktem.db.models import Settings, User, engine
 from ktem.mcp.manager import MCP_TOOL_PREFIX, mcp_manager
 from ktem.utils.i18n import translate_choices, translate_ui_text
+from ktem.utils.passwords import hash_password
 from sqlmodel import Session, select
 from theflow.settings import settings as flowsettings
 
@@ -293,8 +292,7 @@ class SettingsPage(BasePage):
             result = session.exec(statement).all()
             if result:
                 user = result[0]
-                hashed_password = hashlib.sha256(password.encode()).hexdigest()
-                user.password = hashed_password
+                user.password = hash_password(password)
                 session.add(user)
                 session.commit()
                 gr.Info("密码已修改。")
