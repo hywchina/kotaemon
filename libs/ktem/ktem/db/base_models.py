@@ -34,7 +34,7 @@ class BaseConversation(SQLModel):
     is_public: bool = Field(default=False)
 
     # contains messages + current files + chat_suggestions
-    data_source: dict = Field(default={}, sa_column=Column(JSON))
+    data_source: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     date_created: datetime.datetime = Field(
         default_factory=lambda: datetime.datetime.now(get_localzone())
@@ -79,7 +79,7 @@ class BaseSettings(SQLModel):
         default_factory=lambda: uuid.uuid4().hex, primary_key=True, index=True
     )
     user: str = Field(default="")
-    setting: dict = Field(default={}, sa_column=Column(JSON))
+    setting: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
 
 class BaseIssueReport(SQLModel):
@@ -96,7 +96,7 @@ class BaseIssueReport(SQLModel):
     __table_args__ = {"extend_existing": True}
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    issues: dict = Field(default={}, sa_column=Column(JSON))
+    issues: dict = Field(default_factory=dict, sa_column=Column(JSON))
     chat: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     settings: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     user: Optional[str] = Field(default=None)

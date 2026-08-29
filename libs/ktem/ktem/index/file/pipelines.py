@@ -80,6 +80,12 @@ def dev_settings():
 _default_token_func = get_tokenizer()
 
 
+def _run_embedding_in_background(quick_index_mode: bool, hospital_mode: bool) -> bool:
+    """Keep hospital indexing synchronous so provider failures reach the UI."""
+
+    return quick_index_mode and not hospital_mode
+
+
 class DocumentRetrievalPipeline(BaseFileIndexRetriever):
     """Retrieve relevant document
 
@@ -749,13 +755,17 @@ class IndexDocumentPipeline(BaseFileIndexIndexing):
     def get_pipeline(cls, user_settings, index_settings) -> BaseFileIndexIndexing:
         use_quick_index_mode = user_settings.get("quick_index_mode", False)
         print("use_quick_index_mode", use_quick_index_mode)
+        run_embedding_in_thread = _run_embedding_in_background(
+            use_quick_index_mode,
+            getattr(settings, "KH_HOSPITAL_MODE", False),
+        )
         obj = cls(
             embedding=embedding_models_manager[
                 index_settings.get(
                     "embedding", embedding_models_manager.get_default_name()
                 )
             ],
-            run_embedding_in_thread=use_quick_index_mode,
+            run_embedding_in_thread=run_embedding_in_thread,
             reader_mode=user_settings.get("reader_mode", "default"),
         )
         return obj

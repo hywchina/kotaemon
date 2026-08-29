@@ -13,7 +13,7 @@ class Index(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(unique=True)
     index_type: str = Field()
-    config: dict = Field(default={}, sa_column=Column(JSON))
+    config: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
 
 Index.metadata.create_all(engine)
