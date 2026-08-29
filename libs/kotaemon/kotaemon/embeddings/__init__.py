@@ -1,6 +1,7 @@
 from .base import BaseEmbeddings
 from .endpoint_based import EndpointEmbeddings
 from .fastembed import FastEmbedEmbeddings
+from .geekai import GeekAIEmbeddings
 from .langchain_based import (
     LCAzureOpenAIEmbeddings,
     LCCohereEmbeddings,
@@ -26,5 +27,6 @@ __all__ = [
     "OpenAIEmbeddings",
     "AzureOpenAIEmbeddings",
     "FastEmbedEmbeddings",
+    "GeekAIEmbeddings",
     "VoyageAIEmbeddings",
 ]

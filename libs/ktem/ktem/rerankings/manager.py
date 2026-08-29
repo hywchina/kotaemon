@@ -19,12 +19,20 @@ class RerankingManager:
         self._default: str = ""
         self._vendors: list[Type] = []
 
-        # populate the pool if empty
+        # Add newly configured providers without discarding existing user models.
         if hasattr(flowsettings, "KH_RERANKINGS"):
-            with Session(engine) as sess:
-                count = sess.query(RerankingTable).count()
-            if not count:
-                for name, model in flowsettings.KH_RERANKINGS.items():
+            for name, model in flowsettings.KH_RERANKINGS.items():
+                with Session(engine) as sess:
+                    exists = sess.query(RerankingTable).filter_by(name=name).first()
+                    if (
+                        exists
+                        and model.get("managed", False)
+                        and exists.spec != model["spec"]
+                    ):
+                        exists.spec = model["spec"]
+                        sess.add(exists)
+                        sess.commit()
+                if not exists:
                     self.add(
                         name=name,
                         spec=model["spec"],
@@ -54,11 +62,17 @@ class RerankingManager:
     def load_vendors(self):
         from kotaemon.rerankings import (
             CohereReranking,
+            GeekAIReranking,
             TeiFastReranking,
             VoyageAIReranking,
         )
 
-        self._vendors = [TeiFastReranking, CohereReranking, VoyageAIReranking]
+        self._vendors = [
+            TeiFastReranking,
+            CohereReranking,
+            GeekAIReranking,
+            VoyageAIReranking,
+        ]
 
     def __getitem__(self, key: str) -> BaseReranking:
         """Get model by name"""
@@ -182,7 +196,6 @@ class RerankingManager:
 
         try:
             with Session(engine) as sess:
-
                 if default:
                     # turn all models to non-default
                     sess.query(RerankingTable).update({"default": False})

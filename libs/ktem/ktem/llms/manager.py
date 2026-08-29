@@ -23,14 +23,21 @@ class LLMManager:
             for name, model in flowsettings.KH_LLMS.items():
                 with Session(engine) as session:
                     stmt = select(LLMTable).where(LLMTable.name == name)
-                    result = session.execute(stmt)
-                    if not result.first():
-                        item = LLMTable(
+                    item = session.execute(stmt).scalar_one_or_none()
+                    if item and model.get("managed", False):
+                        if item.spec != model["spec"]:
+                            item.spec = model["spec"]
+                            session.add(item)
+                            session.commit()
+                    elif not item:
+                        if model.get("default", False):
+                            session.query(LLMTable).update({"default": False})
+                        new_item = LLMTable(
                             name=name,
                             spec=model["spec"],
                             default=model.get("default", False),
                         )
-                        session.add(item)
+                        session.add(new_item)
                         session.commit()
 
         self.load()
@@ -86,12 +93,10 @@ class LLMManager:
         return key in self._models
 
     @overload
-    def get(self, key: str, default: None) -> Optional[ChatLLM]:
-        ...
+    def get(self, key: str, default: None) -> Optional[ChatLLM]: ...
 
     @overload
-    def get(self, key: str, default: ChatLLM) -> ChatLLM:
-        ...
+    def get(self, key: str, default: ChatLLM) -> ChatLLM: ...
 
     def get(self, key: str, default: Optional[ChatLLM] = None) -> Optional[ChatLLM]:
         """Get model by name with default value"""
@@ -165,7 +170,6 @@ class LLMManager:
 
         try:
             with Session(engine) as session:
-
                 if default:
                     # turn all models to non-default
                     session.query(LLMTable).update({"default": False})
@@ -208,7 +212,6 @@ class LLMManager:
 
         try:
             with Session(engine) as session:
-
                 if default:
                     # turn all models to non-default
                     session.query(LLMTable).update({"default": False})

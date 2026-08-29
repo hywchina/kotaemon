@@ -85,6 +85,21 @@ ChatPage.submit_msg
 `KH_ENABLE_EXTERNAL_AGENT_TOOLS=true` 后再开放 Wikipedia/Google，MCP 工具不受
 该开关影响。
 
+### 2.6 模型调用架构
+
+| 类别 | 当前默认模型 | 应用组件 | API |
+| --- | --- | --- | --- |
+| LLM/VLM | `qwen3-vl-flash` | `ChatOpenAI` | `POST /api/v1/chat/completions` |
+| Embedding | `qwen3-vl-embedding` | `GeekAIEmbeddings` | `POST /api/v1/embeddings` |
+| Rerank | `qwen3-rerank` | `GeekAIReranking` | `POST /api/v1/rerank` |
+| ASR | 暂未接入 | 语音助手页面默认关闭 | 无 |
+
+`flowsettings.py` 从本地 `.env` 读取配置，三个模型 Manager 将配置注册到应用
+数据库；索引入库调用默认 Embedding，问答检索后调用默认 Reranker，最终由默认
+LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型名变更后会在
+下次启动时同步到应用数据库。`KH_MODEL_PROFILE=lmstudio` 可恢复迁移前的本地
+三模型组合，设为 `official` 则使用上游默认配置。
+
 ## 3. 两种升级方案对比
 
 ### 3.1 将 `dev` rebase 到官方 `main`
@@ -130,7 +145,8 @@ ChatPage.submit_msg
 - 文件分组全选、分组优先、取消检索选择、快速上传后不自动提交问题
 - 旧用户设置与新默认设置的合并，避免新增设置键导致 `KeyError`
 - 引用生成超时调整和思维导图相关设置
-- LM Studio/OpenAI-compatible LLM 与 Embedding、本地 TEI-style reranker
+- GeekAI LLM、专用 Embedding/Rerank 协议适配器，以及可选的 LM Studio/本地
+  TEI-style 模型配置
 - 语音助手 iframe 页面，地址和开关改由环境变量控制
 - 压测源码、模型连通性工具和定制 Docker 入口
 - 医疗 favicon 和帮助内容
@@ -156,7 +172,12 @@ ChatPage.submit_msg
 
 | 配置 | 默认值 | 说明 |
 | --- | --- | --- |
-| `KH_USE_LOCAL_MODEL_PROFILE` | `true` | 注册并默认使用本地 LLM/Embedding/Reranker |
+| `KH_MODEL_PROFILE` | `geekai` | 模型配置集：`geekai`、`lmstudio` 或 `official` |
+| `GEEKAI_API_BASE_URL` | `https://geekai.co/api/v1` | GeekAI OpenAI-compatible API 根地址 |
+| `GEEKAI_API_KEY` | 占位值 | GeekAI API Key，仅放在本地 `.env` |
+| `GEEKAI_CHAT_MODEL` | `qwen3-vl-flash` | 默认 LLM/VLM |
+| `GEEKAI_EMBEDDING_MODEL` | `qwen3-vl-embedding` | 默认 Embedding，调用 `/embeddings` |
+| `GEEKAI_RERANK_MODEL` | `qwen3-rerank` | 默认 Reranker，调用 `/rerank` |
 | `KH_SHARED_FILE_COLLECTION` | `true` | 普通用户可检索管理员维护的共享资料 |
 | `KH_FILE_LOADER_MODES` | `default` | UI 可选 loader，逗号分隔，可加入 Paddle/Docling 等 |
 | `KH_ENABLE_URL_UPLOAD` | `false` | 是否显示 URL 入库入口 |
@@ -166,19 +187,27 @@ ChatPage.submit_msg
 | `KH_ENABLE_VOICE_ASSISTANT` | `true` | 是否显示语音助手页 |
 | `KH_START_LOCAL_RERANK` | `false` | `run.sh` 是否同时启动本地重排服务 |
 
+GeekAI 的 LLM 接口兼容 OpenAI Chat Completions，直接复用 `ChatOpenAI`。
+`qwen3-vl-embedding` 的 `input` 必须是 `[{"type": "text", "text": ...}]`
+而不是 OpenAI 的字符串数组，因此使用 `GeekAIEmbeddings` 适配器。GeekAI
+Rerank 返回的 `index` 当前代表排序位置而非原文档位置，`GeekAIReranking` 会按
+响应中的文档内容安全映射回原始 `Document`，并写入 `reranking_score`。
+
 ## 6. 验证结果与边界
 
 - `uv lock --check`：通过，锁文件与 workspace 配置一致
 - 迁移涉及的 Python 文件：Ruff 格式及静态检查通过，`compileall` 通过
 - 应用构建烟测：成功创建 1 个索引、7 个页面标签和 469 个 Gradio 组件
 - `ktem` 会话与 MCP 测试：27 个通过
-- `kotaemon` 核心测试：111 个通过、20 个按可选依赖跳过、5 个 Milvus
+- `kotaemon` 核心测试：115 个通过、20 个按可选依赖跳过、5 个 Milvus
   用例暂不执行；当前旧 `venv` 使用的 `setuptools 84.0.0` 已不提供
   `pkg_resources`，而官方 `uv.lock` 锁定 `setuptools 80.9.0`
 - 官方 `ktem_tests/test_qa.py` 引用了仓库中不存在的顶层 `index` 模块，完整
   应用测试集会在收集阶段失败；该问题在未修改的官方 `v0.12.0` 中同样存在
-- 因本机未配置聊天、Embedding、Reranker 模型，未做真实入库与端到端回答验收；
-  PaddleOCR 可选依赖也未安装，因此相关集成用例按官方规则跳过
+- GeekAI 真实接口验证：Chat Completions 正常生成；Embedding 一次处理两段文本，
+  返回两个 2560 维向量；Rerank 能按相关性重排两段文本；LLM 流式输出正常
+- GeekAI 协议适配单测覆盖批处理、向量顺序、Rerank 文档映射和异常响应；
+  PaddleOCR 可选依赖未安装，因此相关集成用例仍按官方规则跳过
 - 压测脚本已通过静态检查和编译检查；当前环境未安装可选的 `locust`，未实际
   发起压力测试
 

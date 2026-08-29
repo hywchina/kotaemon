@@ -19,9 +19,15 @@ PORT="${2:-${GRADIO_SERVER_PORT:-7860}}"
 
 mkdir -p "$RUNTIME_DIR"
 
-if [[ -x "$APP_DIR/.venv/bin/python" ]]; then
+has_app_runtime() {
+    local python_bin="$1"
+    [[ -x "$python_bin" ]] && \
+        "$python_bin" -c 'import gradio, ktem, theflow' >/dev/null 2>&1
+}
+
+if has_app_runtime "$APP_DIR/.venv/bin/python"; then
     PYTHON_CMD=("$APP_DIR/.venv/bin/python")
-elif [[ -x "$APP_DIR/venv/bin/python" ]]; then
+elif has_app_runtime "$APP_DIR/venv/bin/python"; then
     PYTHON_CMD=("$APP_DIR/venv/bin/python")
 elif command -v uv >/dev/null 2>&1; then
     PYTHON_CMD=(uv run python)

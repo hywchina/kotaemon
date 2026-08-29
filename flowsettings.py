@@ -331,12 +331,66 @@ KH_RERANKINGS["cohere"] = {
     "default": True,
 }
 
-# The fork is deployed with an OpenAI-compatible LM Studio endpoint and a local
-# TEI-style reranker. Keep the profile configurable and avoid embedding machine
-# paths or credentials in source control.
-KH_USE_LOCAL_MODEL_PROFILE = config(
-    "KH_USE_LOCAL_MODEL_PROFILE", default=True, cast=bool
-)
+# Select one managed deployment profile. `KH_USE_LOCAL_MODEL_PROFILE` remains a
+# compatibility fallback for existing deployments that have not set the new
+# `KH_MODEL_PROFILE` variable.
+KH_MODEL_PROFILE = config("KH_MODEL_PROFILE", default="").strip().lower()
+if not KH_MODEL_PROFILE:
+    KH_MODEL_PROFILE = (
+        "lmstudio"
+        if config("KH_USE_LOCAL_MODEL_PROFILE", default=False, cast=bool)
+        else "geekai"
+    )
+if KH_MODEL_PROFILE not in {"geekai", "lmstudio", "official"}:
+    raise ValueError("KH_MODEL_PROFILE must be one of: geekai, lmstudio, official")
+
+KH_USE_GEEKAI_MODEL_PROFILE = KH_MODEL_PROFILE == "geekai"
+KH_USE_LOCAL_MODEL_PROFILE = KH_MODEL_PROFILE == "lmstudio"
+
+if KH_USE_GEEKAI_MODEL_PROFILE:
+    for model_group in (KH_LLMS, KH_EMBEDDINGS, KH_RERANKINGS):
+        for model_config in model_group.values():
+            model_config["default"] = False
+
+    geekai_api_base = config(
+        "GEEKAI_API_BASE_URL", default="https://geekai.co/api/v1"
+    ).rstrip("/")
+    geekai_api_key = config("GEEKAI_API_KEY", default="your-geekai-api-key")
+    KH_LLMS["geekai"] = {
+        "spec": {
+            "__type__": "kotaemon.llms.ChatOpenAI",
+            "base_url": geekai_api_base,
+            "model": config("GEEKAI_CHAT_MODEL", default="qwen3-vl-flash"),
+            "api_key": geekai_api_key,
+            "timeout": config("GEEKAI_CHAT_TIMEOUT", default=120, cast=int),
+        },
+        "default": True,
+        "managed": True,
+    }
+    KH_EMBEDDINGS["geekai"] = {
+        "spec": {
+            "__type__": "kotaemon.embeddings.GeekAIEmbeddings",
+            "endpoint_url": f"{geekai_api_base}/embeddings",
+            "model": config("GEEKAI_EMBEDDING_MODEL", default="qwen3-vl-embedding"),
+            "api_key": geekai_api_key,
+            "batch_size": config("GEEKAI_EMBEDDING_BATCH_SIZE", default=16, cast=int),
+            "timeout": config("GEEKAI_EMBEDDING_TIMEOUT", default=60, cast=int),
+        },
+        "default": True,
+        "managed": True,
+    }
+    KH_RERANKINGS["geekai"] = {
+        "spec": {
+            "__type__": "kotaemon.rerankings.GeekAIReranking",
+            "endpoint_url": f"{geekai_api_base}/rerank",
+            "model_name": config("GEEKAI_RERANK_MODEL", default="qwen3-rerank"),
+            "api_key": geekai_api_key,
+            "timeout": config("GEEKAI_RERANK_TIMEOUT", default=60, cast=int),
+        },
+        "default": True,
+        "managed": True,
+    }
+
 if KH_USE_LOCAL_MODEL_PROFILE:
     for model_group in (KH_LLMS, KH_EMBEDDINGS, KH_RERANKINGS):
         for model_config in model_group.values():

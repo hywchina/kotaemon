@@ -10,6 +10,7 @@ from ktem.rerankings.manager import reranking_models_manager as rerankers
 from theflow.settings import settings as flowsettings
 
 KH_OLLAMA_URL = getattr(flowsettings, "KH_OLLAMA_URL", "http://localhost:11434/v1/")
+KH_MODEL_PROFILE = getattr(flowsettings, "KH_MODEL_PROFILE", "official")
 KH_USE_LOCAL_MODEL_PROFILE = getattr(flowsettings, "KH_USE_LOCAL_MODEL_PROFILE", False)
 DEFAULT_OLLAMA_URL = KH_OLLAMA_URL.replace("v1", "api")
 if DEFAULT_OLLAMA_URL.endswith("/"):
@@ -53,7 +54,9 @@ class SetupPage(BasePage):
     def on_building_ui(self):
         gr.Markdown(f"# 欢迎使用 {self._app.app_name}")
         model_choices = []
-        if KH_USE_LOCAL_MODEL_PROFILE:
+        if KH_MODEL_PROFILE == "geekai":
+            model_choices.append(("已配置的 GeekAI 模型（推荐）", "geekai"))
+        elif KH_USE_LOCAL_MODEL_PROFILE:
             model_choices.append(("已配置的本地模型（推荐）", "lmstudio"))
         model_choices.extend(
             [
@@ -66,10 +69,20 @@ class SetupPage(BasePage):
         self.radio_model = gr.Radio(
             model_choices,
             label="选择模型服务",
-            value="lmstudio" if KH_USE_LOCAL_MODEL_PROFILE else "cohere",
+            value=(
+                KH_MODEL_PROFILE
+                if KH_MODEL_PROFILE in {"geekai", "lmstudio"}
+                else "cohere"
+            ),
             info="稍后可在资源管理中修改模型配置。",
             interactive=True,
         )
+
+        with gr.Column(visible=KH_MODEL_PROFILE == "geekai") as self.geekai_option:
+            gr.Markdown(
+                "GeekAI 的 LLM、Embedding 和 Rerank 参数来自 `.env` 中的 "
+                "`GEEKAI_*` 配置。继续后会测试当前 LLM 与 Embedding 连接。"
+            )
 
         with gr.Column(visible=KH_USE_LOCAL_MODEL_PROFILE) as self.lmstudio_option:
             gr.Markdown(
@@ -88,7 +101,9 @@ class SetupPage(BasePage):
                 show_label=False, placeholder="OpenAI API Key"
             )
 
-        with gr.Column(visible=True) as self.cohere_option:
+        with gr.Column(
+            visible=KH_MODEL_PROFILE not in {"geekai", "lmstudio"}
+        ) as self.cohere_option:
             gr.Markdown(
                 (
                     "#### Cohere API Key\n\n"
@@ -181,6 +196,7 @@ class SetupPage(BasePage):
             inputs=[self.radio_model],
             show_progress="hidden",
             outputs=[
+                self.geekai_option,
                 self.lmstudio_option,
                 self.cohere_option,
                 self.openai_option,
@@ -204,7 +220,7 @@ class SetupPage(BasePage):
             yield gr.value(visible=False)
             return
 
-        if radio_model_value == "lmstudio":
+        if radio_model_value in {"geekai", "lmstudio"}:
             pass
         elif radio_model_value == "cohere":
             if cohere_api_key:
@@ -405,9 +421,17 @@ class SetupPage(BasePage):
         return default_settings
 
     def switch_options_view(self, radio_model_value):
-        components_visible = [gr.update(visible=False) for _ in range(5)]
+        components_visible = [gr.update(visible=False) for _ in range(6)]
 
-        values = ["lmstudio", "cohere", "openai", "ollama", "google", None]
+        values = [
+            "geekai",
+            "lmstudio",
+            "cohere",
+            "openai",
+            "ollama",
+            "google",
+            None,
+        ]
         assert radio_model_value in values, f"Invalid value {radio_model_value}"
 
         if radio_model_value is not None:

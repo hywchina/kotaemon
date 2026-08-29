@@ -19,12 +19,20 @@ class EmbeddingManager:
         self._default: str = ""
         self._vendors: list[Type] = []
 
-        # populate the pool if empty
+        # Add newly configured providers without discarding existing user models.
         if hasattr(flowsettings, "KH_EMBEDDINGS"):
-            with Session(engine) as sess:
-                count = sess.query(EmbeddingTable).count()
-            if not count:
-                for name, model in flowsettings.KH_EMBEDDINGS.items():
+            for name, model in flowsettings.KH_EMBEDDINGS.items():
+                with Session(engine) as sess:
+                    exists = sess.query(EmbeddingTable).filter_by(name=name).first()
+                    if (
+                        exists
+                        and model.get("managed", False)
+                        and exists.spec != model["spec"]
+                    ):
+                        exists.spec = model["spec"]
+                        sess.add(exists)
+                        sess.commit()
+                if not exists:
                     self.add(
                         name=name,
                         spec=model["spec"],
@@ -56,6 +64,7 @@ class EmbeddingManager:
         from kotaemon.embeddings import (
             AzureOpenAIEmbeddings,
             FastEmbedEmbeddings,
+            GeekAIEmbeddings,
             LCCohereEmbeddings,
             LCGoogleEmbeddings,
             LCHuggingFaceEmbeddings,
@@ -69,6 +78,7 @@ class EmbeddingManager:
             AzureOpenAIEmbeddings,
             OpenAIEmbeddings,
             FastEmbedEmbeddings,
+            GeekAIEmbeddings,
             LCCohereEmbeddings,
             LCHuggingFaceEmbeddings,
             LCGoogleEmbeddings,
@@ -201,7 +211,6 @@ class EmbeddingManager:
 
         try:
             with Session(engine) as sess:
-
                 if default:
                     # turn all models to non-default
                     sess.query(EmbeddingTable).update({"default": False})
