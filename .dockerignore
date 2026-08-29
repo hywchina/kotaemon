@@ -1,5 +1,6 @@
 .github/
 .git/
+.env
 .venv/
 venv/
 .mypy_cache/
@@ -18,3 +19,4 @@ pressure_tests/**/code_bak/
 .gitattributes
 README.md
 *.zip
+!libs/ktem/ktem/assets/prebuilt/pdfjs-4.0.379-dist.zip

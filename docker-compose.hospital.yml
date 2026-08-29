@@ -1,0 +1,20 @@
+services:
+  app:
+    image: ${KH_HOSPITAL_IMAGE:-kotaemon-hospital:0.12}
+    env_file:
+      - .env
+    environment:
+      GRADIO_SERVER_NAME: 0.0.0.0
+      GRADIO_SERVER_PORT: 7860
+    ports:
+      - "${KH_APP_PORT:-7860}:7860"
+    volumes:
+      - ./ktem_app_data:/app/ktem_app_data
+    user: "${KH_CONTAINER_UID:-1000}:${KH_CONTAINER_GID:-1000}"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

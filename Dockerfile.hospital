@@ -1,0 +1,52 @@
+FROM python:3.10-slim-bookworm AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        cargo \
+        git \
+        libmagic-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir uv==0.7.3
+
+WORKDIR /app
+COPY . /app
+RUN uv sync --frozen --no-dev
+
+
+FROM python:3.10-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=UTF-8 \
+    GRADIO_SERVER_NAME=0.0.0.0 \
+    GRADIO_SERVER_PORT=7860 \
+    NLTK_DATA=/app/libs/ktem/ktem/assets/nltk_data \
+    KH_DISABLE_TOKENIZER_DOWNLOADS=true
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        fonts-noto-cjk \
+        libgl1 \
+        libglib2.0-0 \
+        libmagic1 \
+        libsm6 \
+        libxext6 \
+        libreoffice \
+        poppler-utils \
+        tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app /app
+RUN PYTHONPATH=/app/libs/ktem .venv/bin/python -c "import ktem.assets"
+
+EXPOSE 7860
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD .venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/', timeout=3)" || exit 1
+
+CMD [".venv/bin/python", "app.py"]
