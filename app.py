@@ -12,6 +12,11 @@ if GRADIO_TEMP_DIR is None:
     os.environ["GRADIO_TEMP_DIR"] = GRADIO_TEMP_DIR
 
 
+from ktem.utils.logging import configure_logging  # noqa: E402
+
+configure_logging(os.path.join(KH_APP_DATA_DIR, "logs"))
+
+
 from ktem.main import App  # noqa
 
 app = App()

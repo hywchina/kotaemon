@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 from copy import deepcopy
 from typing import Optional
@@ -35,6 +36,7 @@ from ...utils import (
 )
 from ...utils.commands import WEB_SEARCH_COMMAND
 from ...utils.hf_papers import get_recommended_papers
+from ...utils.notifications import notify_exception
 from ...utils.rate_limit import check_rate_limit
 from .chat_panel import ChatPanel
 from .chat_suggestion import ChatSuggestion
@@ -48,12 +50,13 @@ KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_WEB_SEARCH_BACKEND = getattr(flowsettings, "KH_WEB_SEARCH_BACKEND", None)
 KH_ENABLE_URL_UPLOAD = getattr(flowsettings, "KH_ENABLE_URL_UPLOAD", False)
+logger = logging.getLogger(__name__)
 WebSearch = None
 if KH_WEB_SEARCH_BACKEND:
     try:
         WebSearch = import_dotted_string(KH_WEB_SEARCH_BACKEND, safe=False)
-    except (ImportError, AttributeError) as e:
-        print(f"Error importing {KH_WEB_SEARCH_BACKEND}: {e}")
+    except (ImportError, AttributeError):
+        logger.exception("Unable to load web search backend: %s", KH_WEB_SEARCH_BACKEND)
 
 REASONING_LIMITS = 2 if KH_DEMO_MODE else 10
 DEFAULT_SETTING = "(default)"
@@ -890,7 +893,7 @@ class ChatPage(BasePage):
             print("User ID:", sso_user_id)
 
         if not chat_input:
-            raise ValueError("Input is empty")
+            raise gr.Error("请输入问题后再发送。")
 
         chat_input_text = chat_input.get("text", "")
         display_chat_input_text = format_mentions_for_display(chat_input_text)
@@ -1408,8 +1411,20 @@ class ChatPage(BasePage):
                     plot,
                     chat_state,
                 )
-        except ValueError as e:
-            print(e)
+        except Exception as exc:  # noqa: BLE001 - keep the chat stream recoverable
+            notice = notify_exception("chat-answer", exc, logger=logger)
+            if text:
+                text = f"{text}\n\n> ⚠️ {notice.display_message}"
+            else:
+                text = f"⚠️ {notice.display_message}"
+            yield (
+                chat_history + [(display_input, text)],
+                refs,
+                plot_gr,
+                plot,
+                chat_state,
+            )
+            return
 
         if not text:
             empty_msg = getattr(
@@ -1431,11 +1446,19 @@ class ChatPage(BasePage):
 
         # check if this is a newly created conversation
         if len(chat_history) == 1:
-            suggested_name = suggest_pipeline(chat_history).text
-            suggested_name = strip_think_tag(suggested_name)
-            suggested_name = suggested_name.replace('"', "").replace("'", "")[:40]
-            new_name = gr.update(value=suggested_name)
-            renamed = True
+            try:
+                suggested_name = suggest_pipeline(chat_history).text
+                suggested_name = strip_think_tag(suggested_name)
+                suggested_name = suggested_name.replace('"', "").replace("'", "")[:40]
+                new_name = gr.update(value=suggested_name)
+                renamed = True
+            except Exception as exc:  # noqa: BLE001 - title is an optional feature
+                notify_exception(
+                    "conversation-title",
+                    exc,
+                    logger=logger,
+                    fallback_message="回答已生成，但自动命名会话失败，您可以稍后手动重命名。",
+                )
 
         return new_name, renamed
 
@@ -1452,23 +1475,31 @@ class ChatPage(BasePage):
             else settings["reasoning.lang"]
         )
         if use_suggestion:
-            suggest_pipeline = SuggestFollowupQuesPipeline()
-            suggest_pipeline.lang = SUPPORTED_LANGUAGE_MAP.get(
-                target_language, "English"
-            )
             suggested_questions = [[each] for each in ChatSuggestion.CHAT_SAMPLES]
+            try:
+                suggest_pipeline = SuggestFollowupQuesPipeline()
+                suggest_pipeline.lang = SUPPORTED_LANGUAGE_MAP.get(
+                    target_language, "English"
+                )
 
-            if len(chat_history) >= 1:
-                suggested_resp = suggest_pipeline(chat_history).text
-                if ques_res := re.search(
-                    r"\[(.*?)\]", re.sub("\n", "", suggested_resp)
-                ):
-                    ques_res_str = ques_res.group()
-                    try:
-                        suggested_questions = json.loads(ques_res_str)
-                        suggested_questions = [[x] for x in suggested_questions]
-                    except Exception:
-                        pass
+                if len(chat_history) >= 1:
+                    suggested_resp = suggest_pipeline(chat_history).text
+                    if ques_res := re.search(
+                        r"\[(.*?)\]", re.sub("\n", "", suggested_resp)
+                    ):
+                        ques_res_str = ques_res.group()
+                        try:
+                            suggested_questions = json.loads(ques_res_str)
+                            suggested_questions = [[x] for x in suggested_questions]
+                        except (TypeError, ValueError, json.JSONDecodeError):
+                            logger.warning("Model returned invalid follow-up questions")
+            except Exception as exc:  # noqa: BLE001 - suggestions must fail open
+                notify_exception(
+                    "follow-up-suggestions",
+                    exc,
+                    logger=logger,
+                    fallback_message="回答已生成，但暂时无法生成推荐追问。",
+                )
 
             return gr.update(visible=True), suggested_questions
 
