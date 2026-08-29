@@ -29,7 +29,7 @@ class ChatSuggestion(BasePage):
             )
             self.examples = gr.DataFrame(
                 value=self.chat_samples,
-                headers=["Next Question"],
+                headers=["推荐追问"],
                 interactive=False,
                 elem_id="chat-suggestion",
                 wrap=True,

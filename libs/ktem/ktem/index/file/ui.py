@@ -27,9 +27,29 @@ KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_SHARED_FILE_COLLECTION = getattr(flowsettings, "KH_SHARED_FILE_COLLECTION", False)
 KH_ENABLE_URL_UPLOAD = getattr(flowsettings, "KH_ENABLE_URL_UPLOAD", False)
-DOWNLOAD_MESSAGE = "Start download"
+DOWNLOAD_MESSAGE = "下载文件"
 MAX_FILENAME_LENGTH = 20
 MAX_FILE_COUNT = 200
+FILE_COLUMNS = {
+    "id": "ID",
+    "name": "文件名",
+    "size": "大小",
+    "tokens": "Token 数",
+    "loader": "解析器",
+    "date_created": "上传时间",
+}
+GROUP_COLUMNS = {
+    "id": "ID",
+    "name": "分组名称",
+    "files": "文件",
+    "date_created": "创建时间",
+}
+CHUNK_TYPE_LABELS = {
+    "text": "文本",
+    "table": "表格",
+    "image": "图片",
+    "thumbnail": "缩略图",
+}
 
 chat_input_focus_js = """
 function() {
@@ -225,13 +245,13 @@ class FileIndexPage(BasePage):
     def upload_instruction(self) -> str:
         msgs = []
         if self._supported_file_types:
-            msgs.append(f"- Supported file types: {self._supported_file_types_str}")
+            msgs.append(f"- 支持的文件类型：{self._supported_file_types_str}")
 
         if max_file_size := self._index.config.get("max_file_size", 0):
-            msgs.append(f"- Maximum file size: {max_file_size} MB")
+            msgs.append(f"- 单个文件最大：{max_file_size} MB")
 
         if max_number_of_files := self._index.config.get("max_number_of_files", 0):
-            msgs.append(f"- The index can have maximum {max_number_of_files} files")
+            msgs.append(f"- 知识库最多包含：{max_number_of_files} 个文件")
 
         if msgs:
             return "\n".join(msgs)
@@ -249,14 +269,7 @@ class FileIndexPage(BasePage):
         )
         self.file_list_state = gr.State(value=None)
         self.file_list = gr.DataFrame(
-            headers=[
-                "id",
-                "name",
-                "size",
-                "tokens",
-                "loader",
-                "date_created",
-            ],
+            headers=list(FILE_COLUMNS.values()),
             column_widths=[0, 50, 8, 7, 15, 20],
             interactive=False,
             wrap=False,
@@ -291,9 +304,15 @@ class FileIndexPage(BasePage):
         self.chunk_header = gr.Markdown(visible=False)
         with gr.Row() as self.chunk_toolbar:
             self.chunk_type_filter = gr.Dropdown(
-                choices=["all", "text", "table", "image", "thumbnail"],
+                choices=[
+                    ("全部", "all"),
+                    ("文本", "text"),
+                    ("表格", "table"),
+                    ("图片", "image"),
+                    ("缩略图", "thumbnail"),
+                ],
                 value="all",
-                label="Chunk type",
+                label="内容类型",
                 show_label=False,
                 scale=1,
                 visible=False,
@@ -323,12 +342,7 @@ class FileIndexPage(BasePage):
     def render_group_list(self):
         self.group_list_state = gr.State(value=None)
         self.group_list = gr.DataFrame(
-            headers=[
-                "id",
-                "name",
-                "files",
-                "date_created",
-            ],
+            headers=list(GROUP_COLUMNS.values()),
             column_widths=[0, 25, 55, 20],
             interactive=False,
             wrap=False,
@@ -532,9 +546,12 @@ class FileIndexPage(BasePage):
         for doc in docs:
             t = doc.metadata.get("type", "text")
             type_counts[t] = type_counts.get(t, 0) + 1
-        type_parts = [f"{c} {t}" for t, c in sorted(type_counts.items())]
+        type_parts = [
+            f"{CHUNK_TYPE_LABELS.get(t, t)} {c}"
+            for t, c in sorted(type_counts.items())
+        ]
         type_str = ", ".join(type_parts) if type_parts else "0"
-        header_md = f"**{total} chunks** ({type_str})"
+        header_md = f"**共 {total} 个内容块**（{type_str}）"
 
         # Render the chunks
         chunks_html: list[str] = []
@@ -555,7 +572,7 @@ class FileIndexPage(BasePage):
 
             header_prefix = f"[{idx + 1}/{total}]"
             if doc.metadata.get("page_label"):
-                header_prefix += f" [Page {doc.metadata['page_label']}]"
+                header_prefix += f" [第 {doc.metadata['page_label']} 页]"
             badge = f' <span style="opacity:0.7;font-size:0.85em">({doc_type})</span>'
             header_prefix += badge
 
@@ -614,7 +631,7 @@ class FileIndexPage(BasePage):
             self._index._vs.delete(vs_ids)
         self._index._docstore.delete(ds_ids)
 
-        gr.Info(f"File {file_name} has been deleted")
+        gr.Info(f"文件“{file_name}”已删除。")
 
         return None, self.selected_panel_false
 
@@ -690,7 +707,7 @@ class FileIndexPage(BasePage):
 
     def download_all_files(self):
         if self._index.config.get("private", False):
-            raise gr.Error("This feature is not available for private collection.")
+            raise gr.Error("私有知识库不支持批量下载。")
 
         zip_files = []
         for file_name in os.listdir(flowsettings.KH_CHUNKS_OUTPUT_DIR):
@@ -707,7 +724,7 @@ class FileIndexPage(BasePage):
         return gr.DownloadButton(label=DOWNLOAD_MESSAGE, value=f"{zip_file_path}.zip")
 
     def delete_all_files(self, file_list):
-        for file_id in file_list.id.values:
+        for file_id in file_list["ID"].values:
             self.delete_event(file_id)
 
     def set_file_id_selector(self, selected_file_id):
@@ -716,9 +733,9 @@ class FileIndexPage(BasePage):
     def show_delete_all_confirm(self, file_list):
         # when the list of files is empty it shows a single line with id equal to -
         if len(file_list) == 0 or (
-            len(file_list) == 1 and file_list.id.values[0] == "-"
+            len(file_list) == 1 and file_list["ID"].values[0] == "-"
         ):
-            gr.Info("No file to delete")
+            gr.Info("没有可删除的文件。")
             return [
                 gr.update(visible=True),
                 gr.update(visible=False),
@@ -1271,7 +1288,7 @@ class FileIndexPage(BasePage):
             errors = self.validate_urls(files)
         else:
             if not files:
-                gr.Info("No uploaded file")
+                gr.Info("请先选择要上传的文件。")
                 yield "", ""
                 return
             files, unzip_errors = self._may_extract_zip(
@@ -1285,7 +1302,7 @@ class FileIndexPage(BasePage):
             yield "", ""
             return
 
-        gr.Info(f"Start indexing {len(files)} files...")
+        gr.Info(f"开始处理 {len(files)} 个文件，请勿关闭页面。")
 
         # get the pipeline
         indexing_pipeline = self._index.get_indexing_pipeline(settings, user_id)
@@ -1318,10 +1335,10 @@ class FileIndexPage(BasePage):
 
         n_successes = len([_ for _ in results if _])
         if n_successes:
-            gr.Info(f"Successfully index {n_successes} files")
+            gr.Info(f"已成功处理 {n_successes} 个文件。")
         n_errors = len([_ for _ in errors if _])
         if n_errors:
-            gr.Warning(f"Have errors for {n_errors} files")
+            gr.Warning(f"有 {n_errors} 个文件处理失败，请查看上传结果。")
 
         return results
 
@@ -1565,7 +1582,7 @@ class FileIndexPage(BasePage):
             ]
 
         if results:
-            file_list = pd.DataFrame.from_records(results)
+            file_list = pd.DataFrame.from_records(results).rename(columns=FILE_COLUMNS)
         else:
             file_list = pd.DataFrame.from_records(
                 [
@@ -1578,7 +1595,7 @@ class FileIndexPage(BasePage):
                         "date_created": "-",
                     }
                 ]
-            )
+            ).rename(columns=FILE_COLUMNS)
 
         return results, file_list
 
@@ -1645,7 +1662,9 @@ class FileIndexPage(BasePage):
                 item_postfix = "s" if item_count > 1 else ""
                 item["files"] = f"[{item_count} item{item_postfix}] " + item["files"]
 
-            group_list = pd.DataFrame.from_records(formated_results)
+            group_list = pd.DataFrame.from_records(formated_results).rename(
+                columns=GROUP_COLUMNS
+            )
         else:
             group_list = pd.DataFrame.from_records(
                 [
@@ -1656,7 +1675,7 @@ class FileIndexPage(BasePage):
                         "date_created": "-",
                     }
                 ]
-            )
+            ).rename(columns=GROUP_COLUMNS)
 
         return results, group_list
 
@@ -1694,7 +1713,7 @@ class FileIndexPage(BasePage):
                     .first()
                 )
                 if current_group:
-                    raise gr.Error(f"Group {group_name} already exists")
+                    raise gr.Error(f"分组“{group_name}”已存在。")
 
                 current_group = FileGroup(
                     name=group_name,
@@ -1706,7 +1725,7 @@ class FileIndexPage(BasePage):
 
             group_id = current_group.id
 
-        gr.Info(f"Group {group_name} has been saved")
+        gr.Info(f"分组“{group_name}”已保存。")
         return group_id
 
     def delete_group(self, group_id):
@@ -1724,22 +1743,22 @@ class FileIndexPage(BasePage):
                 group_name = item.name
                 session.delete(item)
                 session.commit()
-                gr.Info(f"Group {group_name} has been deleted")
+                gr.Info(f"分组“{group_name}”已删除。")
             else:
-                raise gr.Error("No group found")
+                raise gr.Error("找不到该分组，请刷新页面后重试。")
 
         return None
 
     def interact_file_list(self, list_files, ev: gr.SelectData):
         if ev.value == "-" and ev.index[0] == 0:
-            gr.Info("No file is uploaded")
+            gr.Info("尚未上传文件。")
             return None, self.selected_panel_false
 
         if not ev.selected:
             return None, self.selected_panel_false
 
-        return list_files["id"][ev.index[0]], self.selected_panel_true.format(
-            name=list_files["name"][ev.index[0]]
+        return list_files["ID"][ev.index[0]], self.selected_panel_true.format(
+            name=list_files["文件名"][ev.index[0]]
         )
 
     def interact_group_list(self, list_groups, ev: gr.SelectData):
@@ -1747,19 +1766,27 @@ class FileIndexPage(BasePage):
         if (not ev.value or ev.value == "-") and selected_id == 0:
             gr.Info("未选择分组")
             return (
-                "### Group Information",
+                "### 分组信息",
                 None,
                 "",
                 [],
             )
 
-        selected_item = list_groups[selected_id]
-        selected_group_id = selected_item["id"]
+        if isinstance(list_groups, pd.DataFrame):
+            selected_item = list_groups.iloc[selected_id].to_dict()
+            selected_group_id = selected_item["ID"]
+            selected_name = selected_item["分组名称"]
+            selected_files = selected_item["文件"]
+        else:
+            selected_item = list_groups[selected_id]
+            selected_group_id = selected_item["id"]
+            selected_name = selected_item["name"]
+            selected_files = selected_item["files"]
         return (
-            "### Group Information",
+            "### 分组信息",
             selected_group_id,
-            selected_item["name"],
-            selected_item["files"],
+            selected_name,
+            selected_files,
         )
 
     def validate_files(self, files: list[str]):
@@ -1776,7 +1803,7 @@ class FileIndexPage(BasePage):
                 if len(str_errors) > 60:
                     str_errors = str_errors[:55] + "..."
                 errors.append(
-                    f"Maximum file size ({max_file_size} MB) exceeded: {str_errors}"
+                    f"以下文件超过 {max_file_size} MB 限制：{str_errors}"
                 )
 
         if max_number_of_files := self._index.config.get("max_number_of_files", 0):
@@ -1786,7 +1813,7 @@ class FileIndexPage(BasePage):
                 ).count()
             if len(paths) + current_num_files > max_number_of_files:
                 errors.append(
-                    f"Maximum number of files ({max_number_of_files}) will be exceeded"
+                    f"上传后文件总数将超过 {max_number_of_files} 个限制。"
                 )
 
         return errors

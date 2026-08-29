@@ -1,0 +1,78 @@
+/* Intranet clinical UI refinements. Keep selectors scoped to existing IDs. */
+
+.gradio-container {
+  max-width: none !important;
+  min-width: 320px !important;
+}
+
+#conv-settings-panel,
+#chat-info-panel {
+  background: var(--background-fill-primary);
+  border: 1px solid var(--border-color-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+#chat-area {
+  min-width: 0;
+}
+
+#main-chat-bot {
+  background: var(--background-fill-secondary);
+  border: 1px solid var(--border-color-primary);
+  border-radius: var(--radius-lg);
+}
+
+#main-chat-bot .message {
+  max-width: min(88%, 960px);
+  line-height: 1.7;
+}
+
+#chat-composer-row {
+  align-items: flex-end;
+  background: var(--background-fill-primary);
+  border: 1px solid var(--border-color-primary);
+  border-radius: var(--radius-lg);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+}
+
+#chat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#chat-input textarea {
+  line-height: 1.6;
+  min-height: 48px;
+}
+
+#info-expand > .label-wrap,
+#chat-settings-expand > .label-wrap {
+  font-weight: 600;
+}
+
+#file_list_view table {
+  font-size: var(--text-md);
+}
+
+#file_list_view tbody tr:hover {
+  background: var(--table-even-background-fill);
+}
+
+button.primary,
+button.stop {
+  font-weight: 600;
+}
+
+@media (max-width: 960px) {
+  #conv-settings-panel,
+  #chat-info-panel {
+    min-width: 100%;
+    padding: var(--spacing-md);
+  }
+
+  #main-chat-bot .message {
+    max-width: 96%;
+  }
+}

@@ -45,8 +45,11 @@ class BaseApp:
         self._theme = KotaemonTheme()
 
         dir_assets = Path(__file__).parent / "assets"
-        with (dir_assets / "css" / "main.css").open() as fi:
-            self._css = fi.read()
+        css_files = ("main.css", "medical.css")
+        self._css = "\n".join(
+            (dir_assets / "css" / file_name).read_text(encoding="utf-8")
+            for file_name in css_files
+        )
         with (dir_assets / "js" / "main.js").open() as fi:
             self._js = fi.read()
             self._js = self._js.replace("KH_APP_VERSION", self.app_version)

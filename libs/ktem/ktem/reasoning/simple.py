@@ -188,11 +188,11 @@ class FullQAPipeline(BaseReasoning):
                 channel="info",
                 content=Render.collapsible(
                     header="""
-                    <i>Mindmap</i>
+                    <i>思维导图</i>
                     <a href="#" id='mindmap-toggle'>
-                        [Expand]</a>
+                        [展开/收起]</a>
                     <a href="#" id='mindmap-export'>
-                        [Export]</a>""",
+                        [导出]</a>""",
                     content=mindmap_svg,
                     open=True,
                 ),

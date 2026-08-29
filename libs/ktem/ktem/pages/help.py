@@ -63,13 +63,13 @@ class HelpPage:
                 f"{self.remote_content_url}/v{self.app_version}/docs/about.md"
             )
         if about_md:
-            with gr.Accordion("About"):  # translate
+            with gr.Accordion("关于系统"):
                 if self.app_version:
-                    about_md = f"Version: {self.app_version}\n\n{about_md}"
+                    about_md = f"版本：{self.app_version}\n\n{about_md}"
                 gr.Markdown(about_md)
 
         if KH_DEMO_MODE:
-            with gr.Accordion("Create Your Own Space"):
+            with gr.Accordion("创建专属空间"):
                 gr.Markdown(
                     "此为功能受限的演示版本。"
                     "点击**创建空间**按钮可在您自己的空间安装Kotaemon，"
@@ -120,5 +120,5 @@ class HelpPage:
                     fi.write(changelogs)
 
             if changelogs:
-                with gr.Accordion(f"Changelogs (v{self.app_version})"):
+                with gr.Accordion(f"更新记录（v{self.app_version}）"):
                     gr.Markdown(changelogs)

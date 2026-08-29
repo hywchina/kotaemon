@@ -12,7 +12,7 @@ from .manager import llms
 
 def format_description(cls):
     params = cls.describe()["params"]
-    params_lines = ["| Name | Type | Description |", "| --- | --- | --- |"]
+    params_lines = ["| 参数 | 类型 | 说明 |", "| --- | --- | --- |"]
     for key, value in params.items():
         if isinstance(value["auto_callback"], str):
             continue
@@ -24,14 +24,14 @@ class LLMManagement(BasePage):
     def __init__(self, app):
         self._app = app
         self.spec_desc_default = (
-            "# Spec description\n\nSelect an LLM to view the spec description."
+            "# 配置说明\n\n请选择一个语言模型查看配置说明。"
         )
         self.on_building_ui()
 
     def on_building_ui(self):
         with gr.Tab(label="查看"):  # View
             self.llm_list = gr.DataFrame(
-                headers=["name", "vendor", "default"],
+                headers=["名称", "供应商", "是否默认"],
                 interactive=False,
                 column_widths=[30, 40, 30],
             )
@@ -43,15 +43,13 @@ class LLMManagement(BasePage):
                         self.edit_default = gr.Checkbox(
                             label="设为默认",  # Set default
                             info=(
-                                "Set this LLM as default. If no default is set, "
-                                "a random LLM will be used. "
-                                "This default LLM will be used by other components "
-                                "by default if no LLM is specified for such components."
+                                "将此模型设为系统默认语言模型。建议始终明确设置一个"
+                                "默认模型。"
                             ),
                         )
                         self.edit_name = gr.Textbox(
                             label="名称",
-                            info="Edit to rename this LLM.",
+                            info="修改语言模型在系统中的显示名称。",
                         )
                         self.edit_spec = gr.Textbox(
                             label="配置规格",  # Specification
@@ -68,26 +66,26 @@ class LLMManagement(BasePage):
                                 with gr.Column(scale=1):
                                     self.btn_test_connection = gr.Button("测试")
                                 with gr.Column(scale=4):
-                                    self.connection_logs = gr.HTML("Logs")
+                                    self.connection_logs = gr.HTML("连接测试日志")
 
                         with gr.Row(visible=False) as self._selected_panel_btn:
                             with gr.Column():
                                 self.btn_edit_save = gr.Button(
-                                    "Save", min_width=10, variant="primary"
+                                    "保存", min_width=10, variant="primary"
                                 )
                             with gr.Column():
                                 self.btn_delete = gr.Button(
-                                    "Delete", min_width=10, variant="stop"
+                                    "删除", min_width=10, variant="stop"
                                 )
                                 with gr.Row():
                                     self.btn_delete_yes = gr.Button(
-                                        "Confirm Delete",
+                                        "确认删除",
                                         variant="stop",
                                         visible=False,
                                         min_width=10,
                                     )
                                     self.btn_delete_no = gr.Button(
-                                        "Cancel", visible=False, min_width=10
+                                        "取消", visible=False, min_width=10
                                     )
                             with gr.Column():
                                 self.btn_close = gr.Button(
@@ -104,9 +102,7 @@ class LLMManagement(BasePage):
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
                         label="语言模型名称",  # LLM name
-                        info=(
-                            "Must be unique. The name will be used to identify the LLM."
-                        ),
+                        info="名称必须唯一，用于在系统中识别该语言模型。",
                     )
                     self.llm_choices = gr.Dropdown(
                         label="语言模型供应商",  # LLM vendors
@@ -264,40 +260,40 @@ class LLMManagement(BasePage):
             )
 
             llms.add(name, spec=spec, default=default)
-            gr.Info(f"LLM '{name}' created successfully")
+            gr.Info(f"语言模型“{name}”已创建。")
         except ValueError as e:
             raise gr.Error(str(e))
         except Exception as e:
-            raise gr.Error(f"Failed to create LLM '{name}': {e}")
+            raise gr.Error(f"创建语言模型“{name}”失败：{e}")
 
     def list_llms(self):
         """List the LLMs"""
         items = []
         for item in llms.info().values():
             record = {}
-            record["name"] = item["name"]
-            record["vendor"] = item["spec"].get("__type__", "-").split(".")[-1]
-            record["default"] = item["default"]
+            record["名称"] = item["name"]
+            record["供应商"] = item["spec"].get("__type__", "-").split(".")[-1]
+            record["是否默认"] = item["default"]
             items.append(record)
 
         if items:
             llm_list = pd.DataFrame.from_records(items)
         else:
             llm_list = pd.DataFrame.from_records(
-                [{"name": "-", "vendor": "-", "default": "-"}]
+                [{"名称": "-", "供应商": "-", "是否默认": "-"}]
             )
 
         return llm_list
 
     def select_llm(self, llm_list, ev: gr.SelectData):
         if ev.value == "-" and ev.index[0] == 0:
-            gr.Info("No LLM is loaded. Please add LLM first")
+            gr.Info("尚未配置语言模型，请先添加。")
             return ""
 
         if not ev.selected:
             return ""
 
-        return llm_list["name"][ev.index[0]]
+        return llm_list["名称"][ev.index[0]]
 
     def on_selected_llm_change(self, selected_llm_name):
         if selected_llm_name == "":
@@ -352,7 +348,7 @@ class LLMManagement(BasePage):
         log_content: str = ""
 
         try:
-            log_content += f"- Testing model: {selected_llm_name}<br>"
+            log_content += f"- 正在测试模型：{selected_llm_name}<br>"
             yield log_content
 
             # Parse content & init model
@@ -365,23 +361,21 @@ class LLMManagement(BasePage):
             llm = deserialize(info["spec"], safe=False)
 
             if llm is None:
-                raise Exception(f"Can not found model: {selected_llm_name}")
+                raise ValueError(f"找不到模型：{selected_llm_name}")
 
-            log_content += "- Sending a message `Hi`<br>"
+            log_content += "- 正在发送测试消息<br>"
             yield log_content
             respond = llm("Hi")
 
             log_content += (
-                f"<mark style='background: green; color: white'>- Connection success. "
-                f"Got response:\n {respond}</mark><br>"
+                f"<mark>- 连接成功，模型返回：\n {respond}</mark><br>"
             )
             yield log_content
 
-            gr.Info(f"LLM {selected_llm_name} connect successfully")
+            gr.Info(f"语言模型“{selected_llm_name}”连接成功。")
         except Exception as e:
             log_content += (
-                f"<mark style='color: yellow; background: red'>- Connection failed. "
-                f"Got error:\n {e}</mark>"
+                f"<mark>- 连接失败：\n {e}</mark>"
             )
             yield log_content
 
@@ -398,18 +392,18 @@ class LLMManagement(BasePage):
             final_name = (
                 new_name if new_name != selected_llm_name else selected_llm_name
             )
-            gr.Info(f"LLM '{final_name}' saved successfully")
+            gr.Info(f"语言模型“{final_name}”已保存。")
             return final_name
         except ValueError as e:
             raise gr.Error(str(e))
         except Exception as e:
-            raise gr.Error(f"Failed to save LLM '{selected_llm_name}': {e}")
+            raise gr.Error(f"保存语言模型“{selected_llm_name}”失败：{e}")
 
     def delete_llm(self, selected_llm_name):
         try:
             llms.delete(selected_llm_name)
         except Exception as e:
-            gr.Error(f"Failed to delete LLM {selected_llm_name}: {e}")
+            gr.Error(f"删除语言模型“{selected_llm_name}”失败：{e}")
             return selected_llm_name
 
         return ""

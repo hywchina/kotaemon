@@ -5,6 +5,7 @@ from ktem.app import BasePage
 from ktem.components import reasonings
 from ktem.db.models import Settings, User, engine
 from ktem.mcp.manager import MCP_TOOL_PREFIX, mcp_manager
+from ktem.utils.i18n import translate_choices, translate_ui_text
 from sqlmodel import Session, select
 from theflow.settings import settings as flowsettings
 
@@ -37,7 +38,7 @@ gr_cls_choices = {
 def render_setting_item(setting_item, value):
     """Render the setting component into corresponding Gradio UI component"""
     kwargs = {
-        "label": setting_item.name,
+        "label": translate_ui_text(setting_item.name),
         "value": value,
         "interactive": True,
     }
@@ -45,7 +46,7 @@ def render_setting_item(setting_item, value):
     if setting_item.component in gr_cls_single_value:
         return gr_cls_single_value[setting_item.component](**kwargs)
 
-    kwargs["choices"] = setting_item.choices
+    kwargs["choices"] = translate_choices(setting_item.choices)
 
     if setting_item.component in gr_cls_choices:
         return gr_cls_choices[setting_item.component](**kwargs)
@@ -176,7 +177,7 @@ class SettingsPage(BasePage):
             )
 
             def get_name(user_id):
-                name = "Current user: "
+                name = "当前用户："
                 if user_id:
                     with Session(engine) as session:
                         statement = select(User).where(User.id == user_id)
@@ -234,7 +235,7 @@ class SettingsPage(BasePage):
                 show_progress="hidden",
             )
             onSignOutClick = self.signout.click(
-                lambda: (None, "Current user: ___", "", ""),
+                lambda: (None, "当前用户：___", "", ""),
                 inputs=[],
                 outputs=[
                     self._user_id,
@@ -296,9 +297,9 @@ class SettingsPage(BasePage):
                 user.password = hashed_password
                 session.add(user)
                 session.commit()
-                gr.Info("Password changed")
+                gr.Info("密码已修改。")
             else:
-                gr.Warning("User not found")
+                gr.Warning("未找到当前用户，请重新登录。")
 
         return "", ""
 
@@ -367,7 +368,10 @@ class SettingsPage(BasePage):
                         gr.Markdown("**Name**: Description")
                     else:
                         info = reasoning.get_info()
-                        gr.Markdown(f"**{info['name']}**: {info['description']}")
+                    gr.Markdown(
+                        f"**{translate_ui_text(info['name'])}**："
+                        f"{translate_ui_text(info['description'])}"
+                    )
                     for n, si in sig.settings.items():
                         # hide specific options from UI
                         if n in ("create_citation_viz", "use_multimodal"):
@@ -438,7 +442,7 @@ class SettingsPage(BasePage):
         setting = dict(self._settings_dict)
         if user_id is None:
             setting.update(patch_setting)
-            gr.Warning("Need to login before saving settings")
+            gr.Warning("请先登录再保存设置。")
             return setting
 
         with Session(engine) as session:
@@ -456,7 +460,7 @@ class SettingsPage(BasePage):
             session.add(user_setting)
             session.commit()
 
-        gr.Info("Setting saved")
+        gr.Info("设置已保存。")
         return setting
 
     def components(self) -> list:
@@ -483,9 +487,9 @@ class SettingsPage(BasePage):
             from ktem.llms.manager import llms
 
             if llms._default:
-                llm_choices = [(f"{llms._default} (default)", "")]
+                llm_choices = [(f"{llms._default}（默认）", "")]
             else:
-                llm_choices = [("(random)", "")]
+                llm_choices = [("未设置默认模型", "")]
             llm_choices += [(_, _) for _ in llms.options().keys()]
             return gr.update(choices=llm_choices)
 
@@ -493,9 +497,9 @@ class SettingsPage(BasePage):
             from ktem.embeddings.manager import embedding_models_manager
 
             if embedding_models_manager._default:
-                emb_choices = [(f"{embedding_models_manager._default} (default)", "")]
+                emb_choices = [(f"{embedding_models_manager._default}（默认）", "")]
             else:
-                emb_choices = [("(random)", "")]
+                emb_choices = [("未设置默认模型", "")]
             emb_choices += [(_, _) for _ in embedding_models_manager.options().keys()]
             return gr.update(choices=emb_choices)
 

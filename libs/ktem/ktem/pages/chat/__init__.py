@@ -961,7 +961,7 @@ class ChatPage(BasePage):
             chat_history = chat_history + [(display_chat_input_text, None)]
         else:
             if not chat_history:
-                raise gr.Error("Empty chat")
+                raise gr.Error("当前会话没有可重新生成的内容。")
 
         if not conv_id:
             if not KH_DEMO_MODE:
@@ -1121,7 +1121,7 @@ class ChatPage(BasePage):
     ):
         """Update the data source"""
         if not convo_id:
-            gr.Warning("No conversation selected")
+            gr.Warning("请先选择一个会话。")
             return
 
         # if not regen, then append the new message
@@ -1171,7 +1171,7 @@ class ChatPage(BasePage):
     def reasoning_changed(self, reasoning_type):
         if reasoning_type != DEFAULT_SETTING:
             # override app settings state (temporary)
-            gr.Info("Reasoning type changed to `{}`".format(reasoning_type))
+            gr.Info(f"本次会话已切换推理方法：{reasoning_type}")
         return reasoning_type
 
     def is_liked(self, convo_id, liked: gr.LikeData):

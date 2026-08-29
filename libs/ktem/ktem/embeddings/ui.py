@@ -12,7 +12,7 @@ from .manager import embedding_models_manager
 
 def format_description(cls):
     params = cls.describe()["params"]
-    params_lines = ["| Name | Type | Description |", "| --- | --- | --- |"]
+    params_lines = ["| 参数 | 类型 | 说明 |", "| --- | --- | --- |"]
     for key, value in params.items():
         if isinstance(value["auto_callback"], str):
             continue
@@ -24,14 +24,14 @@ class EmbeddingManagement(BasePage):
     def __init__(self, app):
         self._app = app
         self.spec_desc_default = (
-            "# Spec description\n\nSelect a model to view the spec description."
+            "# 配置说明\n\n请选择一个嵌入模型查看配置说明。"
         )
         self.on_building_ui()
 
     def on_building_ui(self):
         with gr.Tab(label="查看"):
             self.emb_list = gr.DataFrame(
-                headers=["name", "vendor", "default"],
+                headers=["名称", "供应商", "是否默认"],
                 interactive=False,
                 column_widths=[30, 40, 30],
             )
@@ -43,18 +43,16 @@ class EmbeddingManagement(BasePage):
                         self.edit_default = gr.Checkbox(
                             label="设为默认",
                             info=(
-                                "Set this Embedding model as default. This default "
-                                "Embedding will be used by other components by default "
-                                "if no Embedding is specified for such components."
+                                "将此模型设为系统默认嵌入模型。"
                             ),
                         )
                         self.edit_name = gr.Textbox(
                             label="名称",
-                            info="Edit to rename this Embedding model.",
+                            info="修改嵌入模型在系统中的显示名称。",
                         )
                         self.edit_spec = gr.Textbox(
                             label="配置规格",
-                            info="Specification of the Embedding model in YAML format",
+                            info="嵌入模型的 YAML 配置。",
                             lines=10,
                         )
 
@@ -65,26 +63,26 @@ class EmbeddingManagement(BasePage):
                                 with gr.Column(scale=1):
                                     self.btn_test_connection = gr.Button("测试")
                                 with gr.Column(scale=4):
-                                    self.connection_logs = gr.HTML("Logs")
+                                    self.connection_logs = gr.HTML("连接测试日志")
 
                         with gr.Row(visible=False) as self._selected_panel_btn:
                             with gr.Column():
                                 self.btn_edit_save = gr.Button(
-                                    "Save", min_width=10, variant="primary"
+                                    "保存", min_width=10, variant="primary"
                                 )
                             with gr.Column():
                                 self.btn_delete = gr.Button(
-                                    "Delete", min_width=10, variant="stop"
+                                    "删除", min_width=10, variant="stop"
                                 )
                                 with gr.Row():
                                     self.btn_delete_yes = gr.Button(
-                                        "Confirm Delete",
+                                        "确认删除",
                                         variant="stop",
                                         visible=False,
                                         min_width=10,
                                     )
                                     self.btn_delete_no = gr.Button(
-                                        "Cancel", visible=False, min_width=10
+                                        "取消", visible=False, min_width=10
                                     )
                             with gr.Column():
                                 self.btn_close = gr.Button("关闭", min_width=10)
@@ -97,29 +95,19 @@ class EmbeddingManagement(BasePage):
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
                         label="嵌入模型名称",
-                        info=(
-                            "Must be unique and non-empty. "
-                            "The name will be used to identify the embedding model."
-                        ),
+                        info="名称必须唯一且非空，用于在系统中识别该嵌入模型。",
                     )
                     self.emb_choices = gr.Dropdown(
                         label="供应商",
-                        info=(
-                            "Choose the vendor of the Embedding model. Each vendor "
-                            "has different specification."
-                        ),
+                        info="选择嵌入模型供应商，不同供应商使用不同配置。",
                     )
                     self.spec = gr.Textbox(
                         label="配置规格",
-                        info="Specification of the Embedding model in YAML format.",
+                        info="嵌入模型的 YAML 配置。",
                     )
                     self.default = gr.Checkbox(
                         label="设为默认",
-                        info=(
-                            "Set this Embedding model as default. This default "
-                            "Embedding will be used by other components by default "
-                            "if no Embedding is specified for such components."
-                        ),
+                        info="将此模型设为系统默认嵌入模型。",
                     )
                     self.btn_new = gr.Button("添加嵌入模型", variant="primary")
 
@@ -258,40 +246,40 @@ class EmbeddingManagement(BasePage):
             )
 
             embedding_models_manager.add(name, spec=spec, default=default)
-            gr.Info(f'Embedding model "{name}" created successfully')
+            gr.Info(f"嵌入模型“{name}”已创建。")
         except ValueError as e:
             raise gr.Error(str(e))
         except Exception as e:
-            raise gr.Error(f"Failed to create Embedding model '{name}': {e}")
+            raise gr.Error(f"创建嵌入模型“{name}”失败：{e}")
 
     def list_embeddings(self):
         """List the Embedding models"""
         items = []
         for item in embedding_models_manager.info().values():
             record = {}
-            record["name"] = item["name"]
-            record["vendor"] = item["spec"].get("__type__", "-").split(".")[-1]
-            record["default"] = item["default"]
+            record["名称"] = item["name"]
+            record["供应商"] = item["spec"].get("__type__", "-").split(".")[-1]
+            record["是否默认"] = item["default"]
             items.append(record)
 
         if items:
             emb_list = pd.DataFrame.from_records(items)
         else:
             emb_list = pd.DataFrame.from_records(
-                [{"name": "-", "vendor": "-", "default": "-"}]
+                [{"名称": "-", "供应商": "-", "是否默认": "-"}]
             )
 
         return emb_list
 
     def select_emb(self, emb_list, ev: gr.SelectData):
         if ev.value == "-" and ev.index[0] == 0:
-            gr.Info("No embedding model is loaded. Please add first")
+            gr.Info("尚未配置嵌入模型，请先添加。")
             return ""
 
         if not ev.selected:
             return ""
 
-        return emb_list["name"][ev.index[0]]
+        return emb_list["名称"][ev.index[0]]
 
     def on_selected_emb_change(self, selected_emb_name):
         if selected_emb_name == "":
@@ -345,7 +333,7 @@ class EmbeddingManagement(BasePage):
     def check_connection(self, selected_emb_name, selected_spec):
         log_content: str = ""
         try:
-            log_content += f"- Testing model: {selected_emb_name}<br>"
+            log_content += f"- 正在测试模型：{selected_emb_name}<br>"
             yield log_content
 
             # Parse content & init model
@@ -358,24 +346,22 @@ class EmbeddingManagement(BasePage):
             emb = deserialize(info["spec"], safe=False)
 
             if emb is None:
-                raise Exception(f"Can not found model: {selected_emb_name}")
+                raise ValueError(f"找不到模型：{selected_emb_name}")
 
-            log_content += "- Sending a message `Hi`<br>"
+            log_content += "- 正在发送测试文本<br>"
             yield log_content
             _ = emb("Hi")
 
             log_content += (
-                "<mark style='background: green; color: white'>- Connection success. "
-                "</mark><br>"
+                "<mark>- 连接成功。</mark><br>"
             )
             yield log_content
 
-            gr.Info(f"Embedding {selected_emb_name} connect successfully")
+            gr.Info(f"嵌入模型“{selected_emb_name}”连接成功。")
         except Exception as e:
             print(e)
             log_content += (
-                f"<mark style='color: yellow; background: red'>- Connection failed. "
-                f"Got error:\n {str(e)}</mark>"
+                f"<mark>- 连接失败：\n {e}</mark>"
             )
             yield log_content
 
@@ -394,18 +380,18 @@ class EmbeddingManagement(BasePage):
             final_name = (
                 new_name if new_name != selected_emb_name else selected_emb_name
             )
-            gr.Info(f'Embedding model "{final_name}" saved successfully')
+            gr.Info(f"嵌入模型“{final_name}”已保存。")
             return final_name
         except ValueError as e:
             raise gr.Error(str(e))
         except Exception as e:
-            raise gr.Error(f'Failed to save Embedding model "{selected_emb_name}": {e}')
+            raise gr.Error(f"保存嵌入模型“{selected_emb_name}”失败：{e}")
 
     def delete_emb(self, selected_emb_name):
         try:
             embedding_models_manager.delete(selected_emb_name)
         except Exception as e:
-            gr.Error(f'Failed to delete Embedding model "{selected_emb_name}": {e}')
+            gr.Error(f"删除嵌入模型“{selected_emb_name}”失败：{e}")
             return selected_emb_name
 
         return ""

@@ -24,7 +24,7 @@ def update_current_module_atime():
 
 def format_description(cls):
     user_settings = cls.get_admin_settings()
-    params_lines = ["| Name | Default | Description |", "| --- | --- | --- |"]
+    params_lines = ["| 参数 | 默认值 | 说明 |", "| --- | --- | --- |"]
     for key, value in user_settings.items():
         params_lines.append(
             f"| {key} | {value.get('value', '')} | {value.get('info', '')} |"
@@ -37,14 +37,14 @@ class IndexManagement(BasePage):
         self._app = app
         self.manager: IndexManager = app.index_manager
         self.spec_desc_default = (
-            "# Spec description\n\nSelect an index to view the spec description."
+            "# 配置说明\n\n请选择一个索引查看配置说明。"
         )
         self.on_building_ui()
 
     def on_building_ui(self):
         with gr.Tab(label="查看"):  # View
             self.index_list = gr.DataFrame(
-                headers=["id", "name", "index type"],
+                headers=["ID", "名称", "索引类型"],
                 interactive=False,
                 column_widths=[10, 30, 60],
             )
@@ -63,9 +63,8 @@ class IndexManagement(BasePage):
                         )
 
                         gr.Markdown(
-                            "IMPORTANT: Changing or deleting the index will require "
-                            "restarting the system. Some config settings will require "
-                            "rebuilding the index for the index to work properly."
+                            "**注意：** 修改或删除索引后需要重启系统；部分配置变更"
+                            "还需要重新构建索引才能生效。"
                         )
                         with gr.Row():
                             self.btn_edit_save = gr.Button(
@@ -107,8 +106,7 @@ class IndexManagement(BasePage):
                         info="索引配置，使用YAML格式",  # Specification of the index in YAML format.
                     )
                     gr.Markdown(
-                        "<mark>Note</mark>: "
-                        "After creating index, please restart the app"
+                        "<mark>提示</mark>：创建索引后请重启应用。"
                     )
                     self.btn_new = gr.Button("添加", variant="primary")  # Add
 
@@ -328,11 +326,11 @@ class IndexManagement(BasePage):
         """Create the index"""
         name = name.strip()
         if not name:
-            raise gr.Error("Name must not be empty")
+            raise gr.Error("索引名称不能为空。")
 
         existing_names = {idx.name for idx in self.manager.indices}
         if name in existing_names:
-            raise gr.Error(f"Index '{name}' already exists. Please use a unique name.")
+            raise gr.Error(f"索引“{name}”已存在，请使用其他名称。")
 
         try:
             self.manager.build_index(
@@ -340,25 +338,25 @@ class IndexManagement(BasePage):
                 config=yaml.load(config, Loader=YAMLNoDateSafeLoader),
                 index_type=index_type,
             )
-            gr.Info(f'Index "{name}" created successfully. Please restart the app!')
+            gr.Info(f"索引“{name}”已创建，请重启应用。")
         except Exception as e:
-            raise gr.Error(f'Failed to create index "{name}": {e}')
+            raise gr.Error(f"创建索引“{name}”失败：{e}")
 
     def list_indices(self):
         """List the indices constructed by the user"""
         items = []
         for item in self.manager.indices:
             record = {}
-            record["id"] = item.id
-            record["name"] = item.name
-            record["index type"] = item.__class__.__name__
+            record["ID"] = item.id
+            record["名称"] = item.name
+            record["索引类型"] = item.__class__.__name__
             items.append(record)
 
         if items:
             indices_list = pd.DataFrame.from_records(items)
         else:
             indices_list = pd.DataFrame.from_records(
-                [{"id": "-", "name": "-", "index type": "-"}]
+                [{"ID": "-", "名称": "-", "索引类型": "-"}]
             )
 
         return indices_list
@@ -366,13 +364,13 @@ class IndexManagement(BasePage):
     def select_index(self, index_list, ev: gr.SelectData) -> int:
         """Return the index id"""
         if ev.value == "-" and ev.index[0] == 0:
-            gr.Info("No index is constructed. Please create one first!")
+            gr.Info("尚未创建索引，请先添加。")
             return -1
 
         if not ev.selected:
             return -1
 
-        return int(index_list["id"][ev.index[0]])
+        return int(index_list["ID"][ev.index[0]])
 
     def on_selected_index_change(self, selected_index_id: int):
         """Show the relevant index as user selects it on the UI
@@ -402,30 +400,30 @@ class IndexManagement(BasePage):
     def update_index(self, selected_index_id: int, name: str, config: str):
         name = name.strip()
         if not name:
-            raise gr.Error("Name must not be empty")
+            raise gr.Error("索引名称不能为空。")
 
         # Check uniqueness (excluding current index)
         for idx in self.manager.indices:
             if idx.name == name and idx.id != selected_index_id:
                 raise gr.Error(
-                    f"Index '{name}' already exists. Please use a unique name."
+                    f"索引“{name}”已存在，请使用其他名称。"
                 )
 
         try:
             spec = yaml.load(config, Loader=YAMLNoDateSafeLoader)
             self.manager.update_index(selected_index_id, name, spec)
-            gr.Info(f'Index "{name}" updated successfully. Please restart the app!')
+            gr.Info(f"索引“{name}”已更新，请重启应用。")
         except gr.Error:
             raise
         except Exception as e:
-            raise gr.Error(f'Failed to save index "{name}": {e}')
+            raise gr.Error(f"保存索引“{name}”失败：{e}")
 
     def delete_index(self, selected_index_id):
         try:
             self.manager.delete_index(selected_index_id)
-            gr.Info("Delete index successfully. Please restart the app!")
+            gr.Info("索引已删除，请重启应用。")
         except Exception as e:
-            gr.Warning(f"Fail to delete index: {e}")
+            gr.Warning(f"删除索引失败：{e}")
             return selected_index_id
 
         return -1

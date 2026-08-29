@@ -14,7 +14,7 @@ from .manager import reranking_models_manager
 
 def format_description(cls):
     params = cls.describe()["params"]
-    params_lines = ["| Name | Type | Description |", "| --- | --- | --- |"]
+    params_lines = ["| 参数 | 类型 | 说明 |", "| --- | --- | --- |"]
     for key, value in params.items():
         if isinstance(value["auto_callback"], str):
             continue
@@ -26,14 +26,14 @@ class RerankingManagement(BasePage):
     def __init__(self, app):
         self._app = app
         self.spec_desc_default = (
-            "# Spec description\n\nSelect a model to view the spec description."
+            "# 配置说明\n\n请选择一个重排序模型查看配置说明。"
         )
         self.on_building_ui()
 
     def on_building_ui(self):
         with gr.Tab(label="查看"):
             self.rerank_list = gr.DataFrame(
-                headers=["name", "vendor", "default"],
+                headers=["名称", "供应商", "是否默认"],
                 interactive=False,
                 column_widths=[30, 40, 30],
             )
@@ -44,19 +44,15 @@ class RerankingManagement(BasePage):
                     with gr.Column():
                         self.edit_default = gr.Checkbox(
                             label="设为默认",
-                            info=(
-                                "Set this Reranking model as default. This default "
-                                "Reranking will be used by other components by default "
-                                "if no Reranking is specified for such components."
-                            ),
+                            info="将此模型设为系统默认重排序模型。",
                         )
                         self.edit_name = gr.Textbox(
                             label="名称",
-                            info="Edit to rename this Reranking model.",
+                            info="修改重排序模型在系统中的显示名称。",
                         )
                         self.edit_spec = gr.Textbox(
                             label="配置规格",
-                            info="Specification of the Embedding model in YAML format",
+                            info="重排序模型的 YAML 配置。",
                             lines=10,
                         )
 
@@ -67,26 +63,26 @@ class RerankingManagement(BasePage):
                                 with gr.Column(scale=1):
                                     self.btn_test_connection = gr.Button("测试")
                                 with gr.Column(scale=4):
-                                    self.connection_logs = gr.HTML("Logs")
+                                    self.connection_logs = gr.HTML("连接测试日志")
 
                         with gr.Row(visible=False) as self._selected_panel_btn:
                             with gr.Column():
                                 self.btn_edit_save = gr.Button(
-                                    "Save", min_width=10, variant="primary"
+                                    "保存", min_width=10, variant="primary"
                                 )
                             with gr.Column():
                                 self.btn_delete = gr.Button(
-                                    "Delete", min_width=10, variant="stop"
+                                    "删除", min_width=10, variant="stop"
                                 )
                                 with gr.Row():
                                     self.btn_delete_yes = gr.Button(
-                                        "Confirm Delete",
+                                        "确认删除",
                                         variant="stop",
                                         visible=False,
                                         min_width=10,
                                     )
                                     self.btn_delete_no = gr.Button(
-                                        "Cancel", visible=False, min_width=10
+                                        "取消", visible=False, min_width=10
                                     )
                             with gr.Column():
                                 self.btn_close = gr.Button("关闭", min_width=10)
@@ -99,29 +95,19 @@ class RerankingManagement(BasePage):
                 with gr.Column(scale=2):
                     self.name = gr.Textbox(
                         label="重排序模型名称",
-                        info=(
-                            "Must be unique and non-empty. "
-                            "The name will be used to identify the reranking model."
-                        ),
+                        info="名称必须唯一且非空，用于在系统中识别该重排序模型。",
                     )
                     self.rerank_choices = gr.Dropdown(
                         label="供应商",
-                        info=(
-                            "Choose the vendor of the Reranking model. Each vendor "
-                            "has different specification."
-                        ),
+                        info="选择重排序模型供应商，不同供应商使用不同配置。",
                     )
                     self.spec = gr.Textbox(
                         label="配置规格",
-                        info="Specification of the Embedding model in YAML format.",
+                        info="重排序模型的 YAML 配置。",
                     )
                     self.default = gr.Checkbox(
                         label="设为默认",
-                        info=(
-                            "Set this Reranking model as default. This default "
-                            "Reranking will be used by other components by default "
-                            "if no Reranking is specified for such components."
-                        ),
+                        info="将此模型设为系统默认重排序模型。",
                     )
                     self.btn_new = gr.Button("添加重排序模型", variant="primary")
 
@@ -257,40 +243,40 @@ class RerankingManagement(BasePage):
             )
 
             reranking_models_manager.add(name, spec=spec, default=default)
-            gr.Info(f'Reranking model "{name}" created successfully')
+            gr.Info(f"重排序模型“{name}”已创建。")
         except ValueError as e:
             raise gr.Error(str(e))
         except Exception as e:
-            raise gr.Error(f"Failed to create Reranking model '{name}': {e}")
+            raise gr.Error(f"创建重排序模型“{name}”失败：{e}")
 
     def list_rerankings(self):
         """List the Reranking models"""
         items = []
         for item in reranking_models_manager.info().values():
             record = {}
-            record["name"] = item["name"]
-            record["vendor"] = item["spec"].get("__type__", "-").split(".")[-1]
-            record["default"] = item["default"]
+            record["名称"] = item["name"]
+            record["供应商"] = item["spec"].get("__type__", "-").split(".")[-1]
+            record["是否默认"] = item["default"]
             items.append(record)
 
         if items:
             rerank_list = pd.DataFrame.from_records(items)
         else:
             rerank_list = pd.DataFrame.from_records(
-                [{"name": "-", "vendor": "-", "default": "-"}]
+                [{"名称": "-", "供应商": "-", "是否默认": "-"}]
             )
 
         return rerank_list
 
     def select_rerank(self, rerank_list, ev: gr.SelectData):
         if ev.value == "-" and ev.index[0] == 0:
-            gr.Info("No reranking model is loaded. Please add first")
+            gr.Info("尚未配置重排序模型，请先添加。")
             return ""
 
         if not ev.selected:
             return ""
 
-        return rerank_list["name"][ev.index[0]]
+        return rerank_list["名称"][ev.index[0]]
 
     def on_selected_rerank_change(self, selected_rerank_name):
         if selected_rerank_name == "":
@@ -344,7 +330,7 @@ class RerankingManagement(BasePage):
     def check_connection(self, selected_rerank_name, selected_spec):
         log_content: str = ""
         try:
-            log_content += f"- Testing model: {selected_rerank_name}<br>"
+            log_content += f"- 正在测试模型：{selected_rerank_name}<br>"
             yield log_content
 
             # Parse content & init model
@@ -357,24 +343,22 @@ class RerankingManagement(BasePage):
             rerank = deserialize(info["spec"], safe=False)
 
             if rerank is None:
-                raise Exception(f"Can not found model: {selected_rerank_name}")
+                raise ValueError(f"找不到模型：{selected_rerank_name}")
 
-            log_content += "- Sending a message ([`Hello`], `Hi`)<br>"
+            log_content += "- 正在发送测试文本<br>"
             yield log_content
             _ = rerank([Document(content="Hello")], "Hi")
 
             log_content += (
-                "<mark style='background: green; color: white'>- Connection success. "
-                "</mark><br>"
+                "<mark>- 连接成功。</mark><br>"
             )
             yield log_content
 
-            gr.Info(f"Embedding {selected_rerank_name} connect successfully")
+            gr.Info(f"重排序模型“{selected_rerank_name}”连接成功。")
         except Exception as e:
             print(e)
             log_content += (
-                f"<mark style='color: yellow; background: red'>- Connection failed. "
-                f"Got error:\n {str(e)}</mark>"
+                f"<mark>- 连接失败：\n {e}</mark>"
             )
             yield log_content
 
@@ -393,20 +377,20 @@ class RerankingManagement(BasePage):
             final_name = (
                 new_name if new_name != selected_rerank_name else selected_rerank_name
             )
-            gr.Info(f'Reranking model "{final_name}" saved successfully')
+            gr.Info(f"重排序模型“{final_name}”已保存。")
             return final_name
         except ValueError as e:
             raise gr.Error(str(e))
         except Exception as e:
             raise gr.Error(
-                f'Failed to save Reranking model "{selected_rerank_name}": {e}'
+                f"保存重排序模型“{selected_rerank_name}”失败：{e}"
             )
 
     def delete_rerank(self, selected_rerank_name):
         try:
             reranking_models_manager.delete(selected_rerank_name)
         except Exception as e:
-            gr.Error(f'Failed to delete Reranking model "{selected_rerank_name}": {e}')
+            gr.Error(f"删除重排序模型“{selected_rerank_name}”失败：{e}")
             return selected_rerank_name
 
         return ""

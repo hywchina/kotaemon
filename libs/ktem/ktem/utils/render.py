@@ -29,7 +29,7 @@ def get_header(doc: RetrievedDocument) -> str:
     """Get the header for the document"""
     header = ""
     if "page_label" in doc.metadata:
-        header += f" [Page {doc.metadata['page_label']}]"
+        header += f" [第 {doc.metadata['page_label']} 页]"
 
     header += f" {doc.metadata.get('file_name', '<evidence>')}"
     return header.strip()
@@ -118,7 +118,7 @@ class Render:
         return f"""
         {html_content}
         <a href="#" class="pdf-link" data-src="{BASE_PATH}/file={pdf_path}" data-page="{page_idx}" data-search="{highlight_text}" data-phrase="{phrase}">
-            [Preview]
+            [查看原文]
         </a>
         """  # noqa
 
@@ -167,7 +167,7 @@ class Render:
         # score from doc_store (Elasticsearch)
         if is_close(doc.score, -1.0):
             vectorstore_score = ""
-            text_search_str = " (full-text search)<br>"
+            text_search_str = "（全文检索）<br>"
         else:
             vectorstore_score = str(round(doc.score, 2))
             text_search_str = "<br>"
@@ -198,13 +198,13 @@ class Render:
             relevant_score = 0.0
 
         rendered_score = Render.collapsible(
-            header=f"<b>&emsp;Relevance score</b>: {relevant_score:.1f}",
-            content="<b>&emsp;&emsp;Vectorstore score:</b>"
+            header=f"<b>&emsp;相关性评分</b>：{relevant_score:.1f}",
+            content="<b>&emsp;&emsp;向量检索评分：</b>"
             f" {vectorstore_score}"
             f"{text_search_str}"
-            "<b>&emsp;&emsp;LLM relevant score:</b>"
+            "<b>&emsp;&emsp;LLM 相关性评分：</b>"
             f" {llm_reranking_score}<br>"
-            "<b>&emsp;&emsp;Reranking score:</b>"
+            "<b>&emsp;&emsp;重排序评分：</b>"
             f" {reranking_score}<br>",
         )
 
