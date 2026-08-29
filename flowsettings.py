@@ -133,7 +133,9 @@ if KH_HOSPITAL_MODE:
 KH_VOICE_ASSISTANT_URL = config(
     "KH_VOICE_ASSISTANT_URL", default="https://localhost:17003/ws/v1/asr/test"
 )
-KH_ENABLE_VOICE_ASSISTANT = config("KH_ENABLE_VOICE_ASSISTANT", default=True, cast=bool)
+KH_ENABLE_VOICE_ASSISTANT = config(
+    "KH_ENABLE_VOICE_ASSISTANT", default=not KH_HOSPITAL_MODE, cast=bool
+)
 KH_WEB_SEARCH_BACKEND = None if KH_HOSPITAL_MODE else (
     "kotaemon.indices.retrievers.tavily_web_search.WebSearch"
     # "kotaemon.indices.retrievers.jina_web_search.WebSearch"

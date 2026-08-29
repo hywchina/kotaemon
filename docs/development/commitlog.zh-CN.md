@@ -126,3 +126,15 @@
   也显式固定相同环境变量，避免入口脚本差异绕过设置。
 - **验证结果**：使用 Socket 拦截器构建完整 UI（423 个组件、247 条依赖）时，模型
   池仅保留 GeekAI 配置、MCP 关闭、页面 Head 不含公网 URL，后台网络连接尝试为 0。
+
+## `chore: remove public provider defaults`
+
+- **改造动机**：通用 `.env.example` 仍沿用上游模板，列出了 OpenAI、Azure、
+  Cohere、Voyage、GraphRAG、Adobe 和 Google 登录等公共服务。医院模式虽不会加载
+  这些配置，但实施人员复制模板时仍可能误配或误以为系统需要通用互联网出口。
+- **配置收敛**：通用模板改为医院档，默认只声明 GeekAI 过渡模型、最终内网模型
+  网关示例、可选内网 Keycloak、离线资源和运行容量参数；删除所有无关公共 Provider
+  密钥字段与公网地址。上游 Provider 适配器源码不删除，便于后续 rebase，但医院
+  模式的 Manager 白名单仍确保它们不会实例化。
+- **文档入口**：中文首页改为复制 `.env.hospital.example`，要求启动前运行
+  `./run.sh doctor`，并链接医院离线构建、备份和回滚手册。

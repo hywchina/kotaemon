@@ -3,11 +3,13 @@
 本项目基于 Kotaemon `v0.12.0`，保留上游的文档问答、MCP 与 PaddleOCR
 能力，并增加医疗场景中文界面、共享知识库权限、模型配置和语音助手。
 
-首次运行前复制环境变量模板并按实际模型服务修改：
+医院环境首次运行前复制专用模板，替换管理员密码和模型密钥，并先执行自检：
 
 ```bash
-cp .env.example .env
+cp .env.hospital.example .env
+# 编辑 .env 后继续
 uv sync --frozen
+./run.sh doctor
 ./run.sh start
 ```
 
@@ -21,10 +23,13 @@ uv sync --frozen
 | `./run.sh restart [端口]` | 重启服务 |
 | `./run.sh status` | 查看应用与本地重排服务状态 |
 | `./run.sh logs` | 查看应用与重排日志 |
+| `./run.sh doctor` | 检查模型出口、密钥占位符、离线资源和数据目录 |
 
 默认使用 GeekAI 的 `qwen3-vl-flash`、`qwen3-vl-embedding` 和
 `qwen3-rerank`。在 `.env` 中配置 `GEEKAI_API_KEY` 后即可使用；Embedding 与
 Rerank 使用项目内的 GeekAI 协议适配器。ASR 不属于本次模型接入，可通过
 `KH_ENABLE_ASR=false` 关闭。将 `KH_MODEL_PROFILE` 改为 `lmstudio` 可切换回原本
 的本地模型配置。完整迁移说明见
-[`docs/development/fork-migration-v0.12.md`](docs/development/fork-migration-v0.12.md)。
+[`docs/development/fork-migration-v0.12.md`](docs/development/fork-migration-v0.12.md)，
+医院离线构建、部署、备份和回滚见
+[`docs/deployment/hospital-intranet.md`](docs/deployment/hospital-intranet.md)。

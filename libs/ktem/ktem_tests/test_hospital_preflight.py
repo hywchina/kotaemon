@@ -60,3 +60,13 @@ def test_preflight_rejects_public_endpoint_in_offline_mode():
     )
 
     assert any("GEEKAI_API_BASE_URL" in failure for failure in report.failures)
+
+
+def test_default_environment_template_has_no_public_provider_defaults():
+    values = hospital_preflight.read_env_file(
+        Path(__file__).parents[3] / ".env.example"
+    )
+
+    assert values["KH_DEPLOYMENT_MODE"] == "hospital-external"
+    assert values["KH_MODEL_PROFILE"] == "geekai"
+    assert not set(hospital_preflight.PUBLIC_PROVIDER_KEYS).intersection(values)
