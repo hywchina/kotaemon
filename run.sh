@@ -138,6 +138,11 @@ show_status() {
     fi
 }
 
+run_doctor() {
+    cd "$APP_DIR"
+    "${PYTHON_CMD[@]}" scripts/hospital_preflight.py
+}
+
 case "$COMMAND" in
     start|--start)
         start_app
@@ -162,8 +167,12 @@ case "$COMMAND" in
         touch "$APP_LOG_FILE" "$RERANK_LOG_FILE"
         tail -n 100 -f "$APP_LOG_FILE" "$RERANK_LOG_FILE"
         ;;
+    doctor|--doctor)
+        run_doctor
+        ;;
     help|--help|-h)
-        echo "Usage: ./run.sh {start|foreground|stop|restart|status|logs} [port]"
+        echo "用法: ./run.sh {start|foreground|stop|restart|status|logs|doctor} [端口]"
+        echo "doctor 会检查医院部署配置、网络出口策略和离线资源。"
         echo "Set KH_START_LOCAL_RERANK=true to start the optional rerank service."
         ;;
     *)
