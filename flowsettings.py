@@ -36,7 +36,8 @@ KH_DEPLOYMENT_MODE = normalize_deployment_mode(
 )
 KH_HOSPITAL_MODE = KH_DEPLOYMENT_MODE.startswith("hospital-")
 KH_OFFLINE_MODE = KH_DEPLOYMENT_MODE == "hospital-offline"
-KH_ENABLE_MCP = config("KH_ENABLE_MCP", default=not KH_HOSPITAL_MODE, cast=bool)
+# MCP is intentionally unavailable in the hospital build.
+KH_ENABLE_MCP = False
 KH_ALLOW_REMOTE_HELP = config(
     "KH_ALLOW_REMOTE_HELP", default=not KH_HOSPITAL_MODE, cast=bool
 )
@@ -130,11 +131,18 @@ KH_ENABLE_URL_UPLOAD = config("KH_ENABLE_URL_UPLOAD", default=False, cast=bool)
 if KH_HOSPITAL_MODE:
     KH_WEB_SEARCH_COMMAND = ""
     KH_ENABLE_URL_UPLOAD = False
-KH_VOICE_ASSISTANT_URL = config(
-    "KH_VOICE_ASSISTANT_URL", default="https://localhost:17003/ws/v1/asr/test"
+# Realtime ASR now lives in the chat composer instead of a standalone page.
+KH_ENABLE_ASR = config("KH_ENABLE_ASR", default=True, cast=bool)
+KH_ASR_PROVIDER = config("KH_ASR_PROVIDER", default="mock")
+KH_ASR_API_BASE_URL = config("KH_ASR_API_BASE_URL", default="")
+KH_ASR_API_KEY = config("KH_ASR_API_KEY", default="")
+KH_ASR_MODEL = config("KH_ASR_MODEL", default="")
+KH_ASR_TIMEOUT = config("KH_ASR_TIMEOUT", default=60, cast=float)
+KH_ASR_MOCK_INTERVAL_SECONDS = config(
+    "KH_ASR_MOCK_INTERVAL_SECONDS", default=0.55, cast=float
 )
-KH_ENABLE_VOICE_ASSISTANT = config(
-    "KH_ENABLE_VOICE_ASSISTANT", default=not KH_HOSPITAL_MODE, cast=bool
+KH_ASR_MOCK_SEED_VOICEPRINTS = config(
+    "KH_ASR_MOCK_SEED_VOICEPRINTS", default=True, cast=bool
 )
 KH_WEB_SEARCH_BACKEND = None if KH_HOSPITAL_MODE else (
     "kotaemon.indices.retrievers.tavily_web_search.WebSearch"

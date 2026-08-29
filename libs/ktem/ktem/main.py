@@ -1,18 +1,17 @@
 import gradio as gr
 from decouple import config
+from theflow.settings import settings as flowsettings
+
 from ktem.app import BaseApp
 from ktem.pages.chat import ChatPage
 from ktem.pages.help import HelpPage
 from ktem.pages.resources import ResourcesTab
 from ktem.pages.settings import SettingsPage
 from ktem.pages.setup import SetupPage
-from ktem.pages.voice_assistant import VoiceAssistantPage
-from theflow.settings import settings as flowsettings
 
 KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_ENABLE_FIRST_SETUP = getattr(flowsettings, "KH_ENABLE_FIRST_SETUP", False)
-KH_ENABLE_VOICE_ASSISTANT = getattr(flowsettings, "KH_ENABLE_VOICE_ASSISTANT", True)
 KH_APP_DATA_EXISTS = getattr(flowsettings, "KH_APP_DATA_EXISTS", True)
 
 # override first setup setting
@@ -124,25 +123,16 @@ class App(BaseApp):
             ) as self._tabs["help-tab"]:
                 self.help_page = HelpPage(self)
 
-            if KH_ENABLE_VOICE_ASSISTANT:
-                with gr.Tab(
-                    label="语音助手",
-                    elem_id="voice-tab",
-                    id="voice-tab",
-                    visible=not self.f_user_management,
-                    elem_classes=["fill-main-area-height", "scrollable"],
-                ) as self._tabs["voice-tab"]:
-                    self.voice_page = VoiceAssistantPage(self)
-
         if KH_ENABLE_FIRST_SETUP:
             with gr.Column(visible=False) as self.setup_page_wrapper:
                 self.setup_page = SetupPage(self)
 
     def on_subscribe_public_events(self):
         if self.f_user_management:
+            from sqlmodel import Session, select
+
             from ktem.db.engine import engine
             from ktem.db.models import User
-            from sqlmodel import Session, select
 
             def toggle_login_visibility(user_id):
                 if not user_id:

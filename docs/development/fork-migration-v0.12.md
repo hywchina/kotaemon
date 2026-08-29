@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | 启动与配置 | `app.py`、`flowsettings.py` | 读取环境变量，声明模型、索引和功能开关，启动 Gradio |
 | 应用编排 | `libs/ktem/ktem/app.py`、`main.py` | 注册推理与索引插件，创建全局状态，组织页面和登录后的权限可见性 |
-| UI 与会话 | `libs/ktem/ktem/pages/` | 聊天、登录、设置、资源管理、语音助手及 Gradio 事件链 |
+| UI 与会话 | `libs/ktem/ktem/pages/` | 聊天、登录、设置、资源管理、实时语音入口及 Gradio 事件链 |
 | 索引应用层 | `libs/ktem/ktem/index/` | 索引实例管理、文件/分组 UI、索引与检索管线装配 |
 | RAG/Agent 编排 | `libs/ktem/ktem/reasoning/` | Simple/Decompose QA、ReAct、ReWOO，组装检索器、LLM 与工具 |
 | 核心组件库 | `libs/kotaemon/kotaemon/` | Loader、Splitter、Embedding、Vector/Doc Store、Reranker、Citation QA、Agent/MCP |
@@ -39,7 +39,7 @@
 2. `ktem.main.App` 初始化 `BaseApp`。
 3. `BaseApp.register_reasonings()` 根据 `KH_REASONINGS` 动态加载推理管线。
 4. `IndexManager.on_application_startup()` 从配置/数据库创建索引实例。
-5. `App.ui()` 创建聊天、文件、资源、设置、帮助和语音助手页面。
+5. `App.ui()` 创建聊天、文件、资源、设置和帮助页面，聊天输入区内注册 ASR 入口。
 6. 各页面先声明公共事件，再订阅事件并注册 Gradio 回调。
 7. 登录事件根据管理员角色切换资源管理、文件管理和快速上传的可见性。
 
@@ -92,7 +92,7 @@ ChatPage.submit_msg
 | LLM/VLM | `qwen3-vl-flash` | `ChatOpenAI` | `POST /api/v1/chat/completions` |
 | Embedding | `qwen3-vl-embedding` | `GeekAIEmbeddings` | `POST /api/v1/embeddings` |
 | Rerank | `qwen3-rerank` | `GeekAIReranking` | `POST /api/v1/rerank` |
-| ASR | 暂未接入 | 语音助手页面默认关闭 | 无 |
+| ASR | Mock 多说话人流 | `MockASRProvider` | 远端 API 待接入 |
 
 `flowsettings.py` 从本地 `.env` 读取配置，三个模型 Manager 将配置注册到应用
 数据库；索引入库调用默认 Embedding，问答检索后调用默认 Reranker，最终由默认
@@ -147,7 +147,7 @@ LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型�
 - 引用生成超时调整和思维导图相关设置
 - GeekAI LLM、专用 Embedding/Rerank 协议适配器，以及可选的 LM Studio/本地
   TEI-style 模型配置
-- 语音助手 iframe 页面，地址和开关改由环境变量控制
+- 聊天输入框实时语音入口、多说话人转写面板和管理员声纹库
 - 压测源码、模型连通性工具和定制 Docker 入口
 - 医疗 favicon 和帮助内容
 
@@ -184,7 +184,8 @@ LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型�
 | `KH_WEB_SEARCH_COMMAND` | 空 | Web 搜索 mention 名；设为 `WebSearch` 即启用入口 |
 | `KH_ENABLE_AGENT_REASONINGS` | `false` | 是否注册 ReAct/ReWOO |
 | `KH_ENABLE_EXTERNAL_AGENT_TOOLS` | `false` | 是否开放 Wikipedia/Google |
-| `KH_ENABLE_VOICE_ASSISTANT` | `true` | 是否显示语音助手页 |
+| `KH_ENABLE_ASR` | `true` | 是否在聊天输入框启用实时语音入口 |
+| `KH_ASR_PROVIDER` | `mock` | ASR Provider；远端 API 接通前使用模拟流 |
 | `KH_START_LOCAL_RERANK` | `false` | `run.sh` 是否同时启动本地重排服务 |
 
 GeekAI 的 LLM 接口兼容 OpenAI Chat Completions，直接复用 `ChatOpenAI`。
@@ -197,8 +198,12 @@ Rerank 返回的 `index` 当前代表排序位置而非原文档位置，`GeekAI
 
 - `uv lock --check`：通过，锁文件与 workspace 配置一致
 - 迁移涉及的 Python 文件：Ruff 格式及静态检查通过，`compileall` 通过
-- 应用构建烟测：成功创建 1 个索引、7 个页面标签和 469 个 Gradio 组件
-- `ktem` 会话与 MCP 测试：27 个通过
+- 应用构建烟测：启用用户管理与 ASR 时成功创建 443 个 Gradio 组件、267 条
+  事件依赖，资源管理包含独立 ASR 与声纹配置页且不再包含 MCP 页签
+- macOS Bash 3.2 下执行 `sh run.sh --restart` 后，首页 HTTP 状态为 200；启动
+  脚本会跳过缺少项目依赖的 Python 虚拟环境
+- `ktem` 本地测试：除上游 `test_qa.py` 引用不存在的顶层 `index` 模块而无法收集
+  外，其余 77 个测试通过；聊天、ASR、会话权限、通知、模型隔离和汉化均覆盖
 - `kotaemon` 核心测试：115 个通过、20 个按可选依赖跳过、5 个 Milvus
   用例暂不执行；当前旧 `venv` 使用的 `setuptools 84.0.0` 已不提供
   `pkg_resources`，而官方 `uv.lock` 锁定 `setuptools 80.9.0`

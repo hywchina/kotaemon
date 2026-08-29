@@ -27,9 +27,9 @@ uv sync --frozen
 
 默认使用 GeekAI 的 `qwen3-vl-flash`、`qwen3-vl-embedding` 和
 `qwen3-rerank`。在 `.env` 中配置 `GEEKAI_API_KEY` 后即可使用；Embedding 与
-Rerank 使用项目内的 GeekAI 协议适配器。ASR 不属于本次模型接入，可通过
-`KH_ENABLE_ASR=false` 关闭。将 `KH_MODEL_PROFILE` 改为 `lmstudio` 可切换回原本
-的本地模型配置。完整迁移说明见
+Rerank 使用项目内的 GeekAI 协议适配器。ASR 当前使用 Mock Provider 演示实时
+多说话人转写，可通过 `KH_ENABLE_ASR=false` 关闭。将 `KH_MODEL_PROFILE` 改为
+`lmstudio` 可切换回原本的本地模型配置。完整迁移说明见
 [`docs/development/fork-migration-v0.12.md`](docs/development/fork-migration-v0.12.md)，
 医院离线构建、部署、备份和回滚见
 [`docs/deployment/hospital-intranet.md`](docs/deployment/hospital-intranet.md)。

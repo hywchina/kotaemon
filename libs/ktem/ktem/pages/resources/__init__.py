@@ -2,18 +2,14 @@ import gradio as gr
 from sqlmodel import Session, select
 
 from ktem.app import BasePage
+from ktem.asr.ui import ASRModelManagement, VoiceprintManagement
 from ktem.db.models import User, engine
 from ktem.embeddings.ui import EmbeddingManagement
 from ktem.index.ui import IndexManagement
 from ktem.llms.ui import LLMManagement
 from ktem.rerankings.ui import RerankingManagement
-from theflow.settings import settings as flowsettings
 
 from .user import UserManagement
-
-KH_ENABLE_MCP = getattr(flowsettings, "KH_ENABLE_MCP", False)
-if KH_ENABLE_MCP:
-    from ktem.mcp.ui import MCPManagement
 
 
 class ResourcesTab(BasePage):
@@ -42,9 +38,15 @@ class ResourcesTab(BasePage):
         ) as self.rerank_management_tab:  # translate Rerankings --》重排序模型
             self.rerank_management = RerankingManagement(self._app)
 
-        if KH_ENABLE_MCP:
-            with gr.Tab("MCP 服务") as self.mcp_management_tab:
-                self.mcp_management = MCPManagement(self._app)
+        with gr.Tab(
+            "语音识别模型", visible=not self._app.f_user_management
+        ) as self.asr_model_management_tab:
+            self.asr_model_management = ASRModelManagement(self._app)
+
+        with gr.Tab(
+            "声纹库", visible=not self._app.f_user_management
+        ) as self.voiceprint_management_tab:
+            self.voiceprint_management = VoiceprintManagement(self._app)
 
         if self._app.f_user_management:
             with gr.Tab(
@@ -57,9 +59,13 @@ class ResourcesTab(BasePage):
             self._app.subscribe_event(
                 name="onSignIn",
                 definition={
-                    "fn": self.toggle_user_management,
+                    "fn": self.toggle_admin_management,
                     "inputs": [self._app.user_id],
-                    "outputs": [self.user_management_tab],
+                    "outputs": [
+                        self.user_management_tab,
+                        self.asr_model_management_tab,
+                        self.voiceprint_management_tab,
+                    ],
                     "show_progress": "hidden",
                 },
             )
@@ -67,18 +73,30 @@ class ResourcesTab(BasePage):
             self._app.subscribe_event(
                 name="onSignOut",
                 definition={
-                    "fn": self.toggle_user_management,
+                    "fn": self.toggle_admin_management,
                     "inputs": [self._app.user_id],
-                    "outputs": [self.user_management_tab],
+                    "outputs": [
+                        self.user_management_tab,
+                        self.asr_model_management_tab,
+                        self.voiceprint_management_tab,
+                    ],
                     "show_progress": "hidden",
                 },
             )
 
-    def toggle_user_management(self, user_id):
-        """Show/hide the user management, depending on the user's role"""
+    def toggle_admin_management(self, user_id):
+        """Show administrator-only resource tabs for administrators."""
         with Session(engine) as session:
             user = session.exec(select(User).where(User.id == user_id)).first()
             if user and user.admin:
-                return gr.update(visible=True)
+                return (
+                    gr.update(visible=True),
+                    gr.update(visible=True),
+                    gr.update(visible=True),
+                )
 
-            return gr.update(visible=False)
+            return (
+                gr.update(visible=False),
+                gr.update(visible=False),
+                gr.update(visible=False),
+            )
