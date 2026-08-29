@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# `sh run.sh ...` ignores the shebang. Re-enter with Bash because this script
+# uses arrays and `[[ ... ]]`; both macOS Bash 3.2 and newer Bash are supported.
+if [ -z "${BASH_VERSION:-}" ]; then
+    exec bash "$0" "$@"
+fi
+
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,8 +35,8 @@ is_running() {
 }
 
 is_true() {
-    case "${1,,}" in
-        1|true|yes|on) return 0 ;;
+    case "${1:-}" in
+        1|true|TRUE|True|yes|YES|Yes|on|ON|On) return 0 ;;
         *) return 1 ;;
     esac
 }
