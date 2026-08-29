@@ -50,6 +50,7 @@ KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_WEB_SEARCH_BACKEND = getattr(flowsettings, "KH_WEB_SEARCH_BACKEND", None)
 KH_ENABLE_URL_UPLOAD = getattr(flowsettings, "KH_ENABLE_URL_UPLOAD", False)
+KH_ENABLE_ASR = getattr(flowsettings, "KH_ENABLE_ASR", True)
 logger = logging.getLogger(__name__)
 WebSearch = None
 if KH_WEB_SEARCH_BACKEND:
@@ -430,92 +431,49 @@ class ChatPage(BasePage):
                 js=recommended_papers_js,
             )
 
-        chat_event = (
-            gr.on(
-                triggers=[
-                    self.chat_panel.text_input.submit,
-                ],
-                fn=self.submit_msg,
-                inputs=[
-                    self.chat_panel.text_input,
-                    self.chat_panel.chatbot,
-                    self._app.user_id,
-                    self._app.settings_state,
-                    self.chat_control.conversation_id,
-                    self.chat_control.conversation_rn,
-                    self.first_selector_choices,
-                ],
-                outputs=[
-                    self.chat_panel.text_input,
-                    self.chat_panel.chatbot,
-                    self.chat_control.conversation_id,
-                    self.chat_control.conversation,
-                    self.chat_control.conversation_rn,
-                    # file selector from the first index
-                    self._indices_input[0],
-                    self._indices_input[1],
-                    self._command_state,
-                ],
-                concurrency_limit=20,
-                show_progress="hidden",
-            )
-            .success(
-                fn=self.chat_fn,
-                inputs=[
-                    self.chat_control.conversation_id,
-                    self.chat_panel.chatbot,
-                    self._app.settings_state,
-                    self.reasoning_type,
-                    self.model_type,
-                    self.use_mindmap,
-                    self.citation,
-                    self.language,
-                    self.state_chat,
-                    self._command_state,
-                    self._app.user_id,
-                ]
-                + self._indices_input,
-                outputs=[
-                    self.chat_panel.chatbot,
-                    self.info_panel,
-                    self.plot_panel,
-                    self.state_plot_panel,
-                    self.state_chat,
-                ],
-                concurrency_limit=20,
-                show_progress="minimal",
-            )
-            .then(
-                fn=lambda: True,
-                inputs=None,
-                outputs=[self._preview_links],
-                js=pdfview_js,
-            )
-            .success(
-                fn=self.check_and_suggest_name_conv,
-                inputs=self.chat_panel.chatbot,
-                outputs=[
-                    self.chat_control.conversation_rn,
-                    self._conversation_renamed,
-                ],
-            )
-            .success(
-                self.chat_control.rename_conv,
-                inputs=[
-                    self.chat_control.conversation_id,
-                    self.chat_control.conversation_rn,
-                    self._conversation_renamed,
-                    self._app.user_id,
-                ],
-                outputs=[
-                    self.chat_control.conversation,
-                    self.chat_control.conversation,
-                    self.chat_control.conversation_rn,
-                ],
-                show_progress="hidden",
-            )
+        submit_inputs = [
+            self.chat_panel.text_input,
+            self.chat_panel.chatbot,
+            self._app.user_id,
+            self._app.settings_state,
+            self.chat_control.conversation_id,
+            self.chat_control.conversation_rn,
+            self.first_selector_choices,
+        ]
+        submit_outputs = [
+            self.chat_panel.text_input,
+            self.chat_panel.chatbot,
+            self.chat_control.conversation_id,
+            self.chat_control.conversation,
+            self.chat_control.conversation_rn,
+            # file selector from the first index
+            self._indices_input[0],
+            self._indices_input[1],
+            self._command_state,
+        ]
+
+        submit_event = gr.on(
+            triggers=[
+                self.chat_panel.text_input.submit,
+                self.chat_panel.submit_btn.click,
+            ],
+            fn=self.submit_msg,
+            inputs=submit_inputs,
+            outputs=submit_outputs,
+            concurrency_limit=20,
+            show_progress="hidden",
         )
 
+        edit_event = self.chat_panel.edit_message_button.click(
+            fn=self.edit_message,
+            inputs=[self.chat_panel.message_action_payload]
+            + submit_inputs[1:]
+            + [self.state_retrieval_history, self.state_plot_history],
+            outputs=submit_outputs
+            + [self.state_retrieval_history, self.state_plot_history],
+            concurrency_limit=20,
+            show_progress="hidden",
+        )
         onSuggestChatEvent = {
             "fn": self.suggest_chat_conv,
             "inputs": [
@@ -530,21 +488,171 @@ class ChatPage(BasePage):
             ],
             "show_progress": "hidden",
         }
-        # chat suggestion toggle
-        chat_event = chat_event.success(**onSuggestChatEvent)
 
-        # final data persist
-        if not KH_DEMO_MODE:
-            chat_event = chat_event.then(
-                fn=self.persist_data_source,
+        def register_chat_pipeline(start_event):
+            chat_event = (
+                start_event.success(
+                    fn=self.chat_fn,
+                    inputs=[
+                        self.chat_control.conversation_id,
+                        self.chat_panel.chatbot,
+                        self._app.settings_state,
+                        self.reasoning_type,
+                        self.model_type,
+                        self.use_mindmap,
+                        self.citation,
+                        self.language,
+                        self.state_chat,
+                        self._command_state,
+                        self._app.user_id,
+                    ]
+                    + self._indices_input,
+                    outputs=[
+                        self.chat_panel.chatbot,
+                        self.info_panel,
+                        self.plot_panel,
+                        self.state_plot_panel,
+                        self.state_chat,
+                    ],
+                    concurrency_limit=20,
+                    show_progress="minimal",
+                )
+                .then(
+                    fn=lambda: True,
+                    inputs=None,
+                    outputs=[self._preview_links],
+                    js=pdfview_js,
+                )
+                .success(
+                    fn=self.check_and_suggest_name_conv,
+                    inputs=self.chat_panel.chatbot,
+                    outputs=[
+                        self.chat_control.conversation_rn,
+                        self._conversation_renamed,
+                    ],
+                )
+                .success(
+                    self.chat_control.rename_conv,
+                    inputs=[
+                        self.chat_control.conversation_id,
+                        self.chat_control.conversation_rn,
+                        self._conversation_renamed,
+                        self._app.user_id,
+                    ],
+                    outputs=[
+                        self.chat_control.conversation,
+                        self.chat_control.conversation,
+                        self.chat_control.conversation_rn,
+                    ],
+                    show_progress="hidden",
+                )
+            )
+
+            # chat suggestion toggle
+            chat_event = chat_event.success(**onSuggestChatEvent)
+
+            # final data persist
+            if not KH_DEMO_MODE:
+                chat_event = chat_event.then(
+                    fn=self.persist_data_source,
+                    inputs=[
+                        self.chat_control.conversation_id,
+                        self._app.user_id,
+                        self.info_panel,
+                        self.state_plot_panel,
+                        self.state_retrieval_history,
+                        self.state_plot_history,
+                        self.chat_panel.chatbot,
+                        self.state_chat,
+                    ]
+                    + self._indices_input,
+                    outputs=[
+                        self.state_retrieval_history,
+                        self.state_plot_history,
+                    ],
+                    concurrency_limit=20,
+                )
+
+            return chat_event
+
+        register_chat_pipeline(submit_event)
+        register_chat_pipeline(edit_event)
+
+        self.chat_panel.delete_message_button.click(
+            fn=self.delete_message,
+            inputs=[
+                self.chat_panel.message_action_payload,
+                self.chat_panel.chatbot,
+                self.chat_control.conversation_id,
+                self._app.user_id,
+                self.state_retrieval_history,
+                self.state_plot_history,
+            ],
+            outputs=[
+                self.chat_panel.chatbot,
+                self.state_retrieval_history,
+                self.state_plot_history,
+                self.info_panel,
+                self.state_plot_panel,
+            ],
+            show_progress="hidden",
+        ).then(
+            fn=self._json_to_plot,
+            inputs=self.state_plot_panel,
+            outputs=self.plot_panel,
+        )
+
+        if KH_ENABLE_ASR:
+            begin_asr_event = self.chat_panel.asr_start_button.click(
+                fn=self.begin_asr_session,
+                inputs=[
+                    self.chat_panel.chatbot,
+                    self._app.user_id,
+                    self.chat_control.conversation_id,
+                    self.chat_control.conversation_rn,
+                    self.state_retrieval_history,
+                    self.state_plot_history,
+                ],
+                outputs=[
+                    self.chat_panel.asr_segments,
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                    self.chat_panel.asr_start_button,
+                    self.chat_panel.asr_stop_button,
+                    self.chat_control.conversation_id,
+                    self.chat_control.conversation,
+                    self.chat_control.conversation_rn,
+                    self.state_retrieval_history,
+                    self.state_plot_history,
+                ],
+                show_progress="hidden",
+                queue=False,
+            )
+            stream_asr_event = begin_asr_event.then(
+                fn=self.chat_panel.stream_transcription,
+                inputs=[
+                    self.chat_panel.asr_segments,
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                ],
+                outputs=[
+                    self.chat_panel.asr_segments,
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                    self.chat_panel.asr_start_button,
+                    self.chat_panel.asr_stop_button,
+                ],
+                show_progress="hidden",
+                concurrency_limit=1,
+            )
+            stream_asr_event.success(
+                fn=self.persist_asr_transcript,
                 inputs=[
                     self.chat_control.conversation_id,
                     self._app.user_id,
-                    self.info_panel,
-                    self.state_plot_panel,
+                    self.chat_panel.chatbot,
                     self.state_retrieval_history,
                     self.state_plot_history,
-                    self.chat_panel.chatbot,
                     self.state_chat,
                 ]
                 + self._indices_input,
@@ -552,7 +660,40 @@ class ChatPage(BasePage):
                     self.state_retrieval_history,
                     self.state_plot_history,
                 ],
-                concurrency_limit=20,
+                show_progress="hidden",
+            )
+            self.chat_panel.asr_stop_button.click(
+                fn=self.chat_panel.stop_transcription,
+                inputs=[
+                    self.chat_panel.asr_segments,
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                ],
+                outputs=[
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                    self.chat_panel.asr_start_button,
+                    self.chat_panel.asr_stop_button,
+                ],
+                cancels=[stream_asr_event],
+                show_progress="hidden",
+                queue=False,
+            ).then(
+                fn=self.persist_asr_transcript,
+                inputs=[
+                    self.chat_control.conversation_id,
+                    self._app.user_id,
+                    self.chat_panel.chatbot,
+                    self.state_retrieval_history,
+                    self.state_plot_history,
+                    self.state_chat,
+                ]
+                + self._indices_input,
+                outputs=[
+                    self.state_retrieval_history,
+                    self.state_plot_history,
+                ],
+                show_progress="hidden",
             )
 
         self.chat_control.btn_info_expand.click(
@@ -847,7 +988,9 @@ class ChatPage(BasePage):
             fn=raise_error_on_state,
             inputs=[self._use_suggestion],
             show_progress="hidden",
-        ).success(**onSuggestChatEvent)
+        ).success(
+            **onSuggestChatEvent
+        )
         self.chat_control.conversation_id.change(
             lambda: gr.update(visible=False),
             outputs=self.plot_panel,
@@ -995,6 +1138,182 @@ class ChatPage(BasePage):
             + [used_command]
         )
 
+    @staticmethod
+    def _parse_message_action(payload, chat_history):
+        try:
+            action = json.loads(payload or "{}")
+            message_index = int(action["index"])
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise gr.Error("消息操作参数无效，请刷新页面后重试。") from exc
+
+        if message_index < 0 or message_index >= len(chat_history or []):
+            raise gr.Error("这条消息已发生变化，请刷新页面后重试。")
+        if not chat_history[message_index][0]:
+            raise gr.Error("只能修改或删除自己发送的问题。")
+        return action, message_index
+
+    def edit_message(
+        self,
+        payload,
+        chat_history,
+        user_id,
+        settings,
+        conv_id,
+        conv_name,
+        first_selector_choices,
+        retrieval_history,
+        plot_history,
+        request: gr.Request,
+    ):
+        """Replace one user turn and regenerate from that point."""
+
+        action, message_index = self._parse_message_action(payload, chat_history)
+        edited_text = str(action.get("text", "")).strip()
+        if not edited_text:
+            raise gr.Error("修改后的问题不能为空。")
+
+        result = self.submit_msg(
+            {"text": edited_text, "files": []},
+            list(chat_history[:message_index]),
+            user_id,
+            settings,
+            conv_id,
+            conv_name,
+            first_selector_choices,
+            request,
+        )
+        return result + [
+            list((retrieval_history or [])[:message_index]),
+            list((plot_history or [])[:message_index]),
+        ]
+
+    def delete_message(
+        self,
+        payload,
+        chat_history,
+        conv_id,
+        user_id,
+        retrieval_history,
+        plot_history,
+    ):
+        """Delete one user/assistant turn and its evidence state."""
+
+        _, message_index = self._parse_message_action(payload, chat_history)
+        if not conv_id:
+            raise gr.Error("当前会话尚未保存，无法删除消息。")
+
+        messages = list(chat_history or [])
+        messages.pop(message_index)
+        retrieval_history = list(retrieval_history or [])
+        plot_history = list(plot_history or [])
+        if message_index < len(retrieval_history):
+            retrieval_history.pop(message_index)
+        if message_index < len(plot_history):
+            plot_history.pop(message_index)
+
+        with Session(engine) as session:
+            conversation = session.exec(
+                select(Conversation).where(Conversation.id == conv_id)
+            ).one_or_none()
+            if conversation is None or conversation.user != user_id:
+                raise gr.Error("只有会话所有者可以删除消息。")
+            data_source = deepcopy(conversation.data_source or {})
+            data_source["messages"] = messages
+            data_source["retrieval_messages"] = retrieval_history
+            data_source["plot_history"] = plot_history
+            updated_likes = []
+            for like in data_source.get("likes", []):
+                if not like or like[0] == message_index:
+                    continue
+                updated_like = list(like)
+                if isinstance(updated_like[0], int) and updated_like[0] > message_index:
+                    updated_like[0] -= 1
+                updated_likes.append(updated_like)
+            data_source["likes"] = updated_likes
+            conversation.data_source = data_source
+            session.add(conversation)
+            session.commit()
+
+        gr.Info("消息及对应回答已删除。")
+        info_panel = (
+            retrieval_history[-1]
+            if retrieval_history
+            else "<h5><b>未找到相关证据。</b></h5>"
+        )
+        plot_data = plot_history[-1] if plot_history else None
+        return messages, retrieval_history, plot_history, info_panel, plot_data
+
+    def begin_asr_session(
+        self,
+        chat_history,
+        user_id,
+        conv_id,
+        conv_name,
+        retrieval_history,
+        plot_history,
+    ):
+        """Create a conversation if needed and append one ASR chat message."""
+
+        if not conv_id:
+            if KH_DEMO_MODE:
+                new_conv_id, new_conv_name, conv_update = None, None, gr.update()
+            else:
+                new_conv_id, conv_update = self.chat_control.new_conv(user_id)
+                with Session(engine) as session:
+                    conversation = session.exec(
+                        select(Conversation).where(Conversation.id == new_conv_id)
+                    ).one()
+                    new_conv_name = conversation.name
+        else:
+            new_conv_id = conv_id
+            new_conv_name = conv_name
+            conv_update = gr.update()
+
+        (
+            segments,
+            messages,
+            message_index,
+            start_button,
+            stop_button,
+        ) = self.chat_panel.begin_transcription(chat_history)
+        retrieval_history = list(retrieval_history or []) + [""]
+        plot_history = list(plot_history or []) + [None]
+        return (
+            segments,
+            messages,
+            message_index,
+            start_button,
+            stop_button,
+            new_conv_id,
+            conv_update,
+            new_conv_name,
+            retrieval_history,
+            plot_history,
+        )
+
+    def persist_asr_transcript(
+        self,
+        convo_id,
+        user_id,
+        messages,
+        retrieval_history,
+        plot_history,
+        state,
+        *selecteds,
+    ):
+        """Persist an ASR chat message without invoking the reasoning pipeline."""
+
+        self._write_conversation_data(
+            convo_id,
+            user_id,
+            messages,
+            retrieval_history,
+            plot_history,
+            state,
+            *selecteds,
+        )
+        return retrieval_history, plot_history
+
     def get_recommendations(self, first_selector_choices, file_ids):
         first_selector_choices_map = {
             item[1]: item[0] for item in first_selector_choices
@@ -1111,35 +1430,21 @@ class ChatPage(BasePage):
                 js=chat_input_focus_js,
             )
 
-    def persist_data_source(
+    def _write_conversation_data(
         self,
         convo_id,
         user_id,
-        retrieval_msg,
-        plot_data,
-        retrival_history,
-        plot_history,
         messages,
+        retrieval_history,
+        plot_history,
         state,
         *selecteds,
     ):
-        """Update the data source"""
+        """Write one complete, already-aligned conversation snapshot."""
+
         if not convo_id:
             gr.Warning("请先选择一个会话。")
             return
-
-        # if not regen, then append the new message
-        if not state["app"].get("regen", False):
-            retrival_history = retrival_history + [retrieval_msg]
-            plot_history = plot_history + [plot_data]
-        else:
-            if retrival_history:
-                print("Updating retrieval history (regen=True)")
-                retrival_history[-1] = retrieval_msg
-                plot_history[-1] = plot_data
-
-        # reset regen state
-        state["app"]["regen"] = False
 
         selecteds_ = {}
         for index in self._app.index_manager.indices:
@@ -1162,13 +1467,52 @@ class ChatPage(BasePage):
             result.data_source = {
                 "selected": selecteds_ if is_owner else old_selecteds,
                 "messages": messages,
-                "retrieval_messages": retrival_history,
+                "retrieval_messages": retrieval_history,
                 "plot_history": plot_history,
                 "state": state,
                 "likes": deepcopy(data_source.get("likes", [])),
             }
             session.add(result)
             session.commit()
+
+    def persist_data_source(
+        self,
+        convo_id,
+        user_id,
+        retrieval_msg,
+        plot_data,
+        retrival_history,
+        plot_history,
+        messages,
+        state,
+        *selecteds,
+    ):
+        """Update the data source after one reasoning response."""
+
+        if not convo_id:
+            gr.Warning("请先选择一个会话。")
+            return
+
+        # if not regen, then append the new message
+        if not state["app"].get("regen", False):
+            retrival_history = retrival_history + [retrieval_msg]
+            plot_history = plot_history + [plot_data]
+        elif retrival_history:
+            print("Updating retrieval history (regen=True)")
+            retrival_history[-1] = retrieval_msg
+            plot_history[-1] = plot_data
+
+        # reset regen state
+        state["app"]["regen"] = False
+        self._write_conversation_data(
+            convo_id,
+            user_id,
+            messages,
+            retrival_history,
+            plot_history,
+            state,
+            *selecteds,
+        )
 
         return retrival_history, plot_history
 
@@ -1318,6 +1662,16 @@ class ChatPage(BasePage):
                 return True
         return False
 
+    @staticmethod
+    def _reasoning_history(chat_history):
+        """Exclude assistant-only ASR display turns from LLM prompt history."""
+
+        return [
+            (human, assistant)
+            for human, assistant in chat_history or []
+            if isinstance(human, str) and human.strip()
+        ]
+
     def chat_fn(
         self,
         conversation_id,
@@ -1382,7 +1736,7 @@ class ChatPage(BasePage):
             for response in pipeline.stream(
                 llm_query,
                 conversation_id,
-                chat_history,
+                self._reasoning_history(chat_history),
             ):
                 if not isinstance(response, Document):
                     continue
@@ -1447,11 +1801,12 @@ class ChatPage(BasePage):
         suggest_pipeline = SuggestConvNamePipeline()
         new_name = gr.update()
         renamed = False
+        reasoning_history = self._reasoning_history(chat_history)
 
         # check if this is a newly created conversation
-        if len(chat_history) == 1:
+        if len(reasoning_history) == 1:
             try:
-                suggested_name = suggest_pipeline(chat_history).text
+                suggested_name = suggest_pipeline(reasoning_history).text
                 suggested_name = strip_think_tag(suggested_name)
                 suggested_name = suggested_name.replace('"', "").replace("'", "")[:40]
                 new_name = gr.update(value=suggested_name)
@@ -1473,6 +1828,7 @@ class ChatPage(BasePage):
         chat_history,
         use_suggestion,
     ):
+        chat_history = self._reasoning_history(chat_history)
         target_language = (
             session_language
             if session_language not in (DEFAULT_SETTING, None)
