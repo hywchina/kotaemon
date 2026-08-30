@@ -1,7 +1,20 @@
 import os
+import warnings
 from importlib.metadata import version
 from inspect import currentframe, getframeinfo
 from pathlib import Path
+
+# Known warnings from pinned optional dependencies. Both are emitted while modules
+# are imported and do not affect the configured LanceDB or PDF functionality.
+warnings.filterwarnings(
+    "ignore",
+    message='Field "model_name" in ColPaliEmbeddings has conflict.*',
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message="ARC4 has been moved to cryptography.*",
+)
 
 from decouple import config
 from ktem.utils.deployment import normalize_deployment_mode, validate_model_endpoint

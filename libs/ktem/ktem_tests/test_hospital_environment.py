@@ -36,3 +36,24 @@ def test_hospital_settings_disable_framework_downloads():
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_known_optional_dependency_warnings_are_suppressed():
+    project_root = Path(__file__).parents[3]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-W",
+            "default",
+            "-c",
+            "import flowsettings; from ktem.main import App; import pypdf",
+        ],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "ColPaliEmbeddings has conflict" not in result.stderr
+    assert "ARC4 has been moved" not in result.stderr

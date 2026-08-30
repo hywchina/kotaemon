@@ -4,6 +4,17 @@
 提交信息统一使用英文，本文件使用中文说明，便于医院信息科、运维和后续开发者
 追溯变更。
 
+## `fix: suppress known dependency startup warnings`
+
+- **改造动机**：LanceDB 的可选 ColPali 模块与当前 Pydantic 命名空间规则冲突，旧版
+  pypdf 又会触发 Cryptography 的 ARC4 迁移提示。两条信息均在导入阶段出现，不影响
+  当前 Chroma/LanceDB、PDF 读取或模型调用，却容易被运维人员误认为启动失败。
+- **改动范围**：仅在应用配置入口按完整警告文本过滤这两条已知依赖提示，不屏蔽其他
+  `UserWarning`、弃用警告或运行异常；新增独立进程测试确认应用和 pypdf 导入时不再
+  输出对应内容。
+- **注意事项**：Lance 首次创建空数据集的日志仍保留，因为它反映真实的索引初始化
+  行为；依赖升级后应删除已不需要的精确过滤规则，而不是扩大过滤范围。
+
 ## `fix: validate bootstrap users before model checks`
 
 - **改造动机**：模型预检会先创建应用数据库中的模型配置表，旧静态自检只判断
