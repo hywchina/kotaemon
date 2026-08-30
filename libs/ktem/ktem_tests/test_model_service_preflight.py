@@ -35,9 +35,8 @@ def test_llm_embedding_and_rerank_checks_validate_response_shapes():
         llm_requests.append(prompt)
         return SimpleNamespace(text="OK")
 
-    embedding = lambda text: [
-        DocumentWithEmbedding(content=text, embedding=[0.1, 0.2, 0.3])
-    ]
+    def embedding(text):
+        return [DocumentWithEmbedding(content=text, embedding=[0.1, 0.2, 0.3])]
 
     class Reranker:
         def run(self, documents, query):

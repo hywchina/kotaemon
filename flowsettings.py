@@ -16,9 +16,12 @@ warnings.filterwarnings(
     message="ARC4 has been moved to cryptography.*",
 )
 
-from decouple import config
-from ktem.utils.deployment import normalize_deployment_mode, validate_model_endpoint
-from ktem.utils.lang import SUPPORTED_LANGUAGE_MAP
+from decouple import config  # noqa: E402
+from ktem.utils.deployment import (  # noqa: E402
+    normalize_deployment_mode,
+    validate_model_endpoint,
+)
+from ktem.utils.lang import SUPPORTED_LANGUAGE_MAP  # noqa: E402
 from theflow.settings.default import *  # noqa
 
 cur_frame = currentframe()
