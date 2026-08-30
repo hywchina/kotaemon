@@ -1,15 +1,16 @@
 function run() {
-  let main_parent = document.getElementById("chat-tab").parentNode;
+  const chatTab = document.getElementById("chat-tab");
+  const mainParent = chatTab && chatTab.parentNode;
+  if (!mainParent) return;
 
-  main_parent.childNodes[0].classList.add("header-bar");
-  main_parent.style = "padding: 0; margin: 0";
-  main_parent.parentNode.style = "gap: 0";
-  main_parent.parentNode.parentNode.style = "padding: 0";
-
-  const version_node = document.createElement("p");
-  version_node.innerHTML = "version: KH_APP_VERSION";
-  version_node.style = "position: fixed; top: 10px; right: 10px;";
-  main_parent.appendChild(version_node);
+  const headerBar = mainParent.firstElementChild;
+  if (headerBar) headerBar.classList.add("header-bar");
+  mainParent.style.padding = "0";
+  mainParent.style.margin = "0";
+  if (mainParent.parentNode) mainParent.parentNode.style.gap = "0";
+  if (mainParent.parentNode && mainParent.parentNode.parentNode) {
+    mainParent.parentNode.parentNode.style.padding = "0";
+  }
 
   // add favicon
   const favicon = document.createElement("link");
@@ -20,8 +21,8 @@ function run() {
   document.head.appendChild(favicon);
 
   // setup conversation dropdown placeholder
-  let conv_dropdown = document.querySelector("#conversation-dropdown input");
-  conv_dropdown.placeholder = "浏览会话记录";  // translate Browse conversation --》浏览对话记录
+  const convDropdown = document.querySelector("#conversation-dropdown input");
+  if (convDropdown) convDropdown.placeholder = "浏览会话记录";
 
   const icon = {
     plus:
@@ -100,9 +101,6 @@ function run() {
         )
       );
       composerRow.classList.toggle("has-message-content", hasText || hasFiles);
-      if (sendButton && sendButton.disabled === (hasText || hasFiles)) {
-        sendButton.disabled = !(hasText || hasFiles);
-      }
     };
 
     const textarea = chatInput.querySelector("textarea");
@@ -260,76 +258,83 @@ function run() {
   }
 
   // move info-expand-button
-  let info_expand_button = document.getElementById("info-expand-button");
-  let chat_info_panel = document.getElementById("info-expand");
-  chat_info_panel.insertBefore(
-    info_expand_button,
-    chat_info_panel.childNodes[2]
-  );
-
-  // move toggle-side-bar button
-  let chat_expand_button = document.getElementById("chat-expand-button");
-  let chat_column = document.getElementById("main-chat-bot");
-  let conv_column = document.getElementById("conv-settings-panel");
-
-  // move setting close button
-  let setting_tab_nav_bar = document.querySelector("#settings-tab .tab-nav");
-  let setting_close_button = document.getElementById("save-setting-btn");
-  if (setting_close_button) {
-    setting_tab_nav_bar.appendChild(setting_close_button);
+  const infoExpandButton = document.getElementById("info-expand-button");
+  const chatInfoPanel = document.getElementById("info-expand");
+  if (infoExpandButton && chatInfoPanel) {
+    chatInfoPanel.insertBefore(infoExpandButton, chatInfoPanel.childNodes[2]);
   }
 
-  let default_conv_column_min_width = "min(300px, 100%)";
-  conv_column.style.minWidth = default_conv_column_min_width;
+  // move toggle-side-bar button
+  const chatExpandButton = document.getElementById("chat-expand-button");
+  const chatColumn = document.getElementById("main-chat-bot");
+  const convColumn = document.getElementById("conv-settings-panel");
+
+  // move setting close button
+  const settingTabNavBar = document.querySelector("#settings-tab .tab-nav");
+  const settingCloseButton = document.getElementById("save-setting-btn");
+  if (settingTabNavBar && settingCloseButton) {
+    settingTabNavBar.appendChild(settingCloseButton);
+  }
+
+  const defaultConvColumnMinWidth = "min(300px, 100%)";
+  if (convColumn) convColumn.style.minWidth = defaultConvColumnMinWidth;
 
   globalThis.toggleChatColumn = () => {
-    /* get flex-grow value of chat_column */
-    let flex_grow = conv_column.style.flexGrow;
-    if (flex_grow == "0") {
-      conv_column.style.flexGrow = "1";
-      conv_column.style.minWidth = default_conv_column_min_width;
+    if (!convColumn) return;
+    const flexGrow = convColumn.style.flexGrow;
+    if (flexGrow === "0") {
+      convColumn.style.flexGrow = "1";
+      convColumn.style.minWidth = defaultConvColumnMinWidth;
     } else {
-      conv_column.style.flexGrow = "0";
-      conv_column.style.minWidth = "0px";
+      convColumn.style.flexGrow = "0";
+      convColumn.style.minWidth = "0px";
     }
   };
 
-  chat_column.insertBefore(chat_expand_button, chat_column.firstChild);
+  if (chatColumn && chatExpandButton) {
+    chatColumn.insertBefore(chatExpandButton, chatColumn.firstChild);
+  }
 
   // move use mind-map checkbox
-  let mindmap_checkbox = document.getElementById("use-mindmap-checkbox");
-  let citation_dropdown = document.getElementById("citation-dropdown");
-  let chat_setting_panel = document.getElementById("chat-settings-expand");
-  chat_setting_panel.insertBefore(
-    mindmap_checkbox,
-    chat_setting_panel.childNodes[2]
-  );
-  chat_setting_panel.insertBefore(citation_dropdown, mindmap_checkbox);
+  const mindmapCheckbox = document.getElementById("use-mindmap-checkbox");
+  const citationDropdown = document.getElementById("citation-dropdown");
+  const chatSettingPanel = document.getElementById("chat-settings-expand");
+  if (chatSettingPanel && mindmapCheckbox) {
+    chatSettingPanel.insertBefore(mindmapCheckbox, chatSettingPanel.childNodes[2]);
+    if (citationDropdown) {
+      chatSettingPanel.insertBefore(citationDropdown, mindmapCheckbox);
+    }
+  }
 
   // move share conv checkbox
-  let report_div = document.querySelector(
+  const reportDiv = document.querySelector(
     "#report-accordion > div:nth-child(3) > div:nth-child(1)"
   );
-  let share_conv_checkbox = document.getElementById("is-public-checkbox");
-  if (share_conv_checkbox) {
-    report_div.insertBefore(share_conv_checkbox, report_div.querySelector("button"));
+  const shareConvCheckbox = document.getElementById("is-public-checkbox");
+  if (reportDiv && shareConvCheckbox) {
+    reportDiv.insertBefore(shareConvCheckbox, reportDiv.querySelector("button"));
   }
 
   // create slider toggle
-  const is_public_checkbox = document.getElementById("suggest-chat-checkbox");
-  const label_element = is_public_checkbox.getElementsByTagName("label")[0];
-  const checkbox_span = is_public_checkbox.getElementsByTagName("span")[0];
-  new_div = document.createElement("div");
-
-  label_element.classList.add("switch");
-  is_public_checkbox.appendChild(checkbox_span);
-  label_element.appendChild(new_div);
+  const suggestionCheckbox = document.getElementById("suggest-chat-checkbox");
+  if (suggestionCheckbox) {
+    const labelElement = suggestionCheckbox.getElementsByTagName("label")[0];
+    const checkboxSpan = suggestionCheckbox.getElementsByTagName("span")[0];
+    if (labelElement && checkboxSpan) {
+      const switchHandle = document.createElement("div");
+      labelElement.classList.add("switch");
+      suggestionCheckbox.appendChild(checkboxSpan);
+      labelElement.appendChild(switchHandle);
+    }
+  }
 
   // clpse
   globalThis.clpseFn = (id) => {
-    var obj = document.getElementById("clpse-btn-" + id);
+    const obj = document.getElementById("clpse-btn-" + id);
+    if (!obj) return;
     obj.classList.toggle("clpse-active");
-    var content = obj.nextElementSibling;
+    const content = obj.nextElementSibling;
+    if (!content) return;
     if (content.style.display === "none") {
       content.style.display = "block";
     } else {
@@ -342,7 +347,7 @@ function run() {
     localStorage.setItem(key, value);
   };
   globalThis.getStorage = (key, value) => {
-    item = localStorage.getItem(key);
+    const item = localStorage.getItem(key);
     return item ? item : value;
   };
   globalThis.removeFromStorage = (key) => {
@@ -356,136 +361,115 @@ function run() {
   }
 
   globalThis.scrollToCitation = async (event) => {
-    event.preventDefault(); // Prevent the default link behavior
-    var citationId = event.target.getAttribute("id");
+    event.preventDefault();
+    const citationId = event.target.getAttribute("id");
 
-    await sleep(100); // Sleep for 100 milliseconds
+    await sleep(100);
 
-    // check if modal is open
-    var modal = document.getElementById("pdf-modal");
-    var citation = document.querySelector('mark[id="' + citationId + '"]');
+    const modal = document.getElementById("pdf-modal");
+    const citation = document.querySelector('mark[id="' + citationId + '"]');
+    if (!citation) return;
 
-    if (modal.style.display == "block") {
-      // trigger on click event of PDF Preview link
-      var detail_elem = citation;
-      // traverse up the DOM tree to find the parent element with tag detail
-      while (detail_elem.tagName.toLowerCase() != "details") {
-        detail_elem = detail_elem.parentElement;
-      }
-      detail_elem.getElementsByClassName("pdf-link").item(0).click();
+    if (modal && modal.style.display === "block") {
+      const details = citation.closest("details");
+      const pdfLink = details && details.querySelector(".pdf-link");
+      if (pdfLink) pdfLink.click();
     } else {
-      if (citation) {
-        citation.scrollIntoView({ behavior: "smooth" });
-      }
+      citation.scrollIntoView({ behavior: "smooth" });
     }
   };
 
+  const clearSearchHighlights = (root) => {
+    root.querySelectorAll("mark[data-ktem-search-highlight]").forEach((mark) => {
+      mark.replaceWith(document.createTextNode(mark.textContent || ""));
+    });
+    root.normalize();
+  };
+
+  const highlightText = (container, text) => {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    let textNode = walker.nextNode();
+    while (textNode) {
+      const index = textNode.data.indexOf(text);
+      if (index >= 0) {
+        const matchedNode = textNode.splitText(index);
+        matchedNode.splitText(text.length);
+        const mark = document.createElement("mark");
+        mark.dataset.ktemSearchHighlight = "true";
+        matchedNode.replaceWith(mark);
+        mark.appendChild(matchedNode);
+        return mark;
+      }
+      textNode = walker.nextNode();
+    }
+    return null;
+  };
+
   globalThis.fullTextSearch = () => {
-    // Assign text selection event to last bot message
-    var bot_messages = document.querySelectorAll(
+    const botMessages = document.querySelectorAll(
       "div#main-chat-bot div.message-row.bot-row"
     );
-    var last_bot_message = bot_messages[bot_messages.length - 1];
-
-    // check if the last bot message has class "text_selection"
-    if (last_bot_message.classList.contains("text_selection")) {
+    const lastBotMessage = botMessages[botMessages.length - 1];
+    if (!lastBotMessage || lastBotMessage.classList.contains("text_selection")) {
       return;
     }
+    lastBotMessage.classList.add("text_selection");
 
-    // assign new class to last message
-    last_bot_message.classList.add("text_selection");
-
-    // Get sentences from evidence div
-    var evidences = document.querySelectorAll(
+    const evidences = document.querySelectorAll(
       "#html-info-panel > div:last-child > div > details.evidence div.evidence-content"
     );
-    console.log("Indexing evidences", evidences);
-
-    const segmenterEn = new Intl.Segmenter("en", { granularity: "sentence" });
-    // Split sentences and save to all_segments list
-    var all_segments = [];
-    for (var evidence of evidences) {
-      // check if <details> tag is open
-      if (!evidence.parentElement.open) {
-        continue;
-      }
-      var markmap_div = evidence.querySelector("div.markmap");
-      if (markmap_div) {
+    const segmenter = new Intl.Segmenter("zh-CN", { granularity: "sentence" });
+    const allSegments = [];
+    for (const evidence of evidences) {
+      if (!evidence.parentElement.open || evidence.querySelector("div.markmap")) {
         continue;
       }
 
-      var evidence_content = evidence.textContent.replace(/[\r\n]+/g, " ");
-      sentence_it = segmenterEn.segment(evidence_content)[Symbol.iterator]();
-      while ((sentence = sentence_it.next().value)) {
-        segment = sentence.segment.trim();
+      const evidenceContent = evidence.textContent.replace(/[\r\n]+/g, " ");
+      const sentenceIterator = segmenter.segment(evidenceContent)[Symbol.iterator]();
+      let sentence = sentenceIterator.next().value;
+      while (sentence) {
+        const segment = sentence.segment.trim();
         if (segment) {
-          all_segments.push({
-            id: all_segments.length,
-            text: segment,
-          });
+          allSegments.push({ id: allSegments.length, text: segment });
         }
+        sentence = sentenceIterator.next().value;
       }
     }
 
-    let miniSearch = new MiniSearch({
-      fields: ["text"], // fields to index for full-text search
+    const miniSearch = new MiniSearch({
+      fields: ["text"],
       storeFields: ["text"],
     });
+    miniSearch.addAll(allSegments);
 
-    // Index all documents
-    miniSearch.addAll(all_segments);
+    lastBotMessage.addEventListener("mouseup", () => {
+      const selection = window.getSelection().toString().trim();
+      if (!selection) return;
+      const results = miniSearch.search(selection);
+      if (results.length === 0) return;
 
-    last_bot_message.addEventListener("mouseup", () => {
-      let selection = window.getSelection().toString();
-      let results = miniSearch.search(selection);
-
-      if (results.length == 0) {
-        return;
-      }
-      let matched_text = results[0].text;
-      console.log("query\n", selection, "\nmatched text\n", matched_text);
-
-      var evidences = document.querySelectorAll(
+      const matchedText = results[0].text;
+      const currentEvidences = document.querySelectorAll(
         "#html-info-panel > div:last-child > div > details.evidence div.evidence-content"
       );
-      // check if modal is open
-      var modal = document.getElementById("pdf-modal");
+      const modal = document.getElementById("pdf-modal");
+      currentEvidences.forEach(clearSearchHighlights);
 
-      // convert all <mark> in evidences to normal text
-      evidences.forEach((evidence) => {
-        evidence.querySelectorAll("mark").forEach((mark) => {
-          mark.outerHTML = mark.innerText;
-        });
-      });
+      // Manipulate text nodes only; never reconstruct untrusted evidence HTML.
+      for (const evidence of currentEvidences) {
+        for (const paragraph of evidence.querySelectorAll("p, li")) {
+          const highlight = highlightText(paragraph, matchedText);
+          if (!highlight) continue;
 
-      // highlight matched_text in evidences
-      for (var evidence of evidences) {
-        var evidence_content = evidence.textContent.replace(/[\r\n]+/g, " ");
-        if (evidence_content.includes(matched_text)) {
-          // select all p and li elements
-          paragraphs = evidence.querySelectorAll("p, li");
-          for (var p of paragraphs) {
-            var p_content = p.textContent.replace(/[\r\n]+/g, " ");
-            if (p_content.includes(matched_text)) {
-              p.innerHTML = p_content.replace(
-                matched_text,
-                "<mark>" + matched_text + "</mark>"
-              );
-              console.log("highlighted", matched_text, "in", p);
-              if (modal.style.display == "block") {
-                // trigger on click event of PDF Preview link
-                var detail_elem = p;
-                // traverse up the DOM tree to find the parent element with tag detail
-                while (detail_elem.tagName.toLowerCase() != "details") {
-                  detail_elem = detail_elem.parentElement;
-                }
-                detail_elem.getElementsByClassName("pdf-link").item(0).click();
-              } else {
-                p.scrollIntoView({ behavior: "smooth", block: "center" });
-              }
-              break;
-            }
+          if (modal && modal.style.display === "block") {
+            const details = paragraph.closest("details");
+            const pdfLink = details && details.querySelector(".pdf-link");
+            if (pdfLink) pdfLink.click();
+          } else {
+            highlight.scrollIntoView({ behavior: "smooth", block: "center" });
           }
+          return;
         }
       }
     });
@@ -512,10 +496,10 @@ function run() {
   };
 
   globalThis.fillChatInput = (event) => {
-    let chatInput = document.querySelector("#chat-input textarea");
+    const chatInput = document.querySelector("#chat-input textarea");
+    if (!chatInput) return;
     // fill the chat input with the clicked div text
-    chatInput.value = "Explain " + event.target.textContent;
-    var evt = new Event("change");
+    chatInput.value = "请解释：" + event.target.textContent;
     chatInput.dispatchEvent(new Event("input", { bubbles: true }));
     chatInput.focus();
   };

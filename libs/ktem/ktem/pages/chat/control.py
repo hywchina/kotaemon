@@ -219,7 +219,9 @@ class ConversationControl(BasePage):
                 else:
                     can_see_public = True
 
-        print(f"User-id: {user_id}, can see public conversations: {can_see_public}")
+        logger.debug(
+            "Conversation visibility evaluated (can_see_public=%s)", can_see_public
+        )
 
         options = []
         with Session(engine) as session:

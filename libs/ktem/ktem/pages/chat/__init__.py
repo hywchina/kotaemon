@@ -192,29 +192,30 @@ function() {
 
 pdfview_js = """
 function() {
-    setTimeout(fullTextSearch(), 100);
+    setTimeout(fullTextSearch, 100);
 
     // Get all links and attach click event
-    var links = document.getElementsByClassName("pdf-link");
-    for (var i = 0; i < links.length; i++) {
-        links[i].onclick = openModal;
+    const pdfLinks = document.getElementsByClassName("pdf-link");
+    for (let i = 0; i < pdfLinks.length; i++) {
+        pdfLinks[i].onclick = openModal;
     }
 
     // Get all citation links and attach click event
-    var links = document.querySelectorAll("a.citation");
-    for (var i = 0; i < links.length; i++) {
-        links[i].onclick = scrollToCitation;
+    const citationLinks = document.querySelectorAll("a.citation");
+    for (let i = 0; i < citationLinks.length; i++) {
+        citationLinks[i].onclick = scrollToCitation;
     }
 
-    var markmap_div = document.querySelector("div.markmap");
-    var mindmap_el_script = document.querySelector('div.markmap script');
+    const markmapDiv = document.querySelector("div.markmap");
+    const mindmapScript = document.querySelector('div.markmap script');
+    let markmapDivHtml = "";
 
-    if (mindmap_el_script) {
-        markmap_div_html = markmap_div.outerHTML;
+    if (mindmapScript && markmapDiv) {
+        markmapDivHtml = markmapDiv.outerHTML;
     }
 
     // render the mindmap if the script tag is present
-    if (mindmap_el_script) {
+    if (mindmapScript) {
         markmap.autoLoader.renderAll();
     }
 
@@ -228,11 +229,11 @@ function() {
 
         if (mindmap_el) {
             function on_svg_export(event) {
-                html = "{html_template}";
-                var renderedMarkmap = document.querySelector("div.markmap");
+                let html = "{html_template}";
+                const renderedMarkmap = document.querySelector("div.markmap");
                 html = html.replace(
                     "{markmap_div}",
-                    renderedMarkmap ? renderedMarkmap.outerHTML : markmap_div_html
+                    renderedMarkmap ? renderedMarkmap.outerHTML : markmapDivHtml
                 );
                 spawnDocument(html, {window: "width=1000,height=1000"});
             }
@@ -1108,8 +1109,8 @@ class ChatPage(BasePage):
     ):
         """Submit a message to the chatbot"""
         if KH_DEMO_MODE:
-            sso_user_id = check_rate_limit("chat", request)
-            print("User ID:", sso_user_id)
+            check_rate_limit("chat", request)
+            logger.debug("Demo chat rate limit identity resolved")
 
         if not chat_input:
             raise gr.Error("请输入问题后再发送。")
@@ -1148,7 +1149,7 @@ class ChatPage(BasePage):
         # get all urls in input_str
         urls, chat_input_text = get_urls(chat_input_text)
         if urls and self.first_indexing_url_fn:
-            print("Detected URLs", urls)
+            logger.debug("Detected %s URLs for indexing", len(urls))
             indexed_url_ids = self.first_indexing_url_fn(
                 "\n".join(urls),
                 True,
@@ -1582,7 +1583,7 @@ class ChatPage(BasePage):
             retrival_history = retrival_history + [retrieval_msg]
             plot_history = plot_history + [plot_data]
         elif retrival_history:
-            print("Updating retrieval history (regen=True)")
+            logger.debug("Updating retrieval history for regenerated response")
             retrival_history[-1] = retrieval_msg
             plot_history[-1] = plot_data
 
@@ -1657,24 +1658,22 @@ class ChatPage(BasePage):
             - the pipeline objects
         """
         # override reasoning_mode by temporary chat page state
-        print(
-            "Session reasoning type",
+        logger.debug(
+            "Creating reasoning pipeline (type=%s, mindmap=%s, citation=%s, "
+            "language=%s, llm=%s)",
             session_reasoning_type,
-            "use mindmap",
             session_use_mindmap,
-            "use citation",
             session_use_citation,
-            "language",
             session_language,
+            session_llm,
         )
-        print("Session LLM", session_llm)
         reasoning_mode = (
             settings["reasoning.use"]
             if session_reasoning_type in (DEFAULT_SETTING, None)
             else session_reasoning_type
         )
         reasoning_cls = reasonings[reasoning_mode]
-        print("Reasoning class", reasoning_cls)
+        logger.debug("Reasoning class selected: %s", reasoning_cls.__name__)
         reasoning_id = reasoning_cls.get_info()["id"]
 
         settings = deepcopy(settings)
@@ -1805,14 +1804,12 @@ class ChatPage(BasePage):
             user_id,
             *selecteds,
         )
-        print("Reasoning state", reasoning_state)
         pipeline.set_output_queue(queue)
 
         text, refs, plot, plot_gr = "", "", None, gr.update(visible=False)
         msg_placeholder = getattr(
             flowsettings, "KH_CHAT_MSG_PLACEHOLDER", "Thinking ..."
         )
-        print(msg_placeholder)
         yield (
             chat_history + [(display_input, text or msg_placeholder)],
             refs,
@@ -1878,7 +1875,7 @@ class ChatPage(BasePage):
             empty_msg = getattr(
                 flowsettings, "KH_CHAT_EMPTY_MSG_PLACEHOLDER", "(Sorry, I don't know)"
             )
-            print(f"Generate nothing: {empty_msg}")
+            logger.warning("Model returned no chat content; using configured fallback")
             yield (
                 chat_history + [(display_input, text or empty_msg)],
                 refs,

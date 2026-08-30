@@ -106,10 +106,6 @@ class ChatPanel(BasePage):
             elem_classes=["chat-action-bridge"],
         )
 
-    def submit_msg(self, chat_input, chat_history):
-        """Submit a message to the chatbot"""
-        return "", chat_history + [(chat_input, None)]
-
     @staticmethod
     def _update_transcript_message(
         chat_history,

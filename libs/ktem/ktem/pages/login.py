@@ -1,9 +1,13 @@
+import logging
+
 import gradio as gr
 from ktem.app import BasePage
 from ktem.db.models import User, engine
 from ktem.pages.resources.user import create_user
 from ktem.utils.passwords import verify_and_upgrade
 from sqlmodel import Session, select
+
+logger = logging.getLogger(__name__)
 
 fetch_creds = """
 function() {
@@ -107,10 +111,10 @@ class LoginPage(BasePage):
                 result = session.exec(stmt).all()
 
             if result:
-                print("现有用户:", user)  # translate Existing user --》现有用户
+                logger.info("Existing SSO user authenticated")
                 return user_id, "", ""
             else:
-                print("创建新用户:", user)  # translate Creating new user --》创建新用户
+                logger.info("Creating a local account for a new SSO user")
                 create_user(
                     usn=user["email"],
                     pwd="",
