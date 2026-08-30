@@ -303,11 +303,13 @@ class FullQAPipeline(BaseReasoning):
         **kwargs,  # type: ignore
     ) -> Generator[Document, None, Document]:
         if self.use_rewrite and self.rewrite_pipeline:
-            print("Chosen rewrite pipeline", self.rewrite_pipeline)
+            logger.debug(
+                "Using rewrite pipeline: %s", type(self.rewrite_pipeline).__name__
+            )
             message = self.rewrite_pipeline(question=message).text
-            print("Rewrite result", message)
+            logger.debug("Question rewrite completed")
 
-        print(f"Retrievers {self.retrievers}")
+        logger.debug("Configured retriever count: %d", len(self.retrievers))
         # should populate the context
         docs, infos = self.retrieve(message, history)
         print(f"Got {len(docs)} retrieved documents")
@@ -553,9 +555,11 @@ class FullDecomposeQAPipeline(FullQAPipeline):
     ) -> Generator[Document, None, Document]:
         sub_question_answer_output = ""
         if self.rewrite_pipeline:
-            print("Chosen rewrite pipeline", self.rewrite_pipeline)
+            logger.debug(
+                "Using rewrite pipeline: %s", type(self.rewrite_pipeline).__name__
+            )
             result = self.rewrite_pipeline(question=message)
-            print("Rewrite result", result)
+            logger.debug("Question rewrite completed")
             if isinstance(result, Document):
                 message = result.text
             elif (
