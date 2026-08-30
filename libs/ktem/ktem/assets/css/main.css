@@ -527,13 +527,34 @@ div.markmap {
 #main-chat-bot .message-row.bot-row {
   width: 100%;
   max-width: none;
+  margin-top: 22px;
+  margin-bottom: 0;
   margin-left: 0;
   margin-right: 0;
 }
 
-#main-chat-bot .bot-row .message-buttons-right {
+#main-chat-bot .bot-row .flex-wrap.bot {
   box-sizing: border-box;
-  width: min(100%, 960px);
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 2px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#main-chat-bot .bot-row + .message-buttons-left {
+  align-self: flex-start;
+  display: flex !important;
+  gap: 4px;
+  width: auto !important;
+  max-width: none !important;
+  margin: 6px 0 18px !important;
+  padding: 2px 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 .ktem-chat-attachments {
@@ -705,31 +726,41 @@ div.markmap {
   display: none !important;
 }
 
-#main-chat-bot .message-buttons-right .like-button,
-#main-chat-bot .message-buttons-right .dislike-button {
-  display: none !important;
-}
-
-#main-chat-bot .message-buttons-right {
-  display: flex !important;
-  gap: 3px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-
-#main-chat-bot .bot-row:hover .message-buttons-right,
-#main-chat-bot .bot-row:focus-within .message-buttons-right {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-#main-chat-bot .user-row .message-buttons-right {
+#main-chat-bot .user-row + .message-buttons-right {
   display: none !important;
 }
 
 #main-chat-bot .user-row {
   position: relative;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+#main-chat-bot .user-row .flex-wrap.user {
+  flex: 0 1 auto !important;
+  width: max-content !important;
+  min-width: 0;
+  max-width: min(72%, 720px) !important;
+  padding: 10px 14px !important;
+  color: var(--body-text-color) !important;
+  background: var(--block-background-fill) !important;
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 8%,
+    var(--background-fill-primary)
+  ) !important;
+  border: 0 !important;
+  border-radius: 16px 16px 4px 16px !important;
+  box-shadow: none !important;
+}
+
+#main-chat-bot .user-row .message.user {
+  width: max-content !important;
+  max-width: 100% !important;
+}
+
+#main-chat-bot .user-row .message.user > button {
+  width: 100%;
 }
 
 .ktem-user-message-actions {
@@ -1035,9 +1066,13 @@ div.markmap {
   }
 
   .ktem-user-message-actions,
-  #main-chat-bot .bot-row .message-buttons-right {
+  #main-chat-bot .bot-row + .message-buttons-left {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  #main-chat-bot .user-row .flex-wrap.user {
+    max-width: 88% !important;
   }
 
 }
