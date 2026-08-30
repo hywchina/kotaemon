@@ -226,6 +226,7 @@ show_status() {
     if is_running "$APP_PID_FILE"; then
         echo "应用: running (PID: $(<"$APP_PID_FILE"))"
     else
+        rm -f "$APP_PID_FILE"
         echo "应用: stopped"
     fi
     if is_running "$RERANK_PID_FILE"; then
@@ -245,9 +246,19 @@ case "$COMMAND" in
         start_app
         ;;
     foreground)
+        if is_running "$APP_PID_FILE"; then
+            echo "[ERROR] 应用已运行 (PID: $(<"$APP_PID_FILE"))"
+            exit 1
+        fi
+        if command -v lsof >/dev/null 2>&1 && \
+            lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "[ERROR] 端口 $PORT 已被其他进程占用；未终止该进程。"
+            exit 1
+        fi
         prepare_startup
         export GRADIO_SERVER_NAME="${GRADIO_SERVER_NAME:-0.0.0.0}"
         export GRADIO_SERVER_PORT="$PORT"
+        echo "$$" >"$APP_PID_FILE"
         exec "${PYTHON_CMD[@]}" "$APP_DIR/app.py"
         ;;
     stop|--stop)

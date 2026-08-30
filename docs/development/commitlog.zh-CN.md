@@ -395,3 +395,14 @@
   128 个通过、20 个因未安装可选依赖跳过；全仓 Ruff、JavaScript 语法及模型服务真实
   预检通过。上游孤立 `test_qa.py` 仍因仓库不存在 `index.ReaderIndexingPipeline`
   无法收集，未用虚假替身掩盖该已记录边界。
+
+## `fix: track foreground application process`
+
+- **改造动机**：`run.sh foreground` 使用 `exec` 启动应用但未写入 PID 文件，导致服务
+  实际监听 7860 且 HTTP 正常时，`run.sh status` 仍误报 stopped，`run.sh stop` 也无法
+  管理该进程，容易让运维人员误判为启动卡死。
+- **进程管理**：前台启动在完成配置和四类模型预检后，将即将被 Python 继承的 Shell
+  PID 写入统一的 `logs/runtime/app.pid`；启动前同时检查已有 PID 和端口占用，避免重复
+  实例。状态检查发现过期 PID 文件时自动清理，保持前后台启动的管理语义一致。
+- **验证结果**：真实执行 foreground 后，status 正确显示 running 与实际 Python PID，
+  首页返回 HTTP 200；随后执行 stop 能在 5 秒内正常结束同一进程并将状态恢复为 stopped。
