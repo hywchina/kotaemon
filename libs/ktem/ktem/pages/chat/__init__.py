@@ -265,7 +265,7 @@ function() {
                 };
             }
 
-            if (markmap_div_html) {
+            if (markmapDivHtml) {
                 var link = document.getElementById("mindmap-export");
                 if (link) {
                     link.addEventListener('click', on_svg_export);
@@ -274,7 +274,7 @@ function() {
         }
     }, 250);
 
-    return [links.length]
+    return [citationLinks.length]
 }
 """.replace(
     "{html_template}",

@@ -1,7 +1,5 @@
 from unittest.mock import Mock, patch
 
-import pytest
-
 from kotaemon.base import Document, DocumentWithEmbedding
 from kotaemon.embeddings import GeekAIEmbeddings
 from kotaemon.rerankings import GeekAIReranking
@@ -116,7 +114,7 @@ def test_geekai_rerank_maps_by_document_instead_of_response_index(post: Mock):
 
 
 @patch("kotaemon.rerankings.geekai.requests.post")
-def test_geekai_rerank_rejects_unknown_returned_document(post: Mock):
+def test_geekai_rerank_falls_back_for_unknown_returned_document(post: Mock):
     post.return_value = json_response(
         {
             "results": [
@@ -130,5 +128,53 @@ def test_geekai_rerank_rejects_unknown_returned_document(post: Mock):
     )
     reranker = GeekAIReranking(api_key="test-key", top_n=1)
 
-    with pytest.raises(RuntimeError, match="was not in the request"):
-        reranker([Document("原始内容")], query="问题")
+    output = reranker([Document("原始内容")], query="问题")
+
+    assert [item.text for item in output] == ["原始内容"]
+    assert output[0].metadata["reranking_fallback"] is True
+
+
+@patch("kotaemon.rerankings.geekai.requests.post")
+def test_geekai_rerank_batches_long_candidate_sets(post: Mock):
+    def response_for_request(*_args, **kwargs):
+        documents = kwargs["json"]["documents"]
+        top_n = kwargs["json"]["top_n"]
+        results = [
+            {
+                "index": index,
+                "document": document,
+                "relevance_score": float(document.rsplit("-", 1)[-1]),
+            }
+            for index, document in enumerate(documents)
+        ]
+        return json_response({"results": sorted(results, key=lambda x: -x["relevance_score"])[:top_n]})
+
+    post.side_effect = response_for_request
+    documents = [Document(f"候选片段-{index}") for index in range(5)]
+    reranker = GeekAIReranking(api_key="test-key", top_n=2, batch_size=2)
+
+    output = reranker(documents, query="问题")
+
+    assert post.call_count == 3
+    assert [item.text for item in output] == ["候选片段-4", "候选片段-3"]
+    assert all(len(call.kwargs["json"]["documents"]) <= 2 for call in post.call_args_list)
+
+
+@patch("kotaemon.rerankings.geekai.requests.post")
+def test_geekai_rerank_limits_request_characters_and_falls_back_on_empty(post: Mock):
+    post.return_value = json_response({"results": []})
+    documents = [Document("甲" * 20), Document("乙" * 20), Document("丙" * 20)]
+    reranker = GeekAIReranking(
+        api_key="test-key",
+        top_n=2,
+        batch_size=10,
+        max_batch_characters=10,
+        max_document_characters=6,
+    )
+
+    output = reranker(documents, query="问题")
+
+    request_documents = post.call_args.kwargs["json"]["documents"]
+    assert sum(map(len, request_documents)) <= 10
+    assert [item.text for item in output] == ["甲" * 20, "乙" * 20]
+    assert all(item.metadata["reranking_fallback"] is True for item in output)

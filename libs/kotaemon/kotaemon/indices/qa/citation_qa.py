@@ -1,3 +1,4 @@
+import logging
 import threading
 from collections import defaultdict
 from typing import Generator
@@ -32,10 +33,12 @@ except ImportError:
     raise ImportError("Please install `ktem` to use this component")
 
 MAX_IMAGES = 10
-CITATION_TIMEOUT = 10.0  # ori 5.0 --> 10.0
+CITATION_TIMEOUT = config("KH_CITATION_TIMEOUT", default=10.0, cast=float)
+MINDMAP_TIMEOUT = config("KH_MINDMAP_TIMEOUT", default=30.0, cast=float)
 CONTEXT_RELEVANT_WARNING_SCORE = config(
     "CONTEXT_RELEVANT_WARNING_SCORE", 0.3, cast=float
 )
+logger = logging.getLogger(__name__)
 
 DEFAULT_QA_TEXT_PROMPT = (
     "Use the following pieces of context to answer the question at the end in detail with clear explanation. "  # noqa: E501
@@ -230,11 +233,19 @@ class AnswerWithContextPipeline(BaseComponent):
 
         def citation_call():
             nonlocal citation
-            citation = self.citation_pipeline(context=evidence, question=question)
+            try:
+                citation = self.citation_pipeline(context=evidence, question=question)
+            except Exception:  # noqa: BLE001 - citation is an optional add-on
+                logger.exception("Citation generation failed")
 
         def mindmap_call():
             nonlocal mindmap
-            mindmap = self.create_mindmap_pipeline(context=evidence, question=question)
+            try:
+                mindmap = self.create_mindmap_pipeline(
+                    context=evidence, question=question
+                )
+            except Exception:  # noqa: BLE001 - mindmap is an optional add-on
+                logger.exception("Mindmap generation failed")
 
         citation_thread = None
         mindmap_thread = None
@@ -242,11 +253,11 @@ class AnswerWithContextPipeline(BaseComponent):
         # execute function call in thread
         if evidence:
             if self.enable_citation:
-                citation_thread = threading.Thread(target=citation_call)
+                citation_thread = threading.Thread(target=citation_call, daemon=True)
                 citation_thread.start()
 
             if self.enable_mindmap:
-                mindmap_thread = threading.Thread(target=mindmap_call)
+                mindmap_thread = threading.Thread(target=mindmap_call, daemon=True)
                 mindmap_thread.start()
 
         output = ""
@@ -293,8 +304,18 @@ class AnswerWithContextPipeline(BaseComponent):
 
         if citation_thread:
             citation_thread.join(timeout=CITATION_TIMEOUT)
+            if citation_thread.is_alive():
+                logger.warning(
+                    "Citation generation exceeded %.1f seconds; response continues",
+                    CITATION_TIMEOUT,
+                )
         if mindmap_thread:
-            mindmap_thread.join(timeout=CITATION_TIMEOUT)
+            mindmap_thread.join(timeout=MINDMAP_TIMEOUT)
+            if mindmap_thread.is_alive():
+                logger.warning(
+                    "Mindmap generation exceeded %.1f seconds; response continues",
+                    MINDMAP_TIMEOUT,
+                )
 
         answer = Document(
             text=output,
