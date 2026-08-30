@@ -654,6 +654,7 @@ function run() {
       content.toString().length
     ) {
       let child = window.open("", opt.childId, opt.window);
+      if (!child) return null;
       child.document.write(content.toString());
       if (opt.closeChild) child.document.close();
       return child;

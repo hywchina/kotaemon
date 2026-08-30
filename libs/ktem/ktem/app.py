@@ -181,8 +181,9 @@ class BaseApp:
         vendor_dir = dir_assets / "vendor"
 
         def asset_url(file_name: str) -> str:
-            path = quote(str(vendor_dir / file_name), safe="/:")
-            return f"{BASE_PATH}/file={path}"
+            asset_path = vendor_dir / file_name
+            path = quote(str(asset_path), safe="/:")
+            return f"{BASE_PATH}/file={path}?v={asset_path.stat().st_mtime_ns}"
 
         head_assets = (
             f"<script src='{asset_url('markmap-bootstrap-0.16.1.js')}'></script>"

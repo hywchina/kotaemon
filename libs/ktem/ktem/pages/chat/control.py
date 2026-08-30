@@ -75,7 +75,6 @@ class ConversationControl(BasePage):
             self.btn_info_expand = gr.Button(
                 value="",
                 icon=f"{ASSETS_DIR}/expand.svg",
-                min_width=2,
                 scale=1,
                 size="sm",
                 elem_classes=["no-background", "body-text-color"],

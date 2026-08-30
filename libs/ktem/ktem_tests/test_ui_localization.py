@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import gradio as gr
 import pandas as pd
 from ktem.index.file.ui import FileIndexPage
-from ktem.pages.chat import ChatPage, toggle_info_panel
+from ktem.pages.chat import ChatPage, open_info_panel_for_evidence, toggle_info_panel
 from ktem.pages.chat import chat_panel as chat_panel_module
 from ktem.reasoning.simple import FullDecomposeQAPipeline, FullQAPipeline
 from ktem.utils.i18n import translate_choices, translate_ui_text
@@ -63,13 +63,41 @@ def test_evidence_panel_is_opt_in_and_toggleable() -> None:
 
     assert visible is True
     assert panel_update["visible"] is True
-    assert button_update["variant"] == "primary"
+    assert button_update["variant"] == "secondary"
 
     panel_update, visible, button_update = toggle_info_panel(True)
 
     assert visible is False
     assert panel_update["visible"] is False
     assert button_update["variant"] == "secondary"
+
+
+def test_evidence_opens_info_panel_without_changing_button_style() -> None:
+    panel_update, visible, button_update = open_info_panel_for_evidence(
+        '<details class="evidence"><div class="evidence-content">参考资料</div></details>',
+        False,
+    )
+
+    assert panel_update["visible"] is True
+    assert visible is True
+    assert button_update["variant"] == "secondary"
+
+
+def test_empty_evidence_does_not_open_info_panel() -> None:
+    panel_update, visible, button_update = open_info_panel_for_evidence("", False)
+
+    assert "visible" not in panel_update
+    assert visible is False
+    assert button_update["variant"] == "secondary"
+
+
+def test_mindmap_alone_does_not_open_info_panel() -> None:
+    panel_update, visible, _ = open_info_panel_for_evidence(
+        '<details class="evidence"><div class="markmap">导图</div></details>', False
+    )
+
+    assert "visible" not in panel_update
+    assert visible is False
 
 
 def test_edit_message_appends_follow_up_without_rewriting_history() -> None:

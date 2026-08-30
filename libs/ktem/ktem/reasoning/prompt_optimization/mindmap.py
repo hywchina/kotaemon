@@ -19,14 +19,32 @@ MINDMAP_HTML_EXPORT_TEMPLATE = dedent(
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>思维导图</title>
     <style>
-      svg.markmap {
-        width: 100%;
-        height: 100vh;
+      {markmap_css}
+      :root {
+        color-scheme: light dark;
+      }
+      html, body {
+        margin: 0;
+        min-width: 100%;
+        min-height: 100%;
+        overflow: auto;
+        background: Canvas;
+        color: CanvasText;
+      }
+      .mindmap-export-canvas {
+        box-sizing: border-box;
+        width: max-content;
+        min-width: 100vw;
+        min-height: 100vh;
+        padding: 32px;
+      }
+      .mindmap-export-canvas > svg {
+        display: block;
       }
     </style>
   </head>
   <body>
-    {markmap_div}
+    <main class="mindmap-export-canvas">{markmap_svg}</main>
   </body>
 </html>
 """

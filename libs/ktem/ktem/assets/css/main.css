@@ -212,6 +212,18 @@ mark {
   z-index: 3;
 }
 
+#info-expand-button,
+#chat-expand-button {
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  padding: 6px !important;
+  border: 0 !important;
+  border-radius: var(--radius-lg) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 /* prevent overflow of html info panel */
 #html-info-panel {
   overflow-x: auto !important;
@@ -447,10 +459,95 @@ div.markmap > svg {
   height: 100%;
   font-family: Quicksand, sans-serif;
   font-size: 15px;
+  cursor: grab;
+  touch-action: none;
 }
 
 div.markmap {
+  position: relative;
   height: 400px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--background-fill-primary);
+}
+
+div.markmap > svg:active {
+  cursor: grabbing;
+}
+
+div.markmap .ktem-mindmap-close {
+  display: none;
+}
+
+div.markmap .ktem-mindmap-hint {
+  display: none;
+}
+
+div.markmap .ktem-mindmap-toolbar {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  overflow: hidden;
+  border: 1px solid var(--border-color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--background-fill-primary);
+  box-shadow: var(--shadow-drop);
+}
+
+body.ktem-mindmap-expanded {
+  overflow: hidden !important;
+}
+
+body.ktem-mindmap-expanded::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgb(0 0 0 / 58%);
+}
+
+div.markmap.is-expanded {
+  position: fixed;
+  inset: clamp(16px, 4vw, 56px);
+  z-index: 1000;
+  width: auto;
+  height: auto !important;
+  min-height: 0;
+  box-shadow: var(--shadow-drop-lg);
+}
+
+div.markmap.is-expanded .ktem-mindmap-close {
+  display: grid;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border-color-primary);
+  border-radius: 50%;
+  background: var(--background-fill-primary);
+  color: var(--body-text-color);
+  cursor: pointer;
+}
+
+div.markmap.is-expanded .ktem-mindmap-hint {
+  display: block;
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2;
+  padding: 6px 10px;
+  border-radius: var(--radius-lg);
+  background: var(--background-fill-secondary);
+  color: var(--body-text-color-subdued);
+  font-size: var(--text-sm);
+  pointer-events: none;
 }
 
 .mindmap-render-error {

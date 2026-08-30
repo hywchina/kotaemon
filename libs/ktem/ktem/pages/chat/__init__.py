@@ -92,8 +92,23 @@ def toggle_info_panel(is_visible: bool):
     return (
         gr.update(visible=next_visible),
         next_visible,
-        gr.update(variant="primary" if next_visible else "secondary"),
+        gr.update(variant="secondary"),
     )
+
+
+def open_info_panel_for_evidence(info_content: str, is_visible: bool):
+    """Open the evidence workspace when the latest answer contains references."""
+
+    normalized_content = str(info_content or "").strip()
+    has_evidence = bool(
+        re.search(
+            r"class=['\"][^'\"]*(?:evidence-content|pdf-link)[^'\"]*['\"]",
+            normalized_content,
+        )
+    )
+    if not has_evidence or is_visible:
+        return gr.update(), bool(is_visible), gr.update(variant="secondary")
+    return gr.update(visible=True), True, gr.update(variant="secondary")
 
 
 def validate_chat_images(file_paths) -> tuple[list[str], list[str]]:
@@ -255,55 +270,163 @@ function() {
         citationLinks[i].onclick = scrollToCitation;
     }
 
-    const markmapDiv = document.querySelector("div.markmap");
-    const mindmapScript = document.querySelector('div.markmap script');
-    let markmapDivHtml = "";
-
-    if (mindmapScript && markmapDiv) {
-        markmapDivHtml = markmapDiv.outerHTML;
-    }
+    const markmapDivs = Array.from(document.querySelectorAll("div.markmap"));
+    const markmapDiv = markmapDivs.find((element) => element.offsetParent !== null)
+        || markmapDivs.at(-1);
+    const mindmapScript = markmapDiv?.querySelector("script");
 
     const setupMindmapInteractions = () => {
-        var mindmap_el = document.querySelector("div.markmap svg");
+        var mindmap_el = markmapDiv?.querySelector("svg");
 
-        var text_nodes = document.querySelectorAll("div.markmap svg div");
+        var text_nodes = markmapDiv?.querySelectorAll("svg div") || [];
         for (var i = 0; i < text_nodes.length; i++) {
             text_nodes[i].onclick = fillChatInput;
         }
 
         if (mindmap_el) {
-            function on_svg_export(event) {
-                let html = "{html_template}";
-                const renderedMarkmap = document.querySelector("div.markmap");
-                html = html.replace(
-                    "{markmap_div}",
-                    renderedMarkmap ? renderedMarkmap.outerHTML : markmapDivHtml
-                );
-                spawnDocument(html, {window: "width=1000,height=1000"});
-            }
+            const mindmapContainer = mindmap_el.closest("div.markmap");
+            const fitMindmap = () => {
+                window.requestAnimationFrame(() => {
+                    mindmapContainer?.__ktemMarkmap?.fit();
+                });
+            };
+            const setMindmapExpanded = (expanded) => {
+                if (!mindmapContainer) return;
+                if (expanded && !mindmapContainer.__ktemPlaceholder) {
+                    const placeholder = document.createComment("ktem-mindmap-placeholder");
+                    mindmapContainer.parentNode?.insertBefore(placeholder, mindmapContainer);
+                    mindmapContainer.__ktemPlaceholder = placeholder;
+                    document.body.append(mindmapContainer);
+                } else if (!expanded && mindmapContainer.__ktemPlaceholder) {
+                    mindmapContainer.__ktemPlaceholder.replaceWith(mindmapContainer);
+                    mindmapContainer.__ktemPlaceholder = null;
+                }
+                mindmapContainer.classList.toggle("is-expanded", expanded);
+                document.body.classList.toggle("ktem-mindmap-expanded", expanded);
+                document.querySelectorAll("#mindmap-toggle").forEach((toggleLink) => {
+                    toggleLink.textContent = expanded ? "[退出全屏]" : "[全屏查看]";
+                });
+                fitMindmap();
+                window.setTimeout(fitMindmap, 420);
+            };
 
-            var link = document.getElementById("mindmap-toggle");
-            if (link) {
-                link.onclick = function(event) {
-                    event.preventDefault(); // Prevent the default link behavior
-                    var div = document.querySelector("div.markmap");
-                    if (div) {
-                        var currentHeight = div.style.height;
-                        if (currentHeight === '400px' || (currentHeight === '')) {
-                            div.style.height = '650px';
-                        } else {
-                            div.style.height = '400px'
-                        }
+            window.ktemCloseExpandedMindmap = () => setMindmapExpanded(false);
+            if (!window.__ktemMindmapEscapeBound) {
+                document.addEventListener("keydown", (event) => {
+                    if (event.key === "Escape") {
+                        window.ktemCloseExpandedMindmap?.();
                     }
-                };
+                });
+                window.__ktemMindmapEscapeBound = true;
             }
 
-            if (markmapDivHtml) {
-                var link = document.getElementById("mindmap-export");
-                if (link) {
-                    link.addEventListener('click', on_svg_export);
+            if (mindmapContainer && !mindmapContainer.querySelector(".ktem-mindmap-close")) {
+                const closeButton = document.createElement("button");
+                closeButton.type = "button";
+                closeButton.className = "ktem-mindmap-close";
+                closeButton.title = "退出思维导图全屏查看";
+                closeButton.setAttribute("aria-label", closeButton.title);
+                closeButton.textContent = "×";
+                closeButton.onclick = () => setMindmapExpanded(false);
+                mindmapContainer.append(closeButton);
+            }
+
+            if (mindmapContainer && !mindmapContainer.querySelector(".ktem-mindmap-hint")) {
+                const hint = document.createElement("span");
+                hint.className = "ktem-mindmap-hint";
+                hint.textContent = "滚轮缩放 · 拖拽移动";
+                mindmapContainer.append(hint);
+            }
+
+            const toolbar = mindmapContainer?.querySelector(".ktem-mindmap-toolbar");
+            toolbar?.querySelector(".mm-toolbar-brand")?.remove();
+            const toolbarLabels = ["放大", "缩小", "适应窗口", "展开或收起全部节点"];
+            toolbar?.querySelectorAll(".mm-toolbar-item").forEach((item, index) => {
+                item.title = toolbarLabels[index] || item.title;
+                item.setAttribute("aria-label", item.title);
+            });
+
+            function prepareMindmapExport() {
+                const sourceSvg = mindmapContainer?.querySelector("svg");
+                const sourceTree = sourceSvg?.querySelector("g");
+                if (!sourceSvg || !sourceTree) return "";
+
+                const bounds = sourceTree.getBBox();
+                const padding = 48;
+                const width = Math.max(Math.ceil(bounds.width + padding * 2), 960);
+                const height = Math.max(Math.ceil(bounds.height + padding * 2), 640);
+                const exportedSvg = sourceSvg.cloneNode(true);
+                const exportedTree = exportedSvg.querySelector("g");
+                if (exportedTree) {
+                    exportedTree.setAttribute(
+                        "transform",
+                        `translate(${padding - bounds.x}, ${padding - bounds.y})`
+                    );
+                }
+                exportedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+                exportedSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+                exportedSvg.setAttribute("width", width);
+                exportedSvg.setAttribute("height", height);
+                exportedSvg.style.width = `${width}px`;
+                exportedSvg.style.height = `${height}px`;
+                exportedSvg.style.maxWidth = "none";
+                return exportedSvg.outerHTML;
+            }
+
+            function on_svg_export(event) {
+                event.preventDefault();
+                let html = "{html_template}";
+                html = html.replace(
+                    "{markmap_css}",
+                    window.markmap?.globalCSS || ""
+                );
+                html = html.replace("{markmap_svg}", prepareMindmapExport());
+                const exportWindow = spawnDocument(
+                    html,
+                    {window: "width=1200,height=900"}
+                );
+                if (!exportWindow) {
+                    const exportUrl = URL.createObjectURL(
+                        new Blob([html], {type: "text/html;charset=utf-8"})
+                    );
+                    const downloadLink = document.createElement("a");
+                    downloadLink.href = exportUrl;
+                    downloadLink.download = "思维导图.html";
+                    downloadLink.click();
+                    window.setTimeout(() => URL.revokeObjectURL(exportUrl), 1000);
                 }
             }
+
+            window.ktemToggleMindmap = () => {
+                setMindmapExpanded(!mindmapContainer?.classList.contains("is-expanded"));
+            };
+            window.ktemExportMindmap = on_svg_export;
+
+            document.querySelectorAll("#mindmap-toggle").forEach((link) => {
+                link.textContent = "[全屏查看]";
+                link.onclick = null;
+            });
+            document.querySelectorAll("#mindmap-export").forEach((link) => {
+                link.onclick = null;
+            });
+
+            if (!window.__ktemMindmapActionsBound) {
+                document.addEventListener("click", (event) => {
+                    const target = event.target instanceof Element ? event.target : null;
+                    if (target?.closest("#mindmap-toggle")) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        window.ktemToggleMindmap?.();
+                    } else if (target?.closest("#mindmap-export")) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        window.ktemExportMindmap?.(event);
+                    }
+                }, true);
+                window.__ktemMindmapActionsBound = true;
+            }
+
+            window.setTimeout(fitMindmap, 450);
         }
     };
 
@@ -311,10 +434,10 @@ function() {
         const rendererReady = window.ktemMarkmapReady || Promise.resolve();
         rendererReady
             .then(() => {
-                if (!window.markmap?.autoLoader?.renderAll) {
+                if (!window.ktemRenderMindmap) {
                     throw new Error("Mindmap renderer is unavailable");
                 }
-                return window.markmap.autoLoader.renderAll();
+                return window.ktemRenderMindmap(markmapDiv);
             })
             .then(setupMindmapInteractions)
             .catch((error) => {
@@ -658,6 +781,16 @@ class ChatPage(BasePage):
                     ],
                     concurrency_limit=20,
                     show_progress="minimal",
+                )
+                .then(
+                    fn=open_info_panel_for_evidence,
+                    inputs=[self.info_panel, self._info_panel_visible],
+                    outputs=[
+                        self.info_column,
+                        self._info_panel_visible,
+                        self.chat_control.btn_info_expand,
+                    ],
+                    show_progress="hidden",
                 )
                 .then(
                     fn=lambda: True,
@@ -1038,6 +1171,16 @@ class ChatPage(BasePage):
                 js=clear_bot_message_selection_js,
             )
             .then(
+                fn=open_info_panel_for_evidence,
+                inputs=[self.info_panel, self._info_panel_visible],
+                outputs=[
+                    self.info_column,
+                    self._info_panel_visible,
+                    self.chat_control.btn_info_expand,
+                ],
+                show_progress="hidden",
+            )
+            .then(
                 fn=lambda: True,
                 inputs=None,
                 outputs=[self._preview_links],
@@ -1062,6 +1205,15 @@ class ChatPage(BasePage):
                 fn=self._json_to_plot,
                 inputs=self.state_plot_panel,
                 outputs=self.plot_panel,
+            ).then(
+                fn=open_info_panel_for_evidence,
+                inputs=[self.info_panel, self._info_panel_visible],
+                outputs=[
+                    self.info_column,
+                    self._info_panel_visible,
+                    self.chat_control.btn_info_expand,
+                ],
+                show_progress="hidden",
             ).then(
                 fn=lambda: True,
                 inputs=None,

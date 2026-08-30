@@ -57,6 +57,7 @@ def test_markmap_dependencies_are_loaded_sequentially() -> None:
     chat_source = (
         Path(__file__).parents[1] / "ktem" / "pages" / "chat" / "__init__.py"
     ).read_text(encoding="utf-8")
+    main_js = (ASSETS_DIR / "js" / "main.js").read_text(encoding="utf-8")
     main_css = (ASSETS_DIR / "css" / "main.css").read_text(encoding="utf-8")
 
     dependencies = [
@@ -70,11 +71,23 @@ def test_markmap_dependencies_are_loaded_sequentially() -> None:
     assert positions == sorted(positions)
     assert "for (const dependency of dependencies)" in bootstrap
     assert "await loadScript(dependency)" in bootstrap
+    assert "manual: true" in bootstrap
+    assert "window.ktemRenderMindmap" in bootstrap
     assert "window.ktemMarkmapReady" in bootstrap
     assert "markmap-bootstrap-0.16.1.js" in app_source
+    assert "asset_path.stat().st_mtime_ns" in app_source
     assert "window.ktemMarkmapReady || Promise.resolve()" in chat_source
-    assert 'document.querySelector("div.markmap svg")' in chat_source
+    assert "window.ktemRenderMindmap(markmapDiv)" in chat_source
+    assert 'classList.toggle("is-expanded", expanded)' in chat_source
+    assert 'sourceTree.getBBox()' in chat_source
+    assert 'markmapDiv?.querySelector("svg")' in chat_source
+    assert 'element.offsetParent !== null' in chat_source
+    assert 'window.__ktemMindmapActionsBound' in chat_source
+    assert 'target?.closest("#mindmap-export")' in chat_source
+    assert 'downloadLink.download = "思维导图.html"' in chat_source
+    assert "if (!child) return null;" in main_js
     assert "div.markmap > svg" in main_css
+    assert "div.markmap.is-expanded" in main_css
 
 
 def test_chat_content_uses_one_shared_visual_width() -> None:
