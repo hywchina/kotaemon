@@ -206,12 +206,10 @@ Rerank 不属于 OpenAI 官方标准；`OpenAICompatibleReranking` 保持相同�
   事件依赖，资源管理包含独立 ASR 与声纹配置页且不再包含 MCP 页签
 - macOS Bash 3.2 下执行 `sh run.sh --restart` 后，首页 HTTP 状态为 200；启动
   脚本会跳过缺少项目依赖的 Python 虚拟环境，并在应用进程启动前完成四类模型预检
-- `ktem` 本地测试：除上游 `test_qa.py` 引用不存在的顶层 `index` 模块而无法收集
-  外，其余 95 个测试通过；聊天、ASR、会话权限、通知、模型隔离和汉化均覆盖
+- `ktem` 本地测试：完整收集并通过 95 个测试；聊天、ASR、会话权限、通知、模型
+  隔离和汉化均覆盖
 - `kotaemon` 核心测试：128 个通过、20 个按可选依赖跳过；当前 Milvus、Qdrant、
   Chroma、内存及文件向量存储用例均通过
-- 官方 `ktem_tests/test_qa.py` 引用了仓库中不存在的顶层 `index` 模块，完整
-  应用测试集会在收集阶段失败；该问题在未修改的官方 `v0.12.0` 中同样存在
 - GeekAI 真实接口验证：Chat Completions 正常生成；Embedding 一次处理两段文本，
   返回两个 2560 维向量；Rerank 能按相关性重排两段文本；LLM 流式输出正常
 - GeekAI 协议适配单测覆盖批处理、向量顺序、Rerank 文档映射和异常响应；

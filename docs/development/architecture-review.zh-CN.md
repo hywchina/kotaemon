@@ -96,7 +96,7 @@ LLM 历史时显式过滤，避免把转写卡片 HTML 当作提示词。
 | 已修复 | 1280 像素下主聊天区被双侧栏压缩到约 505 像素 | 证据面板按需打开，消息与输入区居中并限制阅读宽度 |
 | 已修复 | 全仓静态检查有 4 个存量违规 | 延迟导入增加精确说明，测试 lambda 改为普通函数 |
 | 待上游升级 | Gradio/FastAPI 使用弃用的 `on_event`，Pydantic v1 风格 API 产生告警 | 当前锁定版本可运行；升级依赖时集中迁移，避免局部破坏兼容 |
-| 待清理 | 上游 `ktem_tests/test_qa.py` 引用仓库不存在的顶层 `index` 模块 | 该孤立样例无法收集，不属于当前入库实现；后续上游同步时删除或重写 |
+| 已清理 | 上游 `ktem_tests/test_qa.py` 引用不存在的 `index` 模块和缺失的 `dummy.pdf` | 删除无法执行且不对应当前管线的孤立测试及专用旧响应样本，完整应用测试可正常收集 |
 | 待集成 | ASR 仍为 Mock | 真实接口、音频传输、声纹授权和临床验收完成前不得标记为可用 |
 | 持续关注 | `main.js` 需要适配 Gradio 生成的 DOM | 每次升级 Gradio 都执行桌面/移动端浏览器烟测 |
 
@@ -144,8 +144,8 @@ LLM 历史时显式过滤，避免把转写卡片 HTML 当作提示词。
 
 ## 6. 当前验证基线
 
-- `ktem` 应用层：92 项通过；孤立的上游 `test_qa.py` 单独记录，不掩盖收集失败。
-- `kotaemon` 核心库：123 项通过，20 项因 PaddleOCR、Haystack、Unstructured 等
+- `ktem` 应用层：完整收集并通过 95 项。
+- `kotaemon` 核心库：128 项通过，20 项因 PaddleOCR、Haystack、Unstructured 等
   可选依赖跳过。
 - 全仓 Ruff、Python `compileall`、非压缩 JavaScript 语法、Shell 语法、`pip check`、
   `uv lock --check` 和医院 Docker Compose 配置均通过。

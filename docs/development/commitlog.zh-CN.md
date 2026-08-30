@@ -406,3 +406,15 @@
   实例。状态检查发现过期 PID 文件时自动清理，保持前后台启动的管理语义一致。
 - **验证结果**：真实执行 foreground 后，status 正确显示 running 与实际 Python PID，
   首页返回 HTTP 200；随后执行 stop 能在 5 秒内正常结束同一进程并将状态恢复为 stopped。
+
+## `test: remove obsolete QA pipeline fixture`
+
+- **改造动机**：上游遗留 `ktem_tests/test_qa.py` 引用了仓库从未提供的顶层
+  `index.ReaderIndexingPipeline`，同时引用不存在的 `resources/dummy.pdf`。该文件在
+  当前官方 main 中仍保持相同失效状态，无法进入测试执行阶段，也不对应现在的
+  `IndexDocumentPipeline`、`DocumentRetrievalPipeline` 和 `FullQAPipeline` 链路。
+- **清理范围**：删除这份不可收集的孤立测试，以及仅被它读取的旧 OpenAI Embedding
+  JSON 样本。实际索引、检索、问答、图片输入和真实 PDF 全链路测试均保留；删除内容
+  受 Git 版本管理，可从历史提交完整恢复。
+- **验证结果**：不再使用 `--ignore`，直接运行整个 `libs/ktem/ktem_tests`，95 个测试
+  全部被正常收集并通过；当前测试基线文档同步移除“已知收集失败”例外。
