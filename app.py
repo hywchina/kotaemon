@@ -7,6 +7,7 @@ KH_GRADIO_SHARE = getattr(flowsettings, "KH_GRADIO_SHARE", False)
 KH_HOSPITAL_MODE = getattr(flowsettings, "KH_HOSPITAL_MODE", False)
 GRADIO_TEMP_DIR = os.getenv("GRADIO_TEMP_DIR", None)
 GRADIO_SERVER_NAME = os.getenv("GRADIO_SERVER_NAME", "0.0.0.0")
+GRADIO_SERVER_PORT = int(os.getenv("GRADIO_SERVER_PORT", "7860"))
 # override GRADIO_TEMP_DIR if it's not set
 if GRADIO_TEMP_DIR is None:
     GRADIO_TEMP_DIR = os.path.join(KH_APP_DATA_DIR, "gradio_tmp")
@@ -35,6 +36,7 @@ demo.queue(
     ],
     share=KH_GRADIO_SHARE,
     server_name=GRADIO_SERVER_NAME,
+    server_port=GRADIO_SERVER_PORT,
     show_api=not KH_HOSPITAL_MODE,
     show_error=False,
     max_threads=int(os.getenv("KH_MAX_THREADS", "16")),

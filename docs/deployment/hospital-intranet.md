@@ -83,9 +83,16 @@ ASR 尚未正式接入时保持 `KH_ENABLE_ASR=false`。后续启用时，ASR �
 
 ```bash
 ./run.sh doctor
+./run.sh restart
 docker compose -f docker-compose.hospital.yml ps
 docker compose -f docker-compose.hospital.yml logs --tail=200 app
 ```
+
+`run.sh restart` 会在页面进程启动前实际调用默认 LLM、Embedding 和 Rerank；只有
+三项均返回有效结果才会继续启动。ASR 为 Mock 时跳过。Docker 镜像使用同一前台
+启动入口，因此模型服务失败时容器内的应用也不会进入可用状态。原生后台启动还会
+等待首页返回有效 HTTP 状态后才报告成功，默认超时为 90 秒，可用
+`KH_APP_START_TIMEOUT` 调整。
 
 医生页面出现故障编号后，在 `ktem_app_data/logs/app.log` 搜索该编号。日志可能包含
 文档解析或模型返回的诊断上下文，应按院内敏感数据制度控制访问和备份保留期。
@@ -107,6 +114,7 @@ docker compose -f docker-compose.hospital.yml start app
 - `.env` 权限为 `600`，没有默认密码、占位密钥或无关公共 Provider 密钥。
 - 防火墙只允许用户入口和配置的模型网关；服务器不具备通用互联网出口。
 - `./run.sh doctor` 为零失败，容器健康状态正常。
+- 启动日志中 LLM、Embedding、Rerank 均为 `[PASS]`，Mock ASR 为 `[SKIP]`。
 - 使用脱敏 PDF、DOCX、XLSX 分别完成上传、索引、问答和证据定位测试。
 - 使用无效模型密钥和停机模型服务验证页面中文提示、故障编号和日志关联。
 - 验证普通医生看不到模型、索引、用户和声纹等管理员功能。

@@ -35,8 +35,9 @@
 
 ### 2.2 启动链路
 
-1. `app.py` 触发 TheFlow 加载 `flowsettings.py`。
-2. `ktem.main.App` 初始化 `BaseApp`。
+1. `run.sh` 对默认 LLM、Embedding、Rerank 发起最小请求，Mock ASR 明确跳过。
+2. 必需服务全部通过后，`app.py` 触发 TheFlow 加载 `flowsettings.py`，并初始化
+   `ktem.main.App`。
 3. `BaseApp.register_reasonings()` 根据 `KH_REASONINGS` 动态加载推理管线。
 4. `IndexManager.on_application_startup()` 从配置/数据库创建索引实例。
 5. `App.ui()` 创建聊天、文件、资源、设置和帮助页面，聊天输入区内注册 ASR 入口。
@@ -201,7 +202,7 @@ Rerank 返回的 `index` 当前代表排序位置而非原文档位置，`GeekAI
 - 应用构建烟测：启用用户管理与 ASR 时成功创建 443 个 Gradio 组件、267 条
   事件依赖，资源管理包含独立 ASR 与声纹配置页且不再包含 MCP 页签
 - macOS Bash 3.2 下执行 `sh run.sh --restart` 后，首页 HTTP 状态为 200；启动
-  脚本会跳过缺少项目依赖的 Python 虚拟环境
+  脚本会跳过缺少项目依赖的 Python 虚拟环境，并在应用进程启动前完成四类模型预检
 - `ktem` 本地测试：除上游 `test_qa.py` 引用不存在的顶层 `index` 模块而无法收集
   外，其余 77 个测试通过；聊天、ASR、会话权限、通知、模型隔离和汉化均覆盖
 - `kotaemon` 核心测试：115 个通过、20 个按可选依赖跳过、5 个 Milvus
