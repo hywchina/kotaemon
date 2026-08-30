@@ -629,6 +629,19 @@ div.markmap.is-expanded .ktem-mindmap-hint {
   margin-right: auto;
 }
 
+#main-chat-bot .placeholder-container .message-wrap {
+  justify-content: center;
+  justify-items: center;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+#main-chat-bot .placeholder-container .message-wrap > center {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 760px;
+}
+
 #main-chat-bot .message-row.bot-row {
   width: 100%;
   max-width: none;

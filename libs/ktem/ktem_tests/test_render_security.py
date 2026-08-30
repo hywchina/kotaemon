@@ -112,3 +112,20 @@ def test_chat_content_uses_one_shared_visual_width() -> None:
         assert "width: calc(100% - 32px);" in sibling_rule
         assert "max-width: 964px;" in sibling_rule
         assert "max(8px, calc((100% - 964px) / 2))" in sibling_rule
+
+
+def test_empty_chat_placeholder_is_centered_inside_conversation_canvas() -> None:
+    main_css = (ASSETS_DIR / "css" / "main.css").read_text(encoding="utf-8")
+
+    placeholder_rule = main_css.split(
+        "#main-chat-bot .placeholder-container .message-wrap {", maxsplit=1
+    )[1].split("}", maxsplit=1)[0]
+    placeholder_content_rule = main_css.split(
+        "#main-chat-bot .placeholder-container .message-wrap > center {", maxsplit=1
+    )[1].split("}", maxsplit=1)[0]
+
+    assert "justify-content: center;" in placeholder_rule
+    assert "justify-items: center;" in placeholder_rule
+    assert "margin-right: auto;" in placeholder_rule
+    assert "margin-left: auto;" in placeholder_rule
+    assert "width: 100%;" in placeholder_content_rule
