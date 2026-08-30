@@ -257,17 +257,20 @@ function run() {
     enhanceUserMessages();
   }
 
-  // move info-expand-button
+  // Keep navigation and evidence controls on the chat canvas so they remain
+  // reachable when either side panel is collapsed.
   const infoExpandButton = document.getElementById("info-expand-button");
-  const chatInfoPanel = document.getElementById("info-expand");
-  if (infoExpandButton && chatInfoPanel) {
-    chatInfoPanel.insertBefore(infoExpandButton, chatInfoPanel.childNodes[2]);
-  }
-
-  // move toggle-side-bar button
   const chatExpandButton = document.getElementById("chat-expand-button");
   const chatColumn = document.getElementById("main-chat-bot");
   const convColumn = document.getElementById("conv-settings-panel");
+  if (infoExpandButton) {
+    infoExpandButton.title = "显示或隐藏参考证据";
+    infoExpandButton.setAttribute("aria-label", "显示或隐藏参考证据");
+  }
+  if (chatExpandButton) {
+    chatExpandButton.title = "显示或隐藏会话列表";
+    chatExpandButton.setAttribute("aria-label", "显示或隐藏会话列表");
+  }
 
   // move setting close button
   const settingTabNavBar = document.querySelector("#settings-tab .tab-nav");
@@ -281,18 +284,22 @@ function run() {
 
   globalThis.toggleChatColumn = () => {
     if (!convColumn) return;
-    const flexGrow = convColumn.style.flexGrow;
-    if (flexGrow === "0") {
-      convColumn.style.flexGrow = "1";
-      convColumn.style.minWidth = defaultConvColumnMinWidth;
-    } else {
-      convColumn.style.flexGrow = "0";
-      convColumn.style.minWidth = "0px";
-    }
+    convColumn.classList.toggle("is-collapsed");
   };
+
+  if (convColumn && window.matchMedia("(max-width: 960px)").matches) {
+    convColumn.classList.add("is-collapsed");
+  }
+  if (window.matchMedia("(max-width: 640px)").matches) {
+    const gradioContainer = document.querySelector(".gradio-container");
+    if (gradioContainer) gradioContainer.style.padding = "8px";
+  }
 
   if (chatColumn && chatExpandButton) {
     chatColumn.insertBefore(chatExpandButton, chatColumn.firstChild);
+  }
+  if (chatColumn && infoExpandButton) {
+    chatColumn.insertBefore(infoExpandButton, chatColumn.firstChild);
   }
 
   // move use mind-map checkbox

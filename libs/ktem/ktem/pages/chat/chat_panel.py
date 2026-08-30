@@ -13,7 +13,11 @@ KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 KH_ENABLE_ASR = getattr(flowsettings, "KH_ENABLE_ASR", True)
 
 if not KH_DEMO_MODE:
-    PLACEHOLDER_TEXT = "这是一次新会话的开始。"
+    PLACEHOLDER_TEXT = (
+        "开始一次辅助诊断问答\n\n"
+        "可输入医学问题、添加检查图片，或引用知识库资料。"
+        "模型回答仅供临床参考。"
+    )
 else:
     PLACEHOLDER_TEXT = (
         "Welcome to Kotaemon Demo. "

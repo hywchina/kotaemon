@@ -73,7 +73,7 @@ if KH_WEB_SEARCH_BACKEND:
 
 REASONING_LIMITS = 2 if KH_DEMO_MODE else 10
 DEFAULT_SETTING = "(default)"
-INFO_PANEL_SCALES = {True: 8, False: 4}
+INFO_PANEL_SCALE = 4
 DEFAULT_QUESTION = "请总结这份文档。" if not KH_DEMO_MODE else "请总结这篇论文。"
 DEFAULT_IMAGE_QUESTION = "请分析所附图片，并说明其中的关键信息。"
 CHAT_IMAGE_MIME_TYPES = {
@@ -81,6 +81,17 @@ CHAT_IMAGE_MIME_TYPES = {
     "PNG": "image/png",
     "WEBP": "image/webp",
 }
+
+
+def toggle_info_panel(is_visible: bool):
+    """Toggle the optional evidence workspace without shrinking chat by default."""
+
+    next_visible = not bool(is_visible)
+    return (
+        gr.update(visible=next_visible),
+        next_visible,
+        gr.update(variant="primary" if next_visible else "secondary"),
+    )
 
 
 def validate_chat_images(file_paths) -> tuple[list[str], list[str]]:
@@ -292,7 +303,7 @@ class ChatPage(BasePage):
         self._use_suggestion = gr.State(
             value=getattr(flowsettings, "KH_FEATURE_CHAT_SUGGESTION", False)
         )
-        self._info_panel_expanded = gr.State(value=True)
+        self._info_panel_visible = gr.State(value=False)
         self._command_state = gr.State(value=None)
         self._user_api_key = gr.Text(value="", visible=False)
 
@@ -470,7 +481,9 @@ class ChatPage(BasePage):
                             )
 
             with gr.Column(
-                scale=INFO_PANEL_SCALES[False], elem_id="chat-info-panel"
+                scale=INFO_PANEL_SCALE,
+                visible=False,
+                elem_id="chat-info-panel",
             ) as self.info_column:
                 with gr.Accordion(label="信息面板", open=True, elem_id="info-expand"):
                     self.modal = gr.HTML("<div id='pdf-modal'></div>")
@@ -770,12 +783,13 @@ class ChatPage(BasePage):
             )
 
         self.chat_control.btn_info_expand.click(
-            fn=lambda is_expanded: (
-                gr.update(scale=INFO_PANEL_SCALES[is_expanded]),
-                not is_expanded,
-            ),
-            inputs=self._info_panel_expanded,
-            outputs=[self.info_column, self._info_panel_expanded],
+            fn=toggle_info_panel,
+            inputs=self._info_panel_visible,
+            outputs=[
+                self.info_column,
+                self._info_panel_visible,
+                self.chat_control.btn_info_expand,
+            ],
         )
         self.chat_control.btn_chat_expand.click(
             fn=None, inputs=None, js="function() {toggleChatColumn();}"

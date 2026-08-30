@@ -1,5 +1,6 @@
 :root {
   --main-area-height: calc(100vh - 110px);
+  --main-area-height: calc(100dvh - 110px);
 }
 
 /* no footer */
@@ -87,11 +88,14 @@ button.selected {
 #main-chat-bot {
   background: var(--background-fill-primary);
   flex: auto;
+  position: relative;
 }
 
 #chat-area {
   height: var(--main-area-height) !important;
   column-gap: 2px !important;
+  min-width: 0;
+  padding: 0 clamp(8px, 1.5vw, 24px) 10px;
 }
 
 #chat-info-panel {
@@ -123,6 +127,10 @@ body.dark #chat-info-panel figure>img{
   height: 0;
 }
 
+#conv-settings-panel.is-collapsed {
+  display: none !important;
+}
+
 td {
   /* Fix for Firefox Gradio table overflow display */
   overflow: hidden;
@@ -130,10 +138,6 @@ td {
 
 .setting-answer-mode-description {
   margin: 5px 5px 2px !important;
-}
-
-.message-buttons-right {
-  display: none !important;
 }
 
 mark {
@@ -200,8 +204,9 @@ mark {
 
 #info-expand-button {
   position: absolute;
-  top: 6px;
-  right: 15px;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
 }
 
 /* prevent overflow of html info panel */
@@ -211,9 +216,10 @@ mark {
 
 #chat-expand-button {
   position: absolute;
-  top: 6px;
-  right: -10px;
-  z-index: 1;
+  top: 12px;
+  right: auto;
+  left: 12px;
+  z-index: 3;
 }
 
 #save-setting-btn {
@@ -462,6 +468,15 @@ div.markmap {
   position: relative;
   align-items: stretch;
   flex-wrap: nowrap !important;
+  width: calc(100% - 16px);
+  max-width: 980px;
+  margin: 12px auto 0;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+#chat-composer-row:focus-within {
+  border-color: var(--button-primary-border-color) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16) !important;
 }
 
 #chat-input {
@@ -618,7 +633,21 @@ div.markmap {
 }
 
 #main-chat-bot .message-buttons-right {
+  display: flex !important;
   gap: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+#main-chat-bot .bot-row:hover .message-buttons-right,
+#main-chat-bot .bot-row:focus-within .message-buttons-right {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#main-chat-bot .user-row .message-buttons-right {
+  display: none !important;
 }
 
 #main-chat-bot .user-row {
@@ -885,6 +914,14 @@ div.markmap {
 }
 
 @media (max-width: 640px) {
+  .header-bar {
+    margin-bottom: 8px;
+  }
+
+  #chat-tab {
+    padding: 4px !important;
+  }
+
   .asr-live-header {
     align-items: flex-start;
     flex-direction: column;
@@ -896,6 +933,26 @@ div.markmap {
 
   #main-chat-bot .user-row.is-editing {
     width: 96%;
+  }
+
+  #chat-area {
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  #chat-composer-row {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  #chat-input textarea {
+    min-height: 88px;
+  }
+
+  .ktem-user-message-actions,
+  #main-chat-bot .bot-row .message-buttons-right {
+    opacity: 1;
+    pointer-events: auto;
   }
 
 }

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import gradio as gr
 import pandas as pd
 from ktem.index.file.ui import FileIndexPage
-from ktem.pages.chat import ChatPage
+from ktem.pages.chat import ChatPage, toggle_info_panel
 from ktem.pages.chat import chat_panel as chat_panel_module
 from ktem.reasoning.simple import FullDecomposeQAPipeline, FullQAPipeline
 from ktem.utils.i18n import translate_choices, translate_ui_text
@@ -53,7 +53,22 @@ def test_chat_composer_uses_one_send_or_microphone_action(monkeypatch) -> None:
     assert panel.text_input.file_types == ["image"]
     assert panel.text_input.file_count == "multiple"
     assert panel.pending_multimodal_input.value == {"query": "", "image_paths": []}
+    assert panel.chatbot.placeholder.startswith("开始一次辅助诊断问答")
     assert not hasattr(panel, "regen_btn")
+
+
+def test_evidence_panel_is_opt_in_and_toggleable() -> None:
+    panel_update, visible, button_update = toggle_info_panel(False)
+
+    assert visible is True
+    assert panel_update["visible"] is True
+    assert button_update["variant"] == "primary"
+
+    panel_update, visible, button_update = toggle_info_panel(True)
+
+    assert visible is False
+    assert panel_update["visible"] is False
+    assert button_update["variant"] == "secondary"
 
 
 def test_edit_message_truncates_following_turns_before_regeneration() -> None:
