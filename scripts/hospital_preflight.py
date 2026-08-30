@@ -132,9 +132,9 @@ def validate_configuration(
 
     profile = config.get("KH_MODEL_PROFILE", "geekai").strip().lower()
     report.check(
-        profile in {"geekai", "lmstudio"},
+        profile in {"geekai", "openai-compatible", "lmstudio"},
         f"模型配置档有效：{profile}",
-        "KH_MODEL_PROFILE 只能是 geekai 或 lmstudio。",
+        "KH_MODEL_PROFILE 只能是 geekai、openai-compatible 或 lmstudio。",
     )
 
     user_management_enabled = _is_true(config.get("KH_FEATURE_USER_MANAGEMENT", "true"))
@@ -178,6 +178,24 @@ def validate_configuration(
             "GEEKAI_API_KEY 未设置或仍是占位值。",
         )
         endpoints.append(("GEEKAI_API_BASE_URL", config.get("GEEKAI_API_BASE_URL", "")))
+    elif profile == "openai-compatible":
+        report.check(
+            not _is_placeholder(config.get("OPENAI_COMPATIBLE_API_KEY")),
+            "OpenAI 兼容服务密钥已设置。",
+            "OPENAI_COMPATIBLE_API_KEY 未设置或仍是占位值。",
+        )
+        endpoints.extend(
+            [
+                (
+                    "OPENAI_COMPATIBLE_API_BASE_URL",
+                    config.get("OPENAI_COMPATIBLE_API_BASE_URL", ""),
+                ),
+                (
+                    "OPENAI_COMPATIBLE_RERANK_URL",
+                    config.get("OPENAI_COMPATIBLE_RERANK_URL", ""),
+                ),
+            ]
+        )
     elif profile == "lmstudio":
         endpoints.extend(
             [

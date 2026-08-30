@@ -41,6 +41,23 @@ def test_valid_hospital_external_configuration_passes():
     assert report.failures == []
 
 
+def test_openai_compatible_profile_uses_generic_endpoints():
+    report = hospital_preflight.validate_configuration(
+        hospital_config(
+            KH_MODEL_PROFILE="openai-compatible",
+            KH_MODEL_HOST_ALLOWLIST="models.hospital.example",
+            OPENAI_COMPATIBLE_API_KEY="internal-secret",
+            OPENAI_COMPATIBLE_API_BASE_URL="https://models.hospital.example/v1",
+            OPENAI_COMPATIBLE_RERANK_URL=(
+                "https://models.hospital.example/v1/rerank"
+            ),
+        ),
+        database_has_user=False,
+    )
+
+    assert report.failures == []
+
+
 def test_preflight_rejects_placeholders_and_enabled_public_features():
     report = hospital_preflight.validate_configuration(
         hospital_config(

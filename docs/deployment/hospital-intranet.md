@@ -74,6 +74,23 @@ KH_LOCAL_RERANK_URL=http://rerank-service:8001/rerank
 请求字段、最大上下文和超时，不要直接复用旧向量库：Embedding 模型或维度变化时
 必须重新索引文档。
 
+如果外部或院内网关同时提供三类接口，也可以使用统一兼容配置，而不修改代码：
+
+```dotenv
+KH_MODEL_PROFILE=openai-compatible
+OPENAI_COMPATIBLE_API_BASE_URL=http://model-gateway:8000/v1
+OPENAI_COMPATIBLE_API_KEY=<INTERNAL_KEY>
+OPENAI_COMPATIBLE_CHAT_MODEL=qwen3-vl
+OPENAI_COMPATIBLE_EMBEDDING_MODEL=qwen3-vl-embedding
+OPENAI_COMPATIBLE_EMBEDDING_INPUT_FORMAT=openai
+OPENAI_COMPATIBLE_RERANK_URL=http://model-gateway:8000/v1/rerank
+OPENAI_COMPATIBLE_RERANK_MODEL=qwen3-rerank
+OPENAI_COMPATIBLE_RERANK_RESPONSE_MAPPING=auto
+```
+
+`Rerank` 不是 OpenAI 官方接口；`auto` 会依次尝试响应中的原文和输入索引。若网关
+协议固定，生产配置应明确设为 `document` 或 `index`，并通过启动预检后再上线。
+
 ASR 尚未正式接入时保持 `KH_ENABLE_ASR=false`。后续启用时，ASR 地址同样必须满足
 当前部署档位的出口规则。
 

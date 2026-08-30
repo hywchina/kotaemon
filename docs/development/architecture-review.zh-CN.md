@@ -11,7 +11,7 @@ Vue。迁移历史和上游差异见 `fork-migration-v0.12.md`，部署操作见
   过来；没有把旧分支的生成物、缓存和备份重新带入。
 - 运行架构仍然清晰地分成 `kotaemon` 核心 RAG 库、`ktem` 应用层和 Gradio 事件
   层。模型、索引、权限和持久化都在 Python 内完成，适合当前单机或单容器部署。
-- 医院模式运行时只注册 GeekAI 过渡模型或内网模型，固定关闭 MCP、外部 Agent、
+- 医院模式运行时只注册 GeekAI/其他 OpenAI 兼容过渡模型或内网模型，固定关闭 MCP、外部 Agent、
   Web 搜索、URL 入库、远程帮助、Gradio 分享和遥测。上游公共 Provider 的适配器
   源码仍在可复用核心库中，但不会进入医院运行对象；网络出口仍应由防火墙兜底。
 - 现阶段不建议整体迁移到 Vue。应继续收敛 Gradio 页面，把“模型/索引/会话”业务
@@ -65,11 +65,12 @@ Embedding 模型或向量维度变化时，旧向量库不能混用，必须重�
 | 类别 | 当前实现 | 启动要求 | 后续内网替换点 |
 | --- | --- | --- | --- |
 | LLM/VLM | GeekAI `qwen3-vl-flash` | 文本和生成白图的视觉请求均通过 | OpenAI-compatible `/chat/completions` |
-| Embedding | `qwen3-vl-embedding` 专用输入适配 | 返回非空且维度为 2560 | `/embeddings`，切换后重建索引 |
-| Rerank | `qwen3-rerank` 结果映射适配 | 返回有效重排结果 | `/rerank` |
+| Embedding | OpenAI 兼容适配，GeekAI 使用类型化输入 | 返回非空且维度为 2560 | `/embeddings`，切换后重建索引 |
+| Rerank | OpenAI 风格鉴权与可配置结果映射 | 返回有效重排结果 | `/rerank`（非 OpenAI 官方标准） |
 | ASR | Mock 多说话人事件流 | 明确跳过外部检查 | 实现现有 Provider 接口并配置院内地址 |
 
-模型 Manager 只保存规格与默认项，实际组件按需创建。环境变量中的真实密钥不得写入
+模型 Manager 只保存规格与默认项，实际组件按需创建；业务层不判断 GeekAI 或其他
+厂商名称。环境变量中的真实密钥不得写入
 仓库、日志或错误提示；过渡期图片和问题会发送到外部模型，必须先做脱敏与出网审批。
 
 ### 2.4 会话与 ASR

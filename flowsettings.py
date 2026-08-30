@@ -407,56 +407,148 @@ if not KH_MODEL_PROFILE:
         if config("KH_USE_LOCAL_MODEL_PROFILE", default=False, cast=bool)
         else "geekai"
     )
-if KH_MODEL_PROFILE not in {"geekai", "lmstudio", "official"}:
-    raise ValueError("KH_MODEL_PROFILE must be one of: geekai, lmstudio, official")
+if KH_MODEL_PROFILE not in {
+    "geekai",
+    "openai-compatible",
+    "lmstudio",
+    "official",
+}:
+    raise ValueError(
+        "KH_MODEL_PROFILE must be one of: geekai, openai-compatible, "
+        "lmstudio, official"
+    )
 
 KH_USE_GEEKAI_MODEL_PROFILE = KH_MODEL_PROFILE == "geekai"
+KH_USE_OPENAI_COMPATIBLE_MODEL_PROFILE = KH_MODEL_PROFILE in {
+    "geekai",
+    "openai-compatible",
+}
 KH_USE_LOCAL_MODEL_PROFILE = KH_MODEL_PROFILE == "lmstudio"
 
-if KH_USE_GEEKAI_MODEL_PROFILE:
+if KH_USE_OPENAI_COMPATIBLE_MODEL_PROFILE:
     for model_group in (KH_LLMS, KH_EMBEDDINGS, KH_RERANKINGS):
         for model_config in model_group.values():
             model_config["default"] = False
 
-    geekai_api_base = config(
-        "GEEKAI_API_BASE_URL", default="https://geekai.co/api/v1"
-    ).rstrip("/")
+    if KH_USE_GEEKAI_MODEL_PROFILE:
+        compatible_name = "geekai"
+        compatible_api_base = config(
+            "GEEKAI_API_BASE_URL", default="https://geekai.co/api/v1"
+        ).rstrip("/")
+        compatible_api_key = config(
+            "GEEKAI_API_KEY", default="your-geekai-api-key"
+        )
+        compatible_chat_model = config(
+            "GEEKAI_CHAT_MODEL", default="qwen3-vl-flash"
+        )
+        compatible_chat_timeout = config(
+            "GEEKAI_CHAT_TIMEOUT", default=120, cast=int
+        )
+        compatible_embedding_model = config(
+            "GEEKAI_EMBEDDING_MODEL", default="qwen3-vl-embedding"
+        )
+        compatible_embedding_input_format = config(
+            "GEEKAI_EMBEDDING_INPUT_FORMAT", default="typed_text"
+        )
+        compatible_embedding_batch_size = config(
+            "GEEKAI_EMBEDDING_BATCH_SIZE", default=16, cast=int
+        )
+        compatible_embedding_timeout = config(
+            "GEEKAI_EMBEDDING_TIMEOUT", default=60, cast=int
+        )
+        compatible_rerank_url = f"{compatible_api_base}/rerank"
+        compatible_rerank_model = config(
+            "GEEKAI_RERANK_MODEL", default="qwen3-rerank"
+        )
+        compatible_rerank_response_mapping = config(
+            "GEEKAI_RERANK_RESPONSE_MAPPING", default="document"
+        )
+        compatible_rerank_timeout = config(
+            "GEEKAI_RERANK_TIMEOUT", default=60, cast=int
+        )
+    else:
+        compatible_name = "openai-compatible"
+        compatible_api_base = config(
+            "OPENAI_COMPATIBLE_API_BASE_URL",
+            default="http://model-gateway:8000/v1",
+        ).rstrip("/")
+        compatible_api_key = config(
+            "OPENAI_COMPATIBLE_API_KEY", default="local-api-key"
+        )
+        compatible_chat_model = config(
+            "OPENAI_COMPATIBLE_CHAT_MODEL", default="qwen3-vl"
+        )
+        compatible_chat_timeout = config(
+            "OPENAI_COMPATIBLE_CHAT_TIMEOUT", default=120, cast=int
+        )
+        compatible_embedding_model = config(
+            "OPENAI_COMPATIBLE_EMBEDDING_MODEL", default="qwen3-vl-embedding"
+        )
+        compatible_embedding_input_format = config(
+            "OPENAI_COMPATIBLE_EMBEDDING_INPUT_FORMAT", default="openai"
+        )
+        compatible_embedding_batch_size = config(
+            "OPENAI_COMPATIBLE_EMBEDDING_BATCH_SIZE", default=16, cast=int
+        )
+        compatible_embedding_timeout = config(
+            "OPENAI_COMPATIBLE_EMBEDDING_TIMEOUT", default=60, cast=int
+        )
+        compatible_rerank_url = config(
+            "OPENAI_COMPATIBLE_RERANK_URL",
+            default=f"{compatible_api_base}/rerank",
+        )
+        compatible_rerank_model = config(
+            "OPENAI_COMPATIBLE_RERANK_MODEL", default="qwen3-rerank"
+        )
+        compatible_rerank_response_mapping = config(
+            "OPENAI_COMPATIBLE_RERANK_RESPONSE_MAPPING", default="auto"
+        )
+        compatible_rerank_timeout = config(
+            "OPENAI_COMPATIBLE_RERANK_TIMEOUT", default=60, cast=int
+        )
+
     validate_model_endpoint(
         KH_DEPLOYMENT_MODE,
-        geekai_api_base,
+        compatible_api_base,
         external_hosts=KH_MODEL_HOST_ALLOWLIST,
     )
-    geekai_api_key = config("GEEKAI_API_KEY", default="your-geekai-api-key")
-    KH_LLMS["geekai"] = {
+    validate_model_endpoint(
+        KH_DEPLOYMENT_MODE,
+        compatible_rerank_url,
+        external_hosts=KH_MODEL_HOST_ALLOWLIST,
+    )
+    KH_LLMS[compatible_name] = {
         "spec": {
             "__type__": "kotaemon.llms.ChatOpenAI",
-            "base_url": geekai_api_base,
-            "model": config("GEEKAI_CHAT_MODEL", default="qwen3-vl-flash"),
-            "api_key": geekai_api_key,
-            "timeout": config("GEEKAI_CHAT_TIMEOUT", default=120, cast=int),
+            "base_url": compatible_api_base,
+            "model": compatible_chat_model,
+            "api_key": compatible_api_key,
+            "timeout": compatible_chat_timeout,
         },
         "default": True,
         "managed": True,
     }
-    KH_EMBEDDINGS["geekai"] = {
+    KH_EMBEDDINGS[compatible_name] = {
         "spec": {
-            "__type__": "kotaemon.embeddings.GeekAIEmbeddings",
-            "endpoint_url": f"{geekai_api_base}/embeddings",
-            "model": config("GEEKAI_EMBEDDING_MODEL", default="qwen3-vl-embedding"),
-            "api_key": geekai_api_key,
-            "batch_size": config("GEEKAI_EMBEDDING_BATCH_SIZE", default=16, cast=int),
-            "timeout": config("GEEKAI_EMBEDDING_TIMEOUT", default=60, cast=int),
+            "__type__": "kotaemon.embeddings.OpenAICompatibleEmbeddings",
+            "endpoint_url": f"{compatible_api_base}/embeddings",
+            "model": compatible_embedding_model,
+            "api_key": compatible_api_key,
+            "input_format": compatible_embedding_input_format,
+            "batch_size": compatible_embedding_batch_size,
+            "timeout": compatible_embedding_timeout,
         },
         "default": True,
         "managed": True,
     }
-    KH_RERANKINGS["geekai"] = {
+    KH_RERANKINGS[compatible_name] = {
         "spec": {
-            "__type__": "kotaemon.rerankings.GeekAIReranking",
-            "endpoint_url": f"{geekai_api_base}/rerank",
-            "model_name": config("GEEKAI_RERANK_MODEL", default="qwen3-rerank"),
-            "api_key": geekai_api_key,
-            "timeout": config("GEEKAI_RERANK_TIMEOUT", default=60, cast=int),
+            "__type__": "kotaemon.rerankings.OpenAICompatibleReranking",
+            "endpoint_url": compatible_rerank_url,
+            "model_name": compatible_rerank_model,
+            "api_key": compatible_api_key,
+            "response_mapping": compatible_rerank_response_mapping,
+            "timeout": compatible_rerank_timeout,
         },
         "default": True,
         "managed": True,
@@ -506,11 +598,13 @@ if KH_HOSPITAL_MODE:
     if KH_MODEL_PROFILE == "official":
         raise ValueError("The official public-provider profile is disabled in hospital mode")
     allowed_model_names = {
-        "geekai" if KH_USE_GEEKAI_MODEL_PROFILE else "lmstudio"
+        compatible_name
+        if KH_USE_OPENAI_COMPATIBLE_MODEL_PROFILE
+        else "lmstudio"
     }
     allowed_rerank_names = (
-        {"geekai"}
-        if KH_USE_GEEKAI_MODEL_PROFILE
+        {compatible_name}
+        if KH_USE_OPENAI_COMPATIBLE_MODEL_PROFILE
         else {"local-bge-reranker-v2-m3"}
     )
     KH_LLMS = {

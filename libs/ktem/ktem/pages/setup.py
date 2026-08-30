@@ -56,6 +56,10 @@ class SetupPage(BasePage):
         model_choices = []
         if KH_MODEL_PROFILE == "geekai":
             model_choices.append(("已配置的 GeekAI 模型（推荐）", "geekai"))
+        elif KH_MODEL_PROFILE == "openai-compatible":
+            model_choices.append(
+                ("已配置的 OpenAI 兼容模型（推荐）", "openai-compatible")
+            )
         elif KH_USE_LOCAL_MODEL_PROFILE:
             model_choices.append(("已配置的本地模型（推荐）", "lmstudio"))
         model_choices.extend(
@@ -71,7 +75,11 @@ class SetupPage(BasePage):
             label="选择模型服务",
             value=(
                 KH_MODEL_PROFILE
-                if KH_MODEL_PROFILE in {"geekai", "lmstudio"}
+                if KH_MODEL_PROFILE in {
+                    "geekai",
+                    "openai-compatible",
+                    "lmstudio",
+                }
                 else "cohere"
             ),
             info="稍后可在资源管理中修改模型配置。",
@@ -82,6 +90,14 @@ class SetupPage(BasePage):
             gr.Markdown(
                 "GeekAI 的 LLM、Embedding 和 Rerank 参数来自 `.env` 中的 "
                 "`GEEKAI_*` 配置。继续后会测试当前 LLM 与 Embedding 连接。"
+            )
+
+        with gr.Column(
+            visible=KH_MODEL_PROFILE == "openai-compatible"
+        ) as self.openai_compatible_option:
+            gr.Markdown(
+                "模型连接参数来自 `.env` 中的 `OPENAI_COMPATIBLE_*` 配置。"
+                "LLM、Embedding 和 Rerank 均通过可替换的兼容适配器访问。"
             )
 
         with gr.Column(visible=KH_USE_LOCAL_MODEL_PROFILE) as self.lmstudio_option:
@@ -102,7 +118,8 @@ class SetupPage(BasePage):
             )
 
         with gr.Column(
-            visible=KH_MODEL_PROFILE not in {"geekai", "lmstudio"}
+            visible=KH_MODEL_PROFILE
+            not in {"geekai", "openai-compatible", "lmstudio"}
         ) as self.cohere_option:
             gr.Markdown(
                 (
@@ -197,6 +214,7 @@ class SetupPage(BasePage):
             show_progress="hidden",
             outputs=[
                 self.geekai_option,
+                self.openai_compatible_option,
                 self.lmstudio_option,
                 self.cohere_option,
                 self.openai_option,
@@ -220,7 +238,7 @@ class SetupPage(BasePage):
             yield gr.value(visible=False)
             return
 
-        if radio_model_value in {"geekai", "lmstudio"}:
+        if radio_model_value in {"geekai", "openai-compatible", "lmstudio"}:
             pass
         elif radio_model_value == "cohere":
             if cohere_api_key:
@@ -421,10 +439,11 @@ class SetupPage(BasePage):
         return default_settings
 
     def switch_options_view(self, radio_model_value):
-        components_visible = [gr.update(visible=False) for _ in range(6)]
+        components_visible = [gr.update(visible=False) for _ in range(7)]
 
         values = [
             "geekai",
+            "openai-compatible",
             "lmstudio",
             "cohere",
             "openai",

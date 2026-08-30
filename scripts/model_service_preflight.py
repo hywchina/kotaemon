@@ -44,6 +44,7 @@ def _safe_error(exc: Exception) -> str:
     message = re.sub(r"\bsk-[A-Za-z0-9_-]{8,}\b", "***", message)
     for variable_name in (
         "GEEKAI_API_KEY",
+        "OPENAI_COMPATIBLE_API_KEY",
         "KH_LOCAL_MODEL_API_KEY",
         "KH_ASR_API_KEY",
     ):

@@ -91,15 +91,16 @@ ChatPage.submit_msg
 | 类别 | 当前默认模型 | 应用组件 | API |
 | --- | --- | --- | --- |
 | LLM/VLM | `qwen3-vl-flash` | `ChatOpenAI` | `POST /api/v1/chat/completions` |
-| Embedding | `qwen3-vl-embedding` | `GeekAIEmbeddings` | `POST /api/v1/embeddings` |
-| Rerank | `qwen3-rerank` | `GeekAIReranking` | `POST /api/v1/rerank` |
+| Embedding | `qwen3-vl-embedding` | `OpenAICompatibleEmbeddings` | `POST /api/v1/embeddings` |
+| Rerank | `qwen3-rerank` | `OpenAICompatibleReranking` | `POST /api/v1/rerank` |
 | ASR | Mock 多说话人流 | `MockASRProvider` | 远端 API 待接入 |
 
 `flowsettings.py` 从本地 `.env` 读取配置，三个模型 Manager 将配置注册到应用
 数据库；索引入库调用默认 Embedding，问答检索后调用默认 Reranker，最终由默认
-LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型名变更后会在
-下次启动时同步到应用数据库。`KH_MODEL_PROFILE=lmstudio` 可恢复迁移前的本地
-三模型组合，设为 `official` 则使用上游默认配置。
+LLM 生成答案。GeekAI 是当前环境变量托管的预设，不是业务代码依赖；API Key 或
+模型名变更后会在下次启动时同步到应用数据库。其他兼容网关使用
+`KH_MODEL_PROFILE=openai-compatible` 与 `OPENAI_COMPATIBLE_*` 配置，院内标准
+OpenAI 端点也可使用 `lmstudio` 本地组合。`official` 只供非医院上游模式使用。
 
 ## 3. 两种升级方案对比
 
@@ -173,7 +174,7 @@ LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型�
 
 | 配置 | 默认值 | 说明 |
 | --- | --- | --- |
-| `KH_MODEL_PROFILE` | `geekai` | 模型配置集：`geekai`、`lmstudio` 或 `official` |
+| `KH_MODEL_PROFILE` | `geekai` | 模型配置集：`geekai`、`openai-compatible`、`lmstudio` 或 `official` |
 | `GEEKAI_API_BASE_URL` | `https://geekai.co/api/v1` | GeekAI OpenAI-compatible API 根地址 |
 | `GEEKAI_API_KEY` | 占位值 | GeekAI API Key，仅放在本地 `.env` |
 | `GEEKAI_CHAT_MODEL` | `qwen3-vl-flash` | 默认 LLM/VLM |
@@ -190,11 +191,12 @@ LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型�
 | `KH_ASR_PROVIDER` | `mock` | ASR Provider；远端 API 接通前使用模拟流 |
 | `KH_START_LOCAL_RERANK` | `false` | `run.sh` 是否同时启动本地重排服务 |
 
-GeekAI 的 LLM 接口兼容 OpenAI Chat Completions，直接复用 `ChatOpenAI`。
-`qwen3-vl-embedding` 的 `input` 必须是 `[{"type": "text", "text": ...}]`
-而不是 OpenAI 的字符串数组，因此使用 `GeekAIEmbeddings` 适配器。GeekAI
-Rerank 返回的 `index` 当前代表排序位置而非原文档位置，`GeekAIReranking` 会按
-响应中的文档内容安全映射回原始 `Document`，并写入 `reranking_score`。
+LLM 统一复用 `ChatOpenAI`。`OpenAICompatibleEmbeddings` 默认发送 OpenAI 字符串
+数组，也可通过 `input_format=typed_text` 适配 GeekAI Qwen3-VL 的类型化输入。
+Rerank 不属于 OpenAI 官方标准；`OpenAICompatibleReranking` 保持相同的 Bearer
+鉴权和模型配置方式，并同时支持按响应文档内容或输入索引映射，写入
+`reranking_score`。旧 `GeekAIEmbeddings`、`GeekAIReranking` 类仍作为兼容预设
+保留，已有序列化配置不会失效。
 
 ## 6. 验证结果与边界
 

@@ -13,18 +13,24 @@ from .base import BaseReranking
 logger = logging.getLogger(__name__)
 
 
-class GeekAIReranking(BaseReranking):
-    """Rerank documents with GeekAI's Qwen3 rerank endpoint."""
+class OpenAICompatibleReranking(BaseReranking):
+    """Rerank documents through an OpenAI-style authenticated endpoint.
+
+    Reranking is not part of the official OpenAI API. Compatible gateways
+    commonly return either the original input index or the echoed document;
+    this adapter accepts both response shapes so provider details do not leak
+    into retrieval pipelines.
+    """
 
     endpoint_url: str = Param(
-        "https://geekai.co/api/v1/rerank",
-        help="GeekAI rerank endpoint URL",
+        None,
+        help="OpenAI-compatible rerank endpoint URL",
         required=True,
     )
-    api_key: str = Param(None, help="GeekAI API key", required=True)
+    api_key: str = Param(None, help="API key", required=True)
     model_name: str = Param(
-        "qwen3-rerank",
-        help="GeekAI rerank model name",
+        None,
+        help="Rerank model name",
         required=True,
     )
     top_n: Optional[int] = Param(
@@ -43,6 +49,10 @@ class GeekAIReranking(BaseReranking):
         12000,
         help="Maximum characters from one document sent to the rerank service",
     )
+    response_mapping: str = Param(
+        "auto",
+        help="Response mapping: auto, document, or index",
+    )
     timeout: Optional[float] = Param(60, help="API request timeout in seconds")
 
     def _fallback(
@@ -53,7 +63,7 @@ class GeekAIReranking(BaseReranking):
     ) -> list[Document]:
         """Keep the original retrieval order when optional reranking degrades."""
 
-        logger.warning("GeekAI rerank degraded to retrieval order: %s", reason)
+        logger.warning("Rerank service degraded to retrieval order: %s", reason)
         output = documents[:top_n]
         for document in output:
             document.metadata["reranking_fallback"] = True
@@ -65,6 +75,9 @@ class GeekAIReranking(BaseReranking):
         query: str,
         top_n: int,
     ) -> list[tuple[float, int, Document]]:
+        if self.response_mapping not in {"auto", "document", "index"}:
+            raise ValueError("response_mapping must be auto, document, or index")
+
         document_texts = [text for _, _, text in batch]
         response = requests.post(
             self.endpoint_url,
@@ -84,34 +97,49 @@ class GeekAIReranking(BaseReranking):
             payload = response.json()
         except requests.JSONDecodeError as exc:
             raise RuntimeError(
-                f"GeekAI rerank returned HTTP {response.status_code} "
+                f"Rerank service returned HTTP {response.status_code} "
                 "with a non-JSON response"
             ) from exc
 
         if not response.ok:
             message = payload.get("message") or payload.get("error") or "unknown error"
             raise RuntimeError(
-                f"GeekAI rerank failed with HTTP {response.status_code}: {message}"
+                f"Rerank service failed with HTTP {response.status_code}: {message}"
             )
 
-        # GeekAI currently returns the rank position in `index`, not the input
-        # document index. Map by the echoed document text to preserve identity.
+        # Prefer the echoed document because some gateways use `index` as the
+        # result rank. Fall back to the input index used by other providers.
         indices_by_text: dict[str, deque[int]] = defaultdict(deque)
         for batch_index, content in enumerate(document_texts):
             indices_by_text[content].append(batch_index)
 
         output: list[tuple[float, int, Document]] = []
+        used_batch_indices: set[int] = set()
         for result in payload.get("results", []):
             returned_document = result.get("document")
-            if (
-                not isinstance(returned_document, str)
-                or not indices_by_text[returned_document]
+            if isinstance(returned_document, dict):
+                returned_document = returned_document.get("text")
+
+            batch_index: int | None = None
+            if self.response_mapping != "index" and (
+                isinstance(returned_document, str)
+                and indices_by_text[returned_document]
             ):
+                batch_index = indices_by_text[returned_document].popleft()
+            elif self.response_mapping != "document":
+                returned_index = result.get("index")
+                if (
+                    isinstance(returned_index, int)
+                    and 0 <= returned_index < len(batch)
+                    and returned_index not in used_batch_indices
+                ):
+                    batch_index = returned_index
+
+            if batch_index is None:
                 raise RuntimeError(
-                    "GeekAI rerank response contains a document that was not in the "
-                    "request"
+                    "Rerank service response cannot be mapped to an input document"
                 )
-            batch_index = indices_by_text[returned_document].popleft()
+            used_batch_indices.add(batch_index)
             original_index, document, _ = batch[batch_index]
             score = float(result.get("relevance_score", 0.0))
             document.metadata["reranking_score"] = score
@@ -120,7 +148,7 @@ class GeekAIReranking(BaseReranking):
         expected = min(top_n, len(batch))
         if len(output) != expected:
             raise RuntimeError(
-                "GeekAI rerank returned an unexpected number of results: "
+                "Rerank service returned an unexpected number of results: "
                 f"expected {expected}, got {len(output)}"
             )
         return output
@@ -171,3 +199,22 @@ class GeekAIReranking(BaseReranking):
 
         ranked.sort(key=lambda item: (-item[0], item[1]))
         return [document for _, _, document in ranked[:top_n]]
+
+
+class GeekAIReranking(OpenAICompatibleReranking):
+    """Backward-compatible preset for GeekAI's Qwen3 rerank endpoint."""
+
+    endpoint_url: str = Param(
+        "https://geekai.co/api/v1/rerank",
+        help="GeekAI rerank endpoint URL",
+        required=True,
+    )
+    model_name: str = Param(
+        "qwen3-rerank",
+        help="GeekAI rerank model name",
+        required=True,
+    )
+    response_mapping: str = Param(
+        "document",
+        help="GeekAI echoes documents while index contains the rank position",
+    )

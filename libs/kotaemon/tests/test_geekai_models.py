@@ -1,8 +1,8 @@
 from unittest.mock import Mock, patch
 
 from kotaemon.base import Document, DocumentWithEmbedding
-from kotaemon.embeddings import GeekAIEmbeddings
-from kotaemon.rerankings import GeekAIReranking
+from kotaemon.embeddings import GeekAIEmbeddings, OpenAICompatibleEmbeddings
+from kotaemon.rerankings import GeekAIReranking, OpenAICompatibleReranking
 
 
 def json_response(payload: dict, *, status_code: int = 200) -> Mock:
@@ -66,6 +66,26 @@ def test_geekai_embeddings_batches_requests(post: Mock):
 
     assert [item.embedding for item in output] == [[1.0], [2.0], [3.0]]
     assert post.call_count == 2
+
+
+@patch("kotaemon.embeddings.geekai.requests.post")
+def test_openai_compatible_embeddings_uses_standard_string_input(post: Mock):
+    post.return_value = json_response(
+        {"data": [{"index": 0, "embedding": [1.0, 2.0]}]}
+    )
+    embeddings = OpenAICompatibleEmbeddings(
+        endpoint_url="http://model-gateway/v1/embeddings",
+        api_key="internal-key",
+        model="local-embedding",
+    )
+
+    output = embeddings(["病例摘要"])
+
+    assert output[0].embedding == [1.0, 2.0]
+    assert post.call_args.kwargs["json"] == {
+        "model": "local-embedding",
+        "input": ["病例摘要"],
+    }
 
 
 @patch("kotaemon.rerankings.geekai.requests.post")
@@ -132,6 +152,28 @@ def test_geekai_rerank_falls_back_for_unknown_returned_document(post: Mock):
 
     assert [item.text for item in output] == ["原始内容"]
     assert output[0].metadata["reranking_fallback"] is True
+
+
+@patch("kotaemon.rerankings.geekai.requests.post")
+def test_openai_compatible_rerank_maps_standard_input_indices(post: Mock):
+    post.return_value = json_response(
+        {
+            "results": [
+                {"index": 1, "relevance_score": 0.9},
+                {"index": 0, "relevance_score": 0.1},
+            ]
+        }
+    )
+    reranker = OpenAICompatibleReranking(
+        endpoint_url="http://model-gateway/v1/rerank",
+        api_key="internal-key",
+        model_name="local-reranker",
+    )
+
+    output = reranker([Document("甲"), Document("乙")], query="问题")
+
+    assert [item.text for item in output] == ["乙", "甲"]
+    assert [item.metadata["reranking_score"] for item in output] == [0.9, 0.1]
 
 
 @patch("kotaemon.rerankings.geekai.requests.post")

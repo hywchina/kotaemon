@@ -351,3 +351,22 @@
   未定义变量，确保导图导出事件和引用链接统计不会在回答完成后触发 JavaScript 异常。
 - **验证范围**：新增长候选集分批、请求字符上限、空结果降级、未知返回文档降级及思维
   导图独立超时测试；同时保留现有 GeekAI 文档映射、多模态消息和嵌入批处理测试。
+
+## `refactor: generalize OpenAI-compatible model adapters`
+
+- **改造动机**：GeekAI 只是当前过渡模型网关，后续会替换为其他获批 API 或院内
+  部署服务。旧专用类把厂商名称、Embedding 类型化输入和 Rerank 文档映射假设绑定
+  在一起，容易迫使聊天与检索逻辑在更换供应商时跟着修改。
+- **统一适配边界**：新增通用 `OpenAICompatibleEmbeddings`，支持标准字符串数组和
+  `typed_text` 两种输入；新增 `OpenAICompatibleReranking`，统一 Bearer 鉴权、模型、
+  超时和批处理配置，并支持按响应原文、输入索引或自动模式恢复原始文档。LLM 继续
+  复用 `ChatOpenAI`，业务管线不再判断供应商名称。
+- **兼容策略**：保留 `GeekAIEmbeddings` 与 `GeekAIReranking` 作为原默认参数的兼容
+  子类，避免已有数据库规格失效；当前 GeekAI 托管配置改为实例化通用适配器，并明确
+  使用类型化 Embedding 输入与按文档映射的 Rerank 响应。
+- **可部署配置**：新增 `KH_MODEL_PROFILE=openai-compatible` 及对应
+  `OPENAI_COMPATIBLE_*` 参数，支持只修改根地址、密钥、模型和 Rerank 扩展地址即可
+  切换外部或院内网关；医院启动自检同步校验新档位的密钥、出口白名单和两类端点。
+- **注意事项与验证**：Rerank 并非 OpenAI 官方接口，部署文档要求上线前明确验证其
+  响应映射，Embedding 模型或维度变化后仍须重建索引。新增标准 Embedding 输入、
+  索引式 Rerank 响应和通用医院档测试；相关 21 个适配及预检测试通过，Ruff 检查通过。

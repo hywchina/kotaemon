@@ -96,17 +96,19 @@ class EmbeddingManager:
             LCHuggingFaceEmbeddings,
             LCMistralEmbeddings,
             OpenAIEmbeddings,
+            OpenAICompatibleEmbeddings,
             TeiEndpointEmbeddings,
             VoyageAIEmbeddings,
         )
 
         if self._hospital_mode:
-            self._vendors = [OpenAIEmbeddings, GeekAIEmbeddings]
+            self._vendors = [OpenAIEmbeddings, OpenAICompatibleEmbeddings]
         else:
             self._vendors = [
                 AzureOpenAIEmbeddings,
                 OpenAIEmbeddings,
                 FastEmbedEmbeddings,
+                OpenAICompatibleEmbeddings,
                 GeekAIEmbeddings,
                 LCCohereEmbeddings,
                 LCHuggingFaceEmbeddings,

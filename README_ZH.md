@@ -32,8 +32,9 @@ Provider，启动时会明确显示跳过。后台启动还会等待页面 HTTP 
 可通过 `KH_APP_START_TIMEOUT` 调整。
 
 默认使用 GeekAI 的 `qwen3-vl-flash`、`qwen3-vl-embedding` 和
-`qwen3-rerank`。在 `.env` 中配置 `GEEKAI_API_KEY` 后即可使用；Embedding 与
-Rerank 使用项目内的 GeekAI 协议适配器。聊天输入框左下角可添加 PNG、JPEG 或
+`qwen3-rerank`。在 `.env` 中配置 `GEEKAI_API_KEY` 后即可使用；三类模型通过
+OpenAI 兼容边界访问，后续可改用 `openai-compatible` 或院内本地配置而不修改业务
+代码。聊天输入框左下角可添加 PNG、JPEG 或
 WebP 图片，图片仅随当前问题发送给 VL 模型，不进入知识库。ASR 当前使用 Mock
 Provider 演示实时多说话人转写，可通过 `KH_ENABLE_ASR=false` 关闭。将
 `KH_MODEL_PROFILE` 改为 `lmstudio` 可切换回原本的本地模型配置。完整迁移说明见

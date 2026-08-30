@@ -89,16 +89,18 @@ class RerankingManager:
         from kotaemon.rerankings import (
             CohereReranking,
             GeekAIReranking,
+            OpenAICompatibleReranking,
             TeiFastReranking,
             VoyageAIReranking,
         )
 
         if self._hospital_mode:
-            self._vendors = [TeiFastReranking, GeekAIReranking]
+            self._vendors = [TeiFastReranking, OpenAICompatibleReranking]
         else:
             self._vendors = [
                 TeiFastReranking,
                 CohereReranking,
+                OpenAICompatibleReranking,
                 GeekAIReranking,
                 VoyageAIReranking,
             ]

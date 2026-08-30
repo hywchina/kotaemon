@@ -10,28 +10,47 @@ from kotaemon.base import Document, DocumentWithEmbedding, Param
 from .base import BaseEmbeddings
 
 
-class GeekAIEmbeddings(BaseEmbeddings):
-    """Embedding client for GeekAI's multimodal embedding endpoint.
+class OpenAICompatibleEmbeddings(BaseEmbeddings):
+    """Embedding client for OpenAI-compatible HTTP endpoints.
 
-    GeekAI's Qwen3-VL embedding API uses OpenAI's response shape, but its input
-    is a list of typed content objects instead of a string or list of strings.
+    Most compatible services accept a list of strings. Some multimodal
+    gateways, including GeekAI's Qwen3-VL endpoint, instead require typed text
+    objects while keeping the OpenAI response shape. ``input_format`` keeps
+    that transport detail out of the embedding and retrieval business logic.
     """
 
     endpoint_url: str = Param(
-        "https://geekai.co/api/v1/embeddings",
-        help="GeekAI embeddings endpoint URL",
+        None,
+        help="OpenAI-compatible embeddings endpoint URL",
         required=True,
     )
-    api_key: str = Param(None, help="GeekAI API key", required=True)
+    api_key: str = Param(None, help="API key", required=True)
     model: str = Param(
-        "qwen3-vl-embedding",
-        help="GeekAI embedding model name",
+        None,
+        help="Embedding model name",
         required=True,
+    )
+    input_format: str = Param(
+        "openai",
+        help="Request input format: openai (string list) or typed_text",
     )
     batch_size: int = Param(16, help="Number of texts sent in each API request")
     timeout: Optional[float] = Param(60, help="API request timeout in seconds")
 
     def _embed_batch(self, texts: list[str]) -> list[list[float]]:
+        if self.input_format == "openai":
+            request_input: list[str] | list[dict[str, str]] = [
+                text if text else " " for text in texts
+            ]
+        elif self.input_format == "typed_text":
+            request_input = [
+                {"type": "text", "text": text if text else " "} for text in texts
+            ]
+        else:
+            raise ValueError(
+                "input_format must be either 'openai' or 'typed_text'"
+            )
+
         response = requests.post(
             self.endpoint_url,
             headers={
@@ -40,9 +59,7 @@ class GeekAIEmbeddings(BaseEmbeddings):
             },
             json={
                 "model": self.model,
-                "input": [
-                    {"type": "text", "text": text if text else " "} for text in texts
-                ],
+                "input": request_input,
             },
             timeout=self.timeout,
         )
@@ -50,26 +67,26 @@ class GeekAIEmbeddings(BaseEmbeddings):
             payload = response.json()
         except requests.JSONDecodeError as exc:
             raise RuntimeError(
-                f"GeekAI embeddings returned HTTP {response.status_code} "
+                f"Embedding service returned HTTP {response.status_code} "
                 "with a non-JSON response"
             ) from exc
 
         if not response.ok:
             message = payload.get("message") or payload.get("error") or "unknown error"
             raise RuntimeError(
-                f"GeekAI embeddings failed with HTTP {response.status_code}: {message}"
+                f"Embedding service failed with HTTP {response.status_code}: {message}"
             )
 
         items = sorted(payload.get("data", []), key=lambda item: item.get("index", 0))
         if len(items) != len(texts):
             raise RuntimeError(
-                "GeekAI embeddings returned an unexpected number of vectors: "
+                "Embedding service returned an unexpected number of vectors: "
                 f"expected {len(texts)}, got {len(items)}"
             )
 
         embeddings = [item.get("embedding") for item in items]
         if any(not isinstance(embedding, list) for embedding in embeddings):
-            raise RuntimeError("GeekAI embeddings response is missing vector data")
+            raise RuntimeError("Embedding service response is missing vector data")
         return embeddings
 
     def invoke(
@@ -101,3 +118,19 @@ class GeekAIEmbeddings(BaseEmbeddings):
         **kwargs,
     ) -> list[DocumentWithEmbedding]:
         return await asyncio.to_thread(self.invoke, text, *args, **kwargs)
+
+
+class GeekAIEmbeddings(OpenAICompatibleEmbeddings):
+    """Backward-compatible preset for GeekAI's typed Qwen3-VL endpoint."""
+
+    endpoint_url: str = Param(
+        "https://geekai.co/api/v1/embeddings",
+        help="GeekAI embeddings endpoint URL",
+        required=True,
+    )
+    model: str = Param(
+        "qwen3-vl-embedding",
+        help="GeekAI embedding model name",
+        required=True,
+    )
+    input_format: str = Param("typed_text", help="GeekAI typed text input format")
