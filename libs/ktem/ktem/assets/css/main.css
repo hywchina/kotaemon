@@ -479,9 +479,9 @@ div.markmap {
   position: relative;
   align-items: stretch;
   flex-wrap: nowrap !important;
-  width: calc(100% - 16px);
-  max-width: 980px;
-  margin: 12px auto 0;
+  width: calc(100% - 32px);
+  max-width: 964px;
+  margin: 12px auto 0 max(8px, calc((100% - 964px) / 2));
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
@@ -519,16 +519,16 @@ div.markmap {
   box-sizing: border-box;
   flex: 0 0 auto !important;
   align-self: center;
-  width: calc(100% - 16px);
-  max-width: 980px;
-  margin: 8px auto 0;
+  width: calc(100% - 32px);
+  max-width: 964px;
+  margin: 8px auto 0 max(8px, calc((100% - 964px) / 2));
 }
 
 #main-chat-bot .message-wrap {
   box-sizing: border-box;
   width: calc(100% - 16px);
-  max-width: 980px;
-  margin-left: auto;
+  max-width: 964px;
+  margin-left: max(8px, calc((100% - 948px) / 2));
   margin-right: auto;
 }
 
@@ -1065,7 +1065,6 @@ div.markmap {
   }
 
   #chat-composer-row {
-    width: 100%;
     margin-top: 8px;
   }
 

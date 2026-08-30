@@ -75,3 +75,27 @@ def test_markmap_dependencies_are_loaded_sequentially() -> None:
     assert "window.ktemMarkmapReady || Promise.resolve()" in chat_source
     assert 'document.querySelector("div.markmap svg")' in chat_source
     assert "div.markmap > svg" in main_css
+
+
+def test_chat_content_uses_one_shared_visual_width() -> None:
+    main_css = (ASSETS_DIR / "css" / "main.css").read_text(encoding="utf-8")
+
+    message_width_rule = main_css.split(
+        "#main-chat-bot .message-wrap {", maxsplit=1
+    )[1].split("}", maxsplit=1)[0]
+    composer_width_rule = main_css.split("#chat-composer-row {", maxsplit=1)[1].split(
+        "}", maxsplit=1
+    )[0]
+    settings_width_rule = main_css.split(
+        "#chat-settings-expand {", maxsplit=1
+    )[1].split("}", maxsplit=1)[0]
+
+    assert "width: calc(100% - 16px);" in message_width_rule
+    assert "max-width: 964px;" in message_width_rule
+    assert "margin-left: max(8px, calc((100% - 948px) / 2));" in (
+        message_width_rule
+    )
+    for sibling_rule in (composer_width_rule, settings_width_rule):
+        assert "width: calc(100% - 32px);" in sibling_rule
+        assert "max-width: 964px;" in sibling_rule
+        assert "max(8px, calc((100% - 964px) / 2))" in sibling_rule
