@@ -184,29 +184,8 @@ class BaseApp:
             path = quote(str(vendor_dir / file_name), safe="/:")
             return f"{BASE_PATH}/file={path}"
 
-        markmap_config = """
-        <script>
-            window.markmap = window.markmap || {};
-            window.markmap.autoLoader = {
-                baseJs: [],
-                baseCss: [],
-                transformPlugins: [],
-                toolbar: true,
-            };
-        </script>
-        """
-        scripts = (
-            "d3-7.8.5.min.js",
-            "markmap-lib-0.16.1.min.js",
-            "markmap-view-0.16.0.min.js",
-            "markmap-toolbar-0.16.0.min.js",
-        )
-        head_assets = "".join(
-            f"<script src='{asset_url(file_name)}'></script>" for file_name in scripts
-        )
-        head_assets += markmap_config
-        head_assets += (
-            f"<script src='{asset_url('markmap-autoloader-0.16.1.min.js')}'></script>"
+        head_assets = (
+            f"<script src='{asset_url('markmap-bootstrap-0.16.1.js')}'></script>"
             f"<script src='{asset_url('minisearch-7.1.1.min.js')}'></script>"
             f"<script src='{asset_url('tribute-5.1.3.min.js')}'></script>"
             f"<link rel='stylesheet' "

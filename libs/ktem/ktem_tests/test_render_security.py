@@ -45,3 +45,33 @@ def test_evidence_search_does_not_rebuild_untrusted_html() -> None:
     assert "mark.outerHTML = mark.innerText" not in main_js
     assert 'createTreeWalker(container, NodeFilter.SHOW_TEXT)' in main_js
     assert "setTimeout(fullTextSearch, 100)" in chat_source
+
+
+def test_markmap_dependencies_are_loaded_sequentially() -> None:
+    bootstrap = (ASSETS_DIR / "vendor" / "markmap-bootstrap-0.16.1.js").read_text(
+        encoding="utf-8"
+    )
+    app_source = (Path(__file__).parents[1] / "ktem" / "app.py").read_text(
+        encoding="utf-8"
+    )
+    chat_source = (
+        Path(__file__).parents[1] / "ktem" / "pages" / "chat" / "__init__.py"
+    ).read_text(encoding="utf-8")
+    main_css = (ASSETS_DIR / "css" / "main.css").read_text(encoding="utf-8")
+
+    dependencies = [
+        "d3-7.8.5.min.js",
+        "markmap-lib-0.16.1.min.js",
+        "markmap-view-0.16.0.min.js",
+        "markmap-toolbar-0.16.0.min.js",
+    ]
+    positions = [bootstrap.index(dependency) for dependency in dependencies]
+
+    assert positions == sorted(positions)
+    assert "for (const dependency of dependencies)" in bootstrap
+    assert "await loadScript(dependency)" in bootstrap
+    assert "window.ktemMarkmapReady" in bootstrap
+    assert "markmap-bootstrap-0.16.1.js" in app_source
+    assert "window.ktemMarkmapReady || Promise.resolve()" in chat_source
+    assert 'document.querySelector("div.markmap svg")' in chat_source
+    assert "div.markmap > svg" in main_css

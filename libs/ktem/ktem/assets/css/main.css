@@ -442,7 +442,7 @@ tbody:not(.row_odd) {
   overflow: hidden;
 }
 
-svg.markmap {
+div.markmap > svg {
   width: 100%;
   height: 100%;
   font-family: Quicksand, sans-serif;
@@ -451,6 +451,14 @@ svg.markmap {
 
 div.markmap {
   height: 400px;
+}
+
+.mindmap-render-error {
+  padding: 16px;
+  color: var(--error-text-color);
+  background: var(--error-background-fill);
+  border: 1px solid var(--error-border-color);
+  border-radius: var(--radius-lg);
 }
 
 #google-login {

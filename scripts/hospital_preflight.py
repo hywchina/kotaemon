@@ -42,6 +42,7 @@ PUBLIC_PROVIDER_KEYS = (
 )
 REQUIRED_OFFLINE_ASSETS = (
     "libs/ktem/ktem/assets/vendor/d3-7.8.5.min.js",
+    "libs/ktem/ktem/assets/vendor/markmap-bootstrap-0.16.1.js",
     "libs/ktem/ktem/assets/vendor/tribute-5.1.3.min.js",
     "libs/ktem/ktem/assets/prebuilt/pdfjs-4.0.379-dist.zip",
     "libs/ktem/ktem/assets/nltk_data/corpora/stopwords/english",

@@ -263,15 +263,10 @@ function() {
         markmapDivHtml = markmapDiv.outerHTML;
     }
 
-    // render the mindmap if the script tag is present
-    if (mindmapScript) {
-        markmap.autoLoader.renderAll();
-    }
+    const setupMindmapInteractions = () => {
+        var mindmap_el = document.querySelector("div.markmap svg");
 
-    setTimeout(() => {
-        var mindmap_el = document.querySelector('svg.markmap');
-
-        var text_nodes = document.querySelectorAll("svg.markmap div");
+        var text_nodes = document.querySelectorAll("div.markmap svg div");
         for (var i = 0; i < text_nodes.length; i++) {
             text_nodes[i].onclick = fillChatInput;
         }
@@ -310,7 +305,30 @@ function() {
                 }
             }
         }
-    }, 250);
+    };
+
+    if (mindmapScript) {
+        const rendererReady = window.ktemMarkmapReady || Promise.resolve();
+        rendererReady
+            .then(() => {
+                if (!window.markmap?.autoLoader?.renderAll) {
+                    throw new Error("Mindmap renderer is unavailable");
+                }
+                return window.markmap.autoLoader.renderAll();
+            })
+            .then(setupMindmapInteractions)
+            .catch((error) => {
+                console.error("Unable to render the mindmap.", error);
+                if (markmapDiv) {
+                    markmapDiv.innerHTML =
+                        '<p class="mindmap-render-error">' +
+                        "思维导图加载失败，请刷新页面后重试。" +
+                        "</p>";
+                }
+            });
+    } else {
+        setTimeout(setupMindmapInteractions, 250);
+    }
 
     return [citationLinks.length]
 }
