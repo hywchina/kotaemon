@@ -54,6 +54,45 @@ function run() {
   const resolveButton = (root) =>
     root && (root.matches("button") ? root : root.querySelector("button"));
 
+  const generatedTextTranslations = new Map([
+    ["Warning", "警告"],
+    ["Error", "错误"],
+    ["Info", "提示"],
+    ["Success", "成功"],
+  ]);
+  const localizeTextNode = (textNode) => {
+    const rawText = textNode.nodeValue || "";
+    const trimmedText = rawText.trim();
+    const translatedText = generatedTextTranslations.get(trimmedText);
+    if (translatedText) {
+      textNode.nodeValue = rawText.replace(trimmedText, translatedText);
+    }
+  };
+  const localizeGeneratedText = (root) => {
+    if (!root) return;
+    if (root.nodeType === Node.TEXT_NODE) {
+      localizeTextNode(root);
+      return;
+    }
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let textNode = walker.nextNode();
+    while (textNode) {
+      localizeTextNode(textNode);
+      textNode = walker.nextNode();
+    }
+  };
+  new MutationObserver((records) => {
+    records.forEach((record) => {
+      if (record.type === "characterData") localizeGeneratedText(record.target);
+      record.addedNodes.forEach(localizeGeneratedText);
+    });
+  }).observe(document.body, {
+    characterData: true,
+    childList: true,
+    subtree: true,
+  });
+  localizeGeneratedText(document.body);
+
   // Use one action slot: microphone while empty, send while text/files exist,
   // and a recording indicator while ASR is active.
   const composerRow = document.getElementById("chat-composer-row");
@@ -200,8 +239,29 @@ function run() {
         }
       });
     };
+    const localizeAssistantActions = () => {
+      chatbotRoot.querySelectorAll(".message-buttons-left").forEach((actionBar) => {
+        actionBar.querySelectorAll("button").forEach((button) => {
+          let label = "";
+          let title = "";
+          if (button.classList.contains("dislike-button")) {
+            label = "不满意";
+            title = "不满意";
+          } else if (button.classList.contains("like-button")) {
+            label = "满意";
+            title = "满意";
+          } else {
+            label = "复制回答";
+            title = "复制";
+          }
+          button.setAttribute("aria-label", label);
+          button.title = title;
+        });
+      });
+    };
 
     const enhanceUserMessages = () => {
+      localizeAssistantActions();
       const userRows = chatbotRoot.querySelectorAll(".message-row.user-row");
       if (userRows.length > observedUserMessageCount) {
         activePromptRow = userRows[userRows.length - 1];

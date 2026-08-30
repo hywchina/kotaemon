@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import gradio as gr
@@ -117,6 +118,21 @@ def test_hospital_settings_terms_keep_internal_values() -> None:
         ("常规问答", "simple"),
         ("混合检索", "hybrid"),
     ]
+
+
+def test_generated_chat_actions_and_notifications_are_localized() -> None:
+    main_js = (
+        Path(__file__).parents[1] / "ktem" / "assets" / "js" / "main.js"
+    ).read_text(encoding="utf-8")
+
+    for english, chinese in (
+        ('["Warning", "警告"]', "警告"),
+        ('["Error", "错误"]', "错误"),
+        ('label = "复制回答"', "复制回答"),
+        ('label = "不满意"', "不满意"),
+        ('label = "满意"', "满意"),
+    ):
+        assert english in main_js, chinese
 
 
 def test_default_hospital_prompts_are_chinese() -> None:
