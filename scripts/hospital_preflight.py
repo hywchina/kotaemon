@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import sqlite3
 import sys
 import tempfile
 from dataclasses import dataclass, field
@@ -80,7 +81,9 @@ def read_env_file(path: Path) -> dict[str, str]:
 
 def merged_config(env_file: Path) -> dict[str, str]:
     config = read_env_file(env_file)
-    config.update({key: value for key, value in os.environ.items() if value is not None})
+    config.update(
+        {key: value for key, value in os.environ.items() if value is not None}
+    )
     return config
 
 
@@ -93,8 +96,22 @@ def _is_placeholder(value: str | None) -> bool:
     return not normalized or any(marker in normalized for marker in PLACEHOLDER_MARKERS)
 
 
+def database_has_users(database_path: Path) -> bool:
+    """Return whether the application database contains at least one user."""
+
+    if not database_path.is_file():
+        return False
+    try:
+        with sqlite3.connect(f"file:{database_path}?mode=ro", uri=True) as connection:
+            return (
+                connection.execute("SELECT 1 FROM user LIMIT 1").fetchone() is not None
+            )
+    except sqlite3.Error:
+        return False
+
+
 def validate_configuration(
-    config: dict[str, str], *, database_exists: bool
+    config: dict[str, str], *, database_has_user: bool
 ) -> PreflightReport:
     """Validate security and model settings without performing network requests."""
 
@@ -109,7 +126,9 @@ def validate_configuration(
         return report
 
     if not mode.startswith("hospital-"):
-        report.failures.append("医院部署必须使用 hospital-external 或 hospital-offline。")
+        report.failures.append(
+            "医院部署必须使用 hospital-external 或 hospital-offline。"
+        )
 
     profile = config.get("KH_MODEL_PROFILE", "geekai").strip().lower()
     report.check(
@@ -118,10 +137,28 @@ def validate_configuration(
         "KH_MODEL_PROFILE 只能是 geekai 或 lmstudio。",
     )
 
+    user_management_enabled = _is_true(config.get("KH_FEATURE_USER_MANAGEMENT", "true"))
+    report.check(
+        user_management_enabled,
+        "用户管理已启用。",
+        "医院部署必须启用 KH_FEATURE_USER_MANAGEMENT。",
+    )
+
     password = config.get("KH_FEATURE_USER_MANAGEMENT_PASSWORD", "")
-    if database_exists and _is_placeholder(password):
-        report.warnings.append("已有用户数据库，未设置启动管理员密码；请确认管理员账号可用。")
+    if _is_true(config.get("KH_SSO_ENABLED")):
+        report.passed.append("已启用 SSO，无需启动管理员密码。")
+    elif database_has_user and _is_placeholder(password):
+        report.warnings.append(
+            "已有用户账号，未设置启动管理员密码；请确认管理员账号可用。"
+        )
     else:
+        report.check(
+            not _is_placeholder(
+                config.get("KH_FEATURE_USER_MANAGEMENT_ADMIN", "admin")
+            ),
+            "启动管理员账号已设置。",
+            "首次部署必须设置 KH_FEATURE_USER_MANAGEMENT_ADMIN。",
+        )
         report.check(
             not _is_placeholder(password) and len(password) >= 12,
             "启动管理员密码已设置。",
@@ -140,9 +177,7 @@ def validate_configuration(
             "GeekAI 密钥已设置。",
             "GEEKAI_API_KEY 未设置或仍是占位值。",
         )
-        endpoints.append(
-            ("GEEKAI_API_BASE_URL", config.get("GEEKAI_API_BASE_URL", ""))
-        )
+        endpoints.append(("GEEKAI_API_BASE_URL", config.get("GEEKAI_API_BASE_URL", "")))
     elif profile == "lmstudio":
         endpoints.extend(
             [
@@ -159,7 +194,9 @@ def validate_configuration(
         if asr_endpoint:
             endpoints.append(("KH_ASR_API_BASE_URL", asr_endpoint))
         else:
-            report.warnings.append("ASR 已启用但未配置服务地址，将只能使用 Mock Provider。")
+            report.warnings.append(
+                "ASR 已启用但未配置服务地址，将只能使用 Mock Provider。"
+            )
 
     for name, endpoint in endpoints:
         if not endpoint:
@@ -245,8 +282,8 @@ def main() -> int:
     args = parser.parse_args()
 
     config = merged_config(args.env_file)
-    database_exists = (PROJECT_ROOT / "ktem_app_data/user_data/sql.db").is_file()
-    report = validate_configuration(config, database_exists=database_exists)
+    has_user = database_has_users(PROJECT_ROOT / "ktem_app_data/user_data/sql.db")
+    report = validate_configuration(config, database_has_user=has_user)
     validate_runtime(PROJECT_ROOT, report)
     print_report(report)
     return 1 if report.failures else 0

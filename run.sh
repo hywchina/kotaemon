@@ -101,6 +101,12 @@ run_model_preflight() {
     "${PYTHON_CMD[@]}" scripts/model_service_preflight.py
 }
 
+prepare_startup() {
+    echo "[INFO] 检查医院部署配置"
+    run_doctor
+    prepare_model_services
+}
+
 prepare_model_services() {
     local rerank_was_running=false
     if is_running "$RERANK_PID_FILE"; then
@@ -176,7 +182,7 @@ start_app() {
         return 1
     fi
 
-    prepare_model_services
+    prepare_startup
     echo "[INFO] 启动应用，端口 $PORT"
     nohup env \
         GRADIO_SERVER_NAME="${GRADIO_SERVER_NAME:-0.0.0.0}" \
@@ -239,7 +245,7 @@ case "$COMMAND" in
         start_app
         ;;
     foreground)
-        prepare_model_services
+        prepare_startup
         export GRADIO_SERVER_NAME="${GRADIO_SERVER_NAME:-0.0.0.0}"
         export GRADIO_SERVER_PORT="$PORT"
         exec "${PYTHON_CMD[@]}" "$APP_DIR/app.py"
@@ -264,7 +270,7 @@ case "$COMMAND" in
     help|--help|-h)
         echo "用法: ./run.sh {start|foreground|stop|restart|status|logs|doctor} [端口]"
         echo "doctor 会检查医院部署配置、网络出口策略和离线资源。"
-        echo "start、restart 和 foreground 会在启动应用前测试 LLM、Embedding、Rerank 和 ASR。"
+        echo "start、restart 和 foreground 会先执行 doctor，再测试 LLM、Embedding、Rerank 和 ASR。"
         echo "ASR 使用 Mock Provider 时自动跳过；任一必需模型失败都会阻止应用启动。"
         echo "后台启动仅在页面通过 HTTP 就绪检查后报告成功。"
         ;;

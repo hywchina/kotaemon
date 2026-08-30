@@ -25,12 +25,11 @@ uv sync --frozen
 | `./run.sh logs` | 查看应用与重排日志 |
 | `./run.sh doctor` | 检查模型出口、密钥占位符、离线资源和数据目录 |
 
-`start`、`restart` 和 `foreground` 会在应用启动前依次向当前默认的 LLM、
-Embedding 和 Rerank 发起最小测试请求。三项全部通过后才会启动页面；任一失败都会
-返回非零状态并阻止应用启动。ASR 当前为 Mock Provider，启动时会明确显示跳过。
-后台启动还会等待页面 HTTP 就绪，默认最长 90 秒，可通过
-`KH_APP_START_TIMEOUT` 调整。`doctor` 仍是不访问模型接口的静态部署检查，两者
-用途不同。
+`start`、`restart` 和 `foreground` 会先运行不访问模型接口的 `doctor`，检查首次
+管理员、网络出口、离线资源和数据目录；通过后再依次向当前默认的 LLM、Embedding
+和 Rerank 发起最小测试请求。任一必需检查失败都会阻止页面启动，ASR 当前为 Mock
+Provider，启动时会明确显示跳过。后台启动还会等待页面 HTTP 就绪，默认最长 90 秒，
+可通过 `KH_APP_START_TIMEOUT` 调整。
 
 默认使用 GeekAI 的 `qwen3-vl-flash`、`qwen3-vl-embedding` 和
 `qwen3-rerank`。在 `.env` 中配置 `GEEKAI_API_KEY` 后即可使用；Embedding 与

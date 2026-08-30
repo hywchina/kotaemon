@@ -35,14 +35,15 @@
 
 ### 2.2 启动链路
 
-1. `run.sh` 对默认 LLM、Embedding、Rerank 发起最小请求，Mock ASR 明确跳过。
-2. 必需服务全部通过后，`app.py` 触发 TheFlow 加载 `flowsettings.py`，并初始化
+1. `run.sh` 静态检查首次管理员、部署档位、网络出口、离线资源和数据目录。
+2. 配置通过后对默认 LLM、Embedding、Rerank 发起最小请求，Mock ASR 明确跳过。
+3. 必需服务全部通过后，`app.py` 触发 TheFlow 加载 `flowsettings.py`，并初始化
    `ktem.main.App`。
-3. `BaseApp.register_reasonings()` 根据 `KH_REASONINGS` 动态加载推理管线。
-4. `IndexManager.on_application_startup()` 从配置/数据库创建索引实例。
-5. `App.ui()` 创建聊天、文件、资源、设置和帮助页面，聊天输入区内注册 ASR 入口。
-6. 各页面先声明公共事件，再订阅事件并注册 Gradio 回调。
-7. 登录事件根据管理员角色切换资源管理、文件管理和快速上传的可见性。
+4. `BaseApp.register_reasonings()` 根据 `KH_REASONINGS` 动态加载推理管线。
+5. `IndexManager.on_application_startup()` 从配置/数据库创建索引实例。
+6. `App.ui()` 创建聊天、文件、资源、设置和帮助页面，聊天输入区内注册 ASR 入口。
+7. 各页面先声明公共事件，再订阅事件并注册 Gradio 回调。
+8. 登录事件根据管理员角色切换资源管理、文件管理和快速上传的可见性。
 
 ### 2.3 文档入库链路
 

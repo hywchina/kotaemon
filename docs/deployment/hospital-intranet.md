@@ -88,10 +88,11 @@ docker compose -f docker-compose.hospital.yml ps
 docker compose -f docker-compose.hospital.yml logs --tail=200 app
 ```
 
-`run.sh restart` 会在页面进程启动前实际调用默认 LLM、Embedding 和 Rerank；只有
-三项均返回有效结果才会继续启动。ASR 为 Mock 时跳过。Docker 镜像使用同一前台
-启动入口，因此模型服务失败时容器内的应用也不会进入可用状态。原生后台启动还会
-等待首页返回有效 HTTP 状态后才报告成功，默认超时为 90 秒，可用
+`run.sh restart` 会先执行静态部署自检，再实际调用默认 LLM、Embedding 和 Rerank；
+所有必需检查均通过才会继续启动，ASR 为 Mock 时跳过。首次数据库即使已由模型配置
+初始化，只要还没有用户，也必须在 `.env` 设置启动管理员和至少 12 位密码。Docker
+镜像使用同一前台入口，因此配置或模型服务失败时容器内应用不会进入可用状态。原生
+后台启动还会等待首页返回有效 HTTP 状态后才报告成功，默认超时为 90 秒，可用
 `KH_APP_START_TIMEOUT` 调整。
 
 医生页面出现故障编号后，在 `ktem_app_data/logs/app.log` 搜索该编号。日志可能包含
