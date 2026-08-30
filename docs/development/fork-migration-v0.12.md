@@ -81,11 +81,10 @@ ChatPage.submit_msg
 
 ### 2.5 Agent 与 MCP
 
-官方 `v0.12.0` 的 MCP Manager、MCP 资源页和 ReAct/ReWOO 动态工具加载均保留。
-医疗部署默认只启用 Simple/Decompose QA；设置 `KH_ENABLE_AGENT_REASONINGS=true`
-后才注册 Agent。Agent 默认只提供内部文档与 LLM 工具，
-`KH_ENABLE_EXTERNAL_AGENT_TOOLS=true` 后再开放 Wikipedia/Google，MCP 工具不受
-该开关影响。
+官方 `v0.12.0` 的 MCP 与 Agent 核心源码保留在可复用库中，便于继续吸收上游更新，
+但医院应用固定 `KH_ENABLE_MCP=false`，并已移除 MCP 管理页面及动态工具刷新。
+医院模式只注册 Simple/Decompose QA；即使环境变量打开 Agent 或外部工具开关，
+也不会注册 ReAct/ReWOO、Wikipedia 或 Google。非医院部署档才允许显式启用这些能力。
 
 ### 2.6 模型调用架构
 
@@ -156,7 +155,7 @@ LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型�
 ### 以官方实现为准
 
 - uv workspace 和 `uv.lock`
-- MCP Server 管理、模型/索引重命名及对应数据库 Manager
+- MCP 核心库、模型/索引重命名及对应数据库 Manager；医院应用不暴露 MCP 管理入口
 - PaddleOCR PPStructureV3/PaddleOCR-VL loader
 - `@WebSearch`/文件 mention 的新版解析与显示逻辑
 - Cohere `rerank-v4.0-fast` 默认配置
@@ -184,8 +183,9 @@ LLM 生成答案。GeekAI 属于环境变量托管的配置，API Key 或模型�
 | `KH_FILE_LOADER_MODES` | `default` | UI 可选 loader，逗号分隔，可加入 Paddle/Docling 等 |
 | `KH_ENABLE_URL_UPLOAD` | `false` | 是否显示 URL 入库入口 |
 | `KH_WEB_SEARCH_COMMAND` | 空 | Web 搜索 mention 名；设为 `WebSearch` 即启用入口 |
-| `KH_ENABLE_AGENT_REASONINGS` | `false` | 是否注册 ReAct/ReWOO |
-| `KH_ENABLE_EXTERNAL_AGENT_TOOLS` | `false` | 是否开放 Wikipedia/Google |
+| `KH_ENABLE_MCP` | `false` | 医院构建固定关闭，环境变量不能覆盖 |
+| `KH_ENABLE_AGENT_REASONINGS` | `false` | 非医院模式下是否注册 ReAct/ReWOO |
+| `KH_ENABLE_EXTERNAL_AGENT_TOOLS` | `false` | 非医院模式下是否开放 Wikipedia/Google |
 | `KH_ENABLE_ASR` | `true` | 是否在聊天输入框启用实时语音入口 |
 | `KH_ASR_PROVIDER` | `mock` | ASR Provider；远端 API 接通前使用模拟流 |
 | `KH_START_LOCAL_RERANK` | `false` | `run.sh` 是否同时启动本地重排服务 |
@@ -205,10 +205,9 @@ Rerank 返回的 `index` 当前代表排序位置而非原文档位置，`GeekAI
 - macOS Bash 3.2 下执行 `sh run.sh --restart` 后，首页 HTTP 状态为 200；启动
   脚本会跳过缺少项目依赖的 Python 虚拟环境，并在应用进程启动前完成四类模型预检
 - `ktem` 本地测试：除上游 `test_qa.py` 引用不存在的顶层 `index` 模块而无法收集
-  外，其余 77 个测试通过；聊天、ASR、会话权限、通知、模型隔离和汉化均覆盖
-- `kotaemon` 核心测试：115 个通过、20 个按可选依赖跳过、5 个 Milvus
-  用例暂不执行；当前旧 `venv` 使用的 `setuptools 84.0.0` 已不提供
-  `pkg_resources`，而官方 `uv.lock` 锁定 `setuptools 80.9.0`
+  外，其余 92 个测试通过；聊天、ASR、会话权限、通知、模型隔离和汉化均覆盖
+- `kotaemon` 核心测试：123 个通过、20 个按可选依赖跳过；当前 Milvus、Qdrant、
+  Chroma、内存及文件向量存储用例均通过
 - 官方 `ktem_tests/test_qa.py` 引用了仓库中不存在的顶层 `index` 模块，完整
   应用测试集会在收集阶段失败；该问题在未修改的官方 `v0.12.0` 中同样存在
 - GeekAI 真实接口验证：Chat Completions 正常生成；Embedding 一次处理两段文本，
