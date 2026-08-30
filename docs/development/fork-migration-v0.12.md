@@ -207,8 +207,8 @@ Rerank 不属于 OpenAI 官方标准；`OpenAICompatibleReranking` 保持相同�
 - macOS Bash 3.2 下执行 `sh run.sh --restart` 后，首页 HTTP 状态为 200；启动
   脚本会跳过缺少项目依赖的 Python 虚拟环境，并在应用进程启动前完成四类模型预检
 - `ktem` 本地测试：除上游 `test_qa.py` 引用不存在的顶层 `index` 模块而无法收集
-  外，其余 92 个测试通过；聊天、ASR、会话权限、通知、模型隔离和汉化均覆盖
-- `kotaemon` 核心测试：123 个通过、20 个按可选依赖跳过；当前 Milvus、Qdrant、
+  外，其余 95 个测试通过；聊天、ASR、会话权限、通知、模型隔离和汉化均覆盖
+- `kotaemon` 核心测试：128 个通过、20 个按可选依赖跳过；当前 Milvus、Qdrant、
   Chroma、内存及文件向量存储用例均通过
 - 官方 `ktem_tests/test_qa.py` 引用了仓库中不存在的顶层 `index` 模块，完整
   应用测试集会在收集阶段失败；该问题在未修改的官方 `v0.12.0` 中同样存在

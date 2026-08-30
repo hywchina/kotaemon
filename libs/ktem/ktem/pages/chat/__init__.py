@@ -1,11 +1,13 @@
 import asyncio
 import base64
+import html
 import json
 import logging
 import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 import gradio as gr
 from decouple import config
@@ -143,6 +145,42 @@ def encode_chat_images(file_paths) -> list[str]:
         encoded = base64.b64encode(path.read_bytes()).decode("ascii")
         encoded_images.append(f"data:{mime_type};base64,{encoded}")
     return encoded_images
+
+
+def render_chat_image_attachments(
+    image_paths: list[str], image_names: list[str]
+) -> str:
+    """Render validated upload thumbnails inside the persisted user message."""
+
+    figures = []
+    for image_path, image_name in zip(image_paths, image_names):
+        image_url = "./file=" + quote(image_path, safe="/")
+        safe_url = html.escape(image_url, quote=True)
+        safe_name = html.escape(image_name)
+        figures.append(
+            '<figure class="ktem-chat-attachment">'
+            f'<img src="{safe_url}" alt="{safe_name}" loading="lazy">'
+            f"<figcaption>{safe_name}</figcaption>"
+            "</figure>"
+        )
+    if not figures:
+        return ""
+    return (
+        '<div class="ktem-chat-attachments" data-ktem-chat-attachments="true" '
+        'aria-label="已添加图片">'
+        + "".join(figures)
+        + "</div>"
+    )
+
+
+def strip_chat_image_attachments(display_text: str) -> str:
+    """Remove display-only attachment markup before deriving an LLM query."""
+
+    return re.sub(
+        r'<div class="ktem-chat-attachments"[\s\S]*?</div>',
+        "",
+        display_text,
+    ).strip()
 
 
 chat_input_focus_js = """
@@ -1187,10 +1225,9 @@ class ChatPage(BasePage):
             chat_input_text = DEFAULT_QUESTION
 
         if image_names:
-            attachment_label = "、".join(f"`{name}`" for name in image_names)
             display_chat_input_text = (
                 f"{display_chat_input_text.strip() or chat_input_text}"
-                f"\n\n🖼️ 已添加图片：{attachment_label}"
+                f"\n\n{render_chat_image_attachments(image_paths, image_names)}"
             )
 
         if file_ids:
@@ -1264,16 +1301,19 @@ class ChatPage(BasePage):
         plot_history,
         request: gr.Request,
     ):
-        """Replace one user turn and regenerate from that point."""
+        """Append an edited question as a new turn without rewriting history."""
 
-        action, message_index = self._parse_message_action(payload, chat_history)
+        action, _ = self._parse_message_action(payload, chat_history)
         edited_text = str(action.get("text", "")).strip()
         if not edited_text:
             raise gr.Error("修改后的问题不能为空。")
+        edited_files = action.get("files", [])
+        if not isinstance(edited_files, list):
+            raise gr.Error("消息附件参数无效，请刷新页面后重试。")
 
         result = self.submit_msg(
-            {"text": edited_text, "files": []},
-            list(chat_history[:message_index]),
+            {"text": edited_text, "files": edited_files},
+            list(chat_history),
             user_id,
             settings,
             conv_id,
@@ -1282,8 +1322,8 @@ class ChatPage(BasePage):
             request,
         )
         return result + [
-            list((retrieval_history or [])[:message_index]),
-            list((plot_history or [])[:message_index]),
+            list(retrieval_history or []),
+            list(plot_history or []),
         ]
 
     def delete_message(
@@ -1797,7 +1837,7 @@ class ChatPage(BasePage):
         llm_query = str(multimodal_input.get("query", "") or "").strip()
         if not llm_query:
             llm_query = prepare_llm_query(
-                display_input,
+                strip_chat_image_attachments(display_input),
                 has_selected_files=self._has_selected_files(user_id, *selecteds),
                 default_question=DEFAULT_QUESTION,
             )

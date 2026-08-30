@@ -119,19 +119,110 @@ function run() {
     const bridgeButton =
       bridgeRoot &&
       (bridgeRoot.matches("button") ? bridgeRoot : bridgeRoot.querySelector("button"));
-    if (!payloadInput || !bridgeButton) return;
+    if (!payloadInput || !bridgeButton) return false;
 
     payloadInput.value = JSON.stringify(payload);
     payloadInput.dispatchEvent(new Event("input", { bubbles: true }));
     payloadInput.dispatchEvent(new Event("change", { bubbles: true }));
     bridgeButton.click();
+    return true;
   };
 
   // Gradio does not render a stable action bar for user messages across versions,
   // so attach a dedicated copy/edit/delete bar to every user-side row.
   const chatbotRoot = document.getElementById("main-chat-bot");
   if (chatbotRoot) {
+    let observedUserMessageCount = chatbotRoot.querySelectorAll(
+      ".message-row.user-row"
+    ).length;
+    let activePromptRow = null;
+    let promptAnchorSessionActive = false;
+    let promptAnchorReleaseTimer = null;
+    const scrollPromptToTop = () => {
+      if (!activePromptRow || !activePromptRow.isConnected) return;
+      let scrollContainer = activePromptRow.parentElement;
+      while (scrollContainer && scrollContainer !== chatbotRoot.parentElement) {
+        const overflowY = window.getComputedStyle(scrollContainer).overflowY;
+        if (
+          /(auto|scroll)/.test(overflowY) &&
+          scrollContainer.scrollHeight > scrollContainer.clientHeight
+        ) {
+          const promptRect = activePromptRow.getBoundingClientRect();
+          const containerRect = scrollContainer.getBoundingClientRect();
+          scrollContainer.scrollTop += promptRect.top - containerRect.top - 8;
+          return;
+        }
+        scrollContainer = scrollContainer.parentElement;
+      }
+      activePromptRow.scrollIntoView({ behavior: "auto", block: "start" });
+    };
+    const anchorLatestPrompt = (releaseWhenIdle) => {
+      if (!activePromptRow || !activePromptRow.isConnected) return;
+      window.requestAnimationFrame(scrollPromptToTop);
+      window.setTimeout(scrollPromptToTop, 80);
+      window.setTimeout(scrollPromptToTop, 360);
+      if (releaseWhenIdle) {
+        window.clearTimeout(promptAnchorReleaseTimer);
+        promptAnchorReleaseTimer = window.setTimeout(() => {
+          activePromptRow = null;
+          promptAnchorSessionActive = false;
+        }, 3000);
+      }
+    };
+    const releasePromptAnchor = () => {
+      activePromptRow = null;
+      promptAnchorSessionActive = false;
+      window.clearTimeout(promptAnchorReleaseTimer);
+    };
+    chatbotRoot.addEventListener("wheel", releasePromptAnchor, { passive: true });
+    chatbotRoot.addEventListener("touchmove", releasePromptAnchor, { passive: true });
+    const userMessageText = (message) => {
+      if (!message) return "";
+      const clone = message.cloneNode(true);
+      clone.querySelectorAll("[data-ktem-chat-attachments]").forEach((node) => {
+        node.remove();
+      });
+      return clone.innerText.trim();
+    };
+    const userMessageFiles = (message) => {
+      if (!message) return [];
+      return Array.from(
+        message.querySelectorAll("[data-ktem-chat-attachments] img")
+      ).flatMap((image) => {
+        try {
+          const pathname = new URL(image.src, window.location.href).pathname;
+          const marker = "/file=";
+          const markerIndex = pathname.indexOf(marker);
+          if (markerIndex < 0) return [];
+          return [decodeURIComponent(pathname.slice(markerIndex + marker.length))];
+        } catch (_error) {
+          return [];
+        }
+      });
+    };
+
     const enhanceUserMessages = () => {
+      const userRows = chatbotRoot.querySelectorAll(".message-row.user-row");
+      if (userRows.length > observedUserMessageCount) {
+        activePromptRow = userRows[userRows.length - 1];
+        promptAnchorSessionActive = true;
+        window.clearTimeout(promptAnchorReleaseTimer);
+      }
+      observedUserMessageCount = userRows.length;
+      if (promptAnchorSessionActive && userRows.length) {
+        activePromptRow = userRows[userRows.length - 1];
+      }
+      const messageRows = Array.from(
+        chatbotRoot.querySelectorAll(".message-row")
+      );
+      const activePromptIndex = messageRows.indexOf(activePromptRow);
+      const responseStarted =
+        activePromptIndex >= 0 &&
+        messageRows
+          .slice(activePromptIndex + 1)
+          .some((row) => row.classList.contains("bot-row"));
+      anchorLatestPrompt(responseStarted);
+
       let historyIndex = -1;
       let previousWasUser = false;
       chatbotRoot.querySelectorAll(".message-row").forEach((row) => {
@@ -169,7 +260,7 @@ function run() {
 
         copyButton.addEventListener("click", async () => {
           const message = row.querySelector(".message.user");
-          const text = message ? message.innerText.trim() : "";
+          const text = userMessageText(message);
           if (!text) return;
           try {
             await navigator.clipboard.writeText(text);
@@ -190,7 +281,7 @@ function run() {
           const editor = document.createElement("div");
           editor.className = "chat-message-editor";
           const textarea = document.createElement("textarea");
-          textarea.value = message.innerText.trim();
+          textarea.value = userMessageText(message);
           textarea.setAttribute("aria-label", "修改问题内容");
           const controls = document.createElement("div");
           controls.className = "chat-message-editor-actions";
@@ -222,10 +313,16 @@ function run() {
               return;
             }
             sendButton.disabled = true;
-            dispatchMessageAction("chat-edit-message-bridge", {
+            const dispatched = dispatchMessageAction("chat-edit-message-bridge", {
               index: Number(row.dataset.ktemHistoryIndex),
               text,
+              files: userMessageFiles(message),
             });
+            if (dispatched) {
+              cancelEdit();
+            } else {
+              sendButton.disabled = false;
+            }
           };
           cancelButton.addEventListener("click", cancelEdit);
           sendButton.addEventListener("click", submitEdit);
@@ -251,6 +348,7 @@ function run() {
     };
 
     new MutationObserver(enhanceUserMessages).observe(chatbotRoot, {
+      characterData: true,
       childList: true,
       subtree: true,
     });

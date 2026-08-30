@@ -92,8 +92,11 @@ button.selected {
 }
 
 #chat-area {
+  display: flex !important;
   height: var(--main-area-height) !important;
   column-gap: 2px !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
   min-width: 0;
   padding: 0 clamp(8px, 1.5vw, 24px) 10px;
 }
@@ -481,12 +484,72 @@ div.markmap {
 
 #chat-input {
   position: relative;
+  background: transparent !important;
 }
 
 #chat-input textarea {
   min-height: 104px;
   padding: 16px 64px 54px 16px !important;
+  background: transparent !important;
   line-height: 1.55;
+}
+
+#chat-input > div,
+#chat-input .wrap,
+#chat-input .form,
+#chat-input .file-preview,
+#chat-input [data-testid="file-preview"] {
+  background: transparent !important;
+}
+
+#chat-input .thumbnail-item {
+  width: 64px;
+  height: 64px;
+}
+
+#chat-settings-expand {
+  box-sizing: border-box;
+  flex: 0 0 auto !important;
+  align-self: center;
+  width: calc(100% - 16px);
+  max-width: 980px;
+  margin: 8px auto 0;
+}
+
+#main-chat-bot .bot-row .message-buttons-right {
+  box-sizing: border-box;
+  width: min(100%, 960px);
+}
+
+.ktem-chat-attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 180px));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ktem-chat-attachment {
+  min-width: 0;
+  margin: 0;
+}
+
+.ktem-chat-attachment img {
+  display: block;
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  border: 1px solid var(--border-color-primary);
+  border-radius: 12px;
+  background: var(--background-fill-primary);
+}
+
+.ktem-chat-attachment figcaption {
+  margin-top: 4px;
+  overflow: hidden;
+  color: currentColor;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #chat-input .ktem-native-submit {
@@ -768,9 +831,16 @@ div.markmap {
 
 .asr-chat-transcript {
   box-sizing: border-box;
-  width: min(100%, 620px);
+  align-self: stretch;
+  width: 100% !important;
+  max-width: none !important;
   min-width: 0;
   color: var(--body-text-color);
+}
+
+#main-chat-bot .bot-row:has(.asr-chat-transcript) .message {
+  width: min(100%, 960px) !important;
+  max-width: 960px !important;
 }
 
 .asr-live-header {

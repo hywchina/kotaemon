@@ -71,7 +71,7 @@ def test_evidence_panel_is_opt_in_and_toggleable() -> None:
     assert button_update["variant"] == "secondary"
 
 
-def test_edit_message_truncates_following_turns_before_regeneration() -> None:
+def test_edit_message_appends_follow_up_without_rewriting_history() -> None:
     page = object.__new__(ChatPage)
     chat_history = [
         ("患者有哪些用药禁忌？", "原回答"),
@@ -92,8 +92,11 @@ def test_edit_message_truncates_following_turns_before_regeneration() -> None:
     )
 
     assert result[0] == {}
-    assert result[1] == [("患者服用华法林有哪些禁忌？", None)]
-    assert result[-2:] == [[], []]
+    assert result[1] == chat_history + [("患者服用华法林有哪些禁忌？", None)]
+    assert result[-2:] == [
+        ["证据一", "证据二"],
+        [{"plot": 1}, {"plot": 2}],
+    ]
 
 
 def test_asr_display_turns_are_excluded_from_llm_history() -> None:
