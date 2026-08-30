@@ -50,6 +50,9 @@ def test_chat_composer_uses_one_send_or_microphone_action(monkeypatch) -> None:
 
     assert panel.submit_btn.value == "↑"
     assert panel.asr_start_button.value == "🎙"
+    assert panel.text_input.file_types == ["image"]
+    assert panel.text_input.file_count == "multiple"
+    assert panel.pending_multimodal_input.value == {"query": "", "image_paths": []}
     assert not hasattr(panel, "regen_btn")
 
 

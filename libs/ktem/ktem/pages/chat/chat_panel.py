@@ -41,6 +41,7 @@ class ChatPanel(BasePage):
         if KH_ENABLE_ASR:
             self.asr_segments = gr.State(value=[])
             self.asr_message_index = gr.State(value=-1)
+        self.pending_multimodal_input = gr.State(value={"query": "", "image_paths": []})
 
         with gr.Row(elem_id="chat-composer-row"):
             search_hint = (
@@ -50,7 +51,10 @@ class ChatPanel(BasePage):
                 interactive=True,
                 scale=20,
                 file_count="multiple",
-                placeholder=f"输入消息{search_hint}，或使用 @文件名 引用资料",
+                file_types=["image"],
+                placeholder=(
+                    f"输入消息{search_hint}，或点击左下角添加图片、使用 @文件名 引用资料"
+                ),
                 container=False,
                 show_label=False,
                 elem_id="chat-input",

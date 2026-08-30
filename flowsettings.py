@@ -157,6 +157,11 @@ KH_ASR_MOCK_INTERVAL_SECONDS = config(
 KH_ASR_MOCK_SEED_VOICEPRINTS = config(
     "KH_ASR_MOCK_SEED_VOICEPRINTS", default=True, cast=bool
 )
+KH_CHAT_IMAGE_MAX_FILES = config("KH_CHAT_IMAGE_MAX_FILES", default=4, cast=int)
+KH_CHAT_IMAGE_MAX_SIZE_MB = config("KH_CHAT_IMAGE_MAX_SIZE_MB", default=8, cast=int)
+KH_CHAT_IMAGE_MAX_PIXELS = config(
+    "KH_CHAT_IMAGE_MAX_PIXELS", default=25000000, cast=int
+)
 KH_WEB_SEARCH_BACKEND = None if KH_HOSPITAL_MODE else (
     "kotaemon.indices.retrievers.tavily_web_search.WebSearch"
     # "kotaemon.indices.retrievers.jina_web_search.WebSearch"

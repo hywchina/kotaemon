@@ -29,7 +29,12 @@ class FakeManager:
 
 
 def test_llm_embedding_and_rerank_checks_validate_response_shapes():
-    llm = lambda prompt: SimpleNamespace(text="OK")
+    llm_requests = []
+
+    def llm(prompt):
+        llm_requests.append(prompt)
+        return SimpleNamespace(text="OK")
+
     embedding = lambda text: [
         DocumentWithEmbedding(content=text, embedding=[0.1, 0.2, 0.3])
     ]
@@ -41,8 +46,11 @@ def test_llm_embedding_and_rerank_checks_validate_response_shapes():
             return documents
 
     assert model_service_preflight.check_llm(FakeManager(llm)) == (
-        "默认模型：test-model"
+        "默认模型：test-model，视觉输入：通过"
     )
+    content = llm_requests[0].content
+    assert content[0]["type"] == "text"
+    assert content[1]["image_url"]["url"].startswith("data:image/png;base64,")
     assert "向量维度：3" in model_service_preflight.check_embedding(
         FakeManager(embedding)
     )

@@ -554,6 +554,7 @@ class FullDecomposeQAPipeline(FullQAPipeline):
         **kwargs,  # type: ignore
     ) -> Generator[Document, None, Document]:
         sub_question_answer_output = ""
+        user_images = kwargs.pop("user_images", [])
         if self.rewrite_pipeline:
             logger.debug(
                 "Using rewrite pipeline: %s", type(self.rewrite_pipeline).__name__
@@ -593,6 +594,7 @@ class FullDecomposeQAPipeline(FullQAPipeline):
             evidence_mode=evidence_mode,
             images=images,
             conv_id=conv_id,
+            user_images=user_images,
             **kwargs,
         )
 

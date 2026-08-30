@@ -7,8 +7,10 @@ import os
 import re
 import sys
 import time
+from base64 import b64encode
 from collections.abc import Callable
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -70,12 +72,28 @@ def _response_text(response: Any) -> str:
 
 
 def check_llm(manager) -> str:
-    """Send one minimal chat request through the configured default LLM."""
+    """Send one minimal vision request through the configured default LLM."""
+
+    from PIL import Image
+
+    from kotaemon.base import HumanMessage
 
     model_name = manager.get_default_name()
-    response = manager.get_default()("启动连通性检查，请仅回复 OK。")
+    image_buffer = BytesIO()
+    Image.new("RGB", (64, 64), color="white").save(image_buffer, format="PNG")
+    image_url = "data:image/png;base64," + b64encode(image_buffer.getvalue()).decode(
+        "ascii"
+    )
+    response = manager.get_default()(
+        HumanMessage(
+            content=[
+                {"type": "text", "text": "启动视觉连通性检查，请仅回复 OK。"},
+                {"type": "image_url", "image_url": {"url": image_url}},
+            ]
+        )
+    )
     _response_text(response)
-    return f"默认模型：{model_name}"
+    return f"默认模型：{model_name}，视觉输入：通过"
 
 
 def check_embedding(manager) -> str:

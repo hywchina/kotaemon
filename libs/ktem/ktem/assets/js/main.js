@@ -24,6 +24,8 @@ function run() {
   conv_dropdown.placeholder = "浏览会话记录";  // translate Browse conversation --》浏览对话记录
 
   const icon = {
+    plus:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     microphone:
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 1 0-7 0v5A3.5 3.5 0 0 0 12 15Z"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></svg>',
     send:
@@ -69,8 +71,15 @@ function run() {
       );
       const nativeButtons = chatInput.querySelectorAll("button");
       const nativeSubmit = nativeButtons[nativeButtons.length - 1];
+      const uploadButton = chatInput.querySelector(
+        "button[data-testid='upload-button']"
+      );
       if (nativeSubmit && !nativeSubmit.classList.contains("ktem-native-submit")) {
         nativeSubmit.classList.add("ktem-native-submit");
+      }
+      if (uploadButton) {
+        uploadButton.classList.add("ktem-image-upload");
+        setIconButton(uploadButton, icon.plus, "添加图片");
       }
 
       setIconButton(sendButton, icon.send, "发送消息");
@@ -87,7 +96,7 @@ function run() {
       const hasText = Boolean(textarea && textarea.value.trim());
       const hasFiles = Boolean(
         chatInput.querySelector(
-          ".file-preview, .file-container, [data-testid='file-preview']"
+          ".thumbnail-item, .file-preview, .file-container, [data-testid='file-preview']"
         )
       );
       composerRow.classList.toggle("has-message-content", hasText || hasFiles);

@@ -80,6 +80,26 @@ DEFAULT_QA_FIGURE_PROMPT = (
 )  # noqa
 
 
+def build_multimodal_message_content(
+    prompt: str,
+    *,
+    user_images: list[str] | None = None,
+    evidence_images: list[str] | None = None,
+    include_evidence_images: bool = False,
+) -> list[dict] | None:
+    """Build one OpenAI-compatible content list with user images first."""
+
+    images = list(user_images or [])
+    if include_evidence_images:
+        images.extend(evidence_images or [])
+    images = images[:MAX_IMAGES]
+    if not images:
+        return None
+    return [{"type": "text", "text": prompt}] + [
+        {"type": "image_url", "image_url": {"url": image}} for image in images
+    ]
+
+
 class AnswerWithContextPipeline(BaseComponent):
     """Answer the question based on the evidence
 
@@ -196,6 +216,7 @@ class AnswerWithContextPipeline(BaseComponent):
         **kwargs,
     ) -> Generator[Document, None, Document]:
         history = kwargs.get("history", [])
+        user_images = kwargs.pop("user_images", [])
         print(f"Got {len(images)} images")
         # check if evidence exists, use QA prompt
         if evidence:
@@ -239,22 +260,16 @@ class AnswerWithContextPipeline(BaseComponent):
             messages.append(HumanMessage(content=human))
             messages.append(AIMessage(content=ai))
 
-        if self.use_multimodal and evidence_mode == EVIDENCE_MODE_FIGURE:
-            # create image message:
-            messages.append(
-                HumanMessage(
-                    content=[
-                        {"type": "text", "text": prompt},
-                    ]
-                    + [
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": image},
-                        }
-                        for image in images[:MAX_IMAGES]
-                    ],
-                )
-            )
+        multimodal_content = build_multimodal_message_content(
+            prompt,
+            user_images=user_images,
+            evidence_images=images,
+            include_evidence_images=(
+                self.use_multimodal and evidence_mode == EVIDENCE_MODE_FIGURE
+            ),
+        )
+        if multimodal_content:
+            messages.append(HumanMessage(content=multimodal_content))
         else:
             # append main prompt
             messages.append(HumanMessage(content=prompt))

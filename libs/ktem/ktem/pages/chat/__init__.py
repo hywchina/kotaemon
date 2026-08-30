@@ -1,8 +1,10 @@
 import asyncio
+import base64
 import json
 import logging
 import re
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional
 
 import gradio as gr
@@ -19,6 +21,7 @@ from ktem.reasoning.prompt_optimization.suggest_followup_chat import (
     SuggestFollowupQuesPipeline,
 )
 from plotly.io import from_json
+from PIL import Image, UnidentifiedImageError
 from sqlmodel import Session, select
 from theflow.settings import settings as flowsettings
 from theflow.utils.modules import import_dotted_string
@@ -51,6 +54,15 @@ KH_SSO_ENABLED = getattr(flowsettings, "KH_SSO_ENABLED", False)
 KH_WEB_SEARCH_BACKEND = getattr(flowsettings, "KH_WEB_SEARCH_BACKEND", None)
 KH_ENABLE_URL_UPLOAD = getattr(flowsettings, "KH_ENABLE_URL_UPLOAD", False)
 KH_ENABLE_ASR = getattr(flowsettings, "KH_ENABLE_ASR", True)
+KH_CHAT_IMAGE_MAX_FILES = max(
+    1, int(getattr(flowsettings, "KH_CHAT_IMAGE_MAX_FILES", 4))
+)
+KH_CHAT_IMAGE_MAX_SIZE_MB = max(
+    1, int(getattr(flowsettings, "KH_CHAT_IMAGE_MAX_SIZE_MB", 8))
+)
+KH_CHAT_IMAGE_MAX_PIXELS = max(
+    1, int(getattr(flowsettings, "KH_CHAT_IMAGE_MAX_PIXELS", 25_000_000))
+)
 logger = logging.getLogger(__name__)
 WebSearch = None
 if KH_WEB_SEARCH_BACKEND:
@@ -63,6 +75,64 @@ REASONING_LIMITS = 2 if KH_DEMO_MODE else 10
 DEFAULT_SETTING = "(default)"
 INFO_PANEL_SCALES = {True: 8, False: 4}
 DEFAULT_QUESTION = "请总结这份文档。" if not KH_DEMO_MODE else "请总结这篇论文。"
+DEFAULT_IMAGE_QUESTION = "请分析所附图片，并说明其中的关键信息。"
+CHAT_IMAGE_MIME_TYPES = {
+    "JPEG": "image/jpeg",
+    "PNG": "image/png",
+    "WEBP": "image/webp",
+}
+
+
+def validate_chat_images(file_paths) -> tuple[list[str], list[str]]:
+    """Validate browser-uploaded images before they can reach a model API."""
+
+    paths = [Path(path) for path in (file_paths or [])]
+    if len(paths) > KH_CHAT_IMAGE_MAX_FILES:
+        raise gr.Error(f"每次最多添加 {KH_CHAT_IMAGE_MAX_FILES} 张图片。")
+
+    validated_paths = []
+    display_names = []
+    max_bytes = KH_CHAT_IMAGE_MAX_SIZE_MB * 1024 * 1024
+    for path in paths:
+        if path.is_symlink() or not path.is_file():
+            raise gr.Error("图片文件不存在或已失效，请重新添加。")
+        if path.stat().st_size > max_bytes:
+            raise gr.Error(
+                f"图片“{path.name}”超过 {KH_CHAT_IMAGE_MAX_SIZE_MB} MB 限制。"
+            )
+        try:
+            with Image.open(path) as image:
+                image_format = (image.format or "").upper()
+                width, height = image.size
+                if image_format not in CHAT_IMAGE_MIME_TYPES:
+                    raise gr.Error("仅支持 PNG、JPEG 和 WebP 图片。")
+                if width * height > KH_CHAT_IMAGE_MAX_PIXELS:
+                    raise gr.Error(f"图片“{path.name}”像素过大，请压缩后重新添加。")
+                image.verify()
+        except gr.Error:
+            raise
+        except (Image.DecompressionBombError, UnidentifiedImageError, OSError) as exc:
+            raise gr.Error(f"无法读取图片“{path.name}”，请检查文件是否损坏。") from exc
+
+        validated_paths.append(str(path))
+        display_names.append(re.sub(r"[\x00-\x1f`]", "_", path.name))
+
+    return validated_paths, display_names
+
+
+def encode_chat_images(file_paths) -> list[str]:
+    """Encode validated images as OpenAI-compatible data URLs."""
+
+    paths, _ = validate_chat_images(file_paths)
+    encoded_images = []
+    for raw_path in paths:
+        path = Path(raw_path)
+        with Image.open(path) as image:
+            mime_type = CHAT_IMAGE_MIME_TYPES[image.format.upper()]
+        encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+        encoded_images.append(f"data:{mime_type};base64,{encoded}")
+    return encoded_images
+
 
 chat_input_focus_js = """
 function() {
@@ -443,6 +513,7 @@ class ChatPage(BasePage):
         submit_outputs = [
             self.chat_panel.text_input,
             self.chat_panel.chatbot,
+            self.chat_panel.pending_multimodal_input,
             self.chat_control.conversation_id,
             self.chat_control.conversation,
             self.chat_control.conversation_rn,
@@ -496,6 +567,7 @@ class ChatPage(BasePage):
                     inputs=[
                         self.chat_control.conversation_id,
                         self.chat_panel.chatbot,
+                        self.chat_panel.pending_multimodal_input,
                         self._app.settings_state,
                         self.reasoning_type,
                         self.model_type,
@@ -1042,7 +1114,10 @@ class ChatPage(BasePage):
         if not chat_input:
             raise gr.Error("请输入问题后再发送。")
 
-        chat_input_text = chat_input.get("text", "")
+        chat_input_text = str(chat_input.get("text", "") or "")
+        image_paths, image_names = validate_chat_images(chat_input.get("files", []))
+        if not chat_input_text.strip() and not image_paths:
+            raise gr.Error("请输入问题或添加图片后再发送。")
         display_chat_input_text = format_mentions_for_display(chat_input_text)
         file_ids = []
         used_command = None
@@ -1086,14 +1161,22 @@ class ChatPage(BasePage):
             # Add new file ids to the first selector choices for display
             first_selector_choices.extend(zip(urls, indexed_url_ids))
 
-        # if file_ids is not empty and chat_input_text is empty
-        # set the input to summary
-        if not chat_input_text and file_ids:
+        if not chat_input_text and image_paths:
+            chat_input_text = DEFAULT_IMAGE_QUESTION
+            display_chat_input_text = DEFAULT_IMAGE_QUESTION
+        elif not chat_input_text and file_ids:
             chat_input_text = DEFAULT_QUESTION
 
         # if start of conversation and no query is specified
         if not chat_input_text and not chat_history:
             chat_input_text = DEFAULT_QUESTION
+
+        if image_names:
+            attachment_label = "、".join(f"`{name}`" for name in image_names)
+            display_chat_input_text = (
+                f"{display_chat_input_text.strip() or chat_input_text}"
+                f"\n\n🖼️ 已添加图片：{attachment_label}"
+            )
 
         if file_ids:
             selector_output = [
@@ -1130,6 +1213,7 @@ class ChatPage(BasePage):
             [
                 {},
                 chat_history,
+                {"query": chat_input_text, "image_paths": image_paths},
                 new_conv_id,
                 conv_update,
                 new_conv_name,
@@ -1676,6 +1760,7 @@ class ChatPage(BasePage):
         self,
         conversation_id,
         chat_history,
+        multimodal_input,
         settings,
         reasoning_type,
         llm_type,
@@ -1695,11 +1780,15 @@ class ChatPage(BasePage):
         if chat_output:
             chat_state["app"]["regen"] = True
 
-        llm_query = prepare_llm_query(
-            display_input,
-            has_selected_files=self._has_selected_files(user_id, *selecteds),
-            default_question=DEFAULT_QUESTION,
-        )
+        multimodal_input = multimodal_input or {}
+        llm_query = str(multimodal_input.get("query", "") or "").strip()
+        if not llm_query:
+            llm_query = prepare_llm_query(
+                display_input,
+                has_selected_files=self._has_selected_files(user_id, *selecteds),
+                default_question=DEFAULT_QUESTION,
+            )
+        user_images = encode_chat_images(multimodal_input.get("image_paths", []))
 
         queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
 
@@ -1737,6 +1826,7 @@ class ChatPage(BasePage):
                 llm_query,
                 conversation_id,
                 self._reasoning_history(chat_history),
+                user_images=user_images,
             ):
                 if not isinstance(response, Document):
                     continue

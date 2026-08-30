@@ -95,6 +95,13 @@ docker compose -f docker-compose.hospital.yml logs --tail=200 app
 后台启动还会等待首页返回有效 HTTP 状态后才报告成功，默认超时为 90 秒，可用
 `KH_APP_START_TIMEOUT` 调整。
 
+图片问答默认每次最多 4 张、单张不超过 8 MB、总像素不超过 2500 万，只接受 PNG、
+JPEG 和 WebP。可分别通过 `KH_CHAT_IMAGE_MAX_FILES`、
+`KH_CHAT_IMAGE_MAX_SIZE_MB`、`KH_CHAT_IMAGE_MAX_PIXELS` 调整。图片会以当前问题的
+多模态内容发送到所选 LLM；过渡期使用 GeekAI 时等同于将图片发送至外部模型服务，
+必须遵守院内脱敏和出网审批要求。切换内网模型网关后，数据 URL 只进入内网接口。
+启动时的 LLM 预检使用程序生成的纯白测试图，不包含任何患者数据。
+
 医生页面出现故障编号后，在 `ktem_app_data/logs/app.log` 搜索该编号。日志可能包含
 文档解析或模型返回的诊断上下文，应按院内敏感数据制度控制访问和备份保留期。
 
