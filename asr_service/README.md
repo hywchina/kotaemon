@@ -1,5 +1,9 @@
 # Kotaemon standalone ASR service
 
+> 在新服务器部署前，请先阅读完整中文手册：
+> [DEPLOYMENT_ZH.md](DEPLOYMENT_ZH.md)。其中包含服务器要求、联网/离线模型下载、
+> 原生与 Docker 启动、systemd、Kotaemon 配置、声纹迁移、验收和故障排查。
+
 This directory is an independent API service. It does not import or modify the
 Kotaemon application. It implements the selected stack:
 
@@ -81,7 +85,9 @@ before syncing the remaining dependencies.
 
 ## Docker
 
-The included image is a CPU-oriented baseline:
+The included image is a CPU-oriented baseline. Download or restore `models/`
+on the host first; Compose mounts that directory read-only at runtime instead
+of copying roughly 2.1 GB of weights into the image:
 
 ```bash
 cd asr_service
@@ -91,8 +97,8 @@ docker compose build
 docker compose up -d
 ```
 
-Build context is this directory only. `data/` and `model-cache/` remain local
-volumes. A GPU production image should use an approved CUDA/PyTorch base image.
+Build context is this directory only. `data/` remains a writable host volume.
+A GPU production image should use an approved CUDA/PyTorch base image.
 
 ## Security and operational constraints
 

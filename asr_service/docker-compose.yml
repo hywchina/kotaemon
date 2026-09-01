@@ -8,5 +8,5 @@ services:
       - "${ASR_PORT:-8002}:8002"
     volumes:
       - ./data:/opt/asr-service/data
-      - ./model-cache:/root/.cache/modelscope
+      - ./models:/opt/asr-service/models:ro
     restart: unless-stopped
