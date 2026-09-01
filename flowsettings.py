@@ -160,6 +160,11 @@ KH_ASR_MOCK_INTERVAL_SECONDS = config(
 KH_ASR_MOCK_SEED_VOICEPRINTS = config(
     "KH_ASR_MOCK_SEED_VOICEPRINTS", default=True, cast=bool
 )
+KH_ASR_VAD_RMS_THRESHOLD = config(
+    "KH_ASR_VAD_RMS_THRESHOLD", default=500.0, cast=float
+)
+KH_ASR_VAD_SILENCE_MS = config("KH_ASR_VAD_SILENCE_MS", default=700, cast=int)
+KH_ASR_MIN_SPEECH_MS = config("KH_ASR_MIN_SPEECH_MS", default=400, cast=int)
 KH_CHAT_IMAGE_MAX_FILES = config("KH_CHAT_IMAGE_MAX_FILES", default=4, cast=int)
 KH_CHAT_IMAGE_MAX_SIZE_MB = config("KH_CHAT_IMAGE_MAX_SIZE_MB", default=8, cast=int)
 KH_CHAT_IMAGE_MAX_PIXELS = config(

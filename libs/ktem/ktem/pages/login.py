@@ -11,16 +11,25 @@ logger = logging.getLogger(__name__)
 
 fetch_creds = """
 function() {
-    const username = getStorage('username', '')
-    removeFromStorage('password');
+    let username = '';
+    try {
+        username = localStorage.getItem('username') || '';
+        localStorage.removeItem('password');
+    } catch (error) {
+        console.warn('Unable to read saved login name', error);
+    }
     return [username, '', null];
 }
 """
 
 signin_js = """
 function(usn, pwd) {
-    setStorage('username', usn);
-    removeFromStorage('password');
+    try {
+        localStorage.setItem('username', usn);
+        localStorage.removeItem('password');
+    } catch (error) {
+        console.warn('Unable to save login name', error);
+    }
     return [usn, pwd];
 }
 """
@@ -37,13 +46,14 @@ class LoginPage(BasePage):
         gr.Markdown(
             f"# 欢迎使用{self._app.app_name}！"
         )  # translate Welcome to... --》欢迎使用...！
-        self.usn = gr.Textbox(
-            label="用户名", visible=False
-        )  # translate Username --》用户名
+        # The login tab is itself hidden after authentication, so keeping its
+        # controls initially visible avoids an unusable blank page if a separate
+        # optional UI enhancement fails during the first browser render.
+        self.usn = gr.Textbox(label="用户名")  # translate Username --》用户名
         self.pwd = gr.Textbox(
-            label="密码", type="password", visible=False
+            label="密码", type="password"
         )  # translate Password --》密码
-        self.btn_login = gr.Button("登录", visible=False)  # translate Login --》登录
+        self.btn_login = gr.Button("登录")  # translate Login --》登录
 
     def on_register_events(self):
         onSignIn = gr.on(

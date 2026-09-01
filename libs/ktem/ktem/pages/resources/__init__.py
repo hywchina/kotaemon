@@ -9,6 +9,7 @@ from ktem.index.ui import IndexManagement
 from ktem.llms.ui import LLMManagement
 from ktem.rerankings.ui import RerankingManagement
 
+from .feedback import FeedbackManagement
 from .user import UserManagement
 
 
@@ -48,6 +49,11 @@ class ResourcesTab(BasePage):
         ) as self.voiceprint_management_tab:
             self.voiceprint_management = VoiceprintManagement(self._app)
 
+        with gr.Tab(
+            "反馈管理", visible=not self._app.f_user_management
+        ) as self.feedback_management_tab:
+            self.feedback_management = FeedbackManagement(self._app)
+
         if self._app.f_user_management:
             with gr.Tab(
                 "用户管理", visible=False
@@ -65,6 +71,7 @@ class ResourcesTab(BasePage):
                         self.user_management_tab,
                         self.asr_model_management_tab,
                         self.voiceprint_management_tab,
+                        self.feedback_management_tab,
                     ],
                     "show_progress": "hidden",
                 },
@@ -79,6 +86,7 @@ class ResourcesTab(BasePage):
                         self.user_management_tab,
                         self.asr_model_management_tab,
                         self.voiceprint_management_tab,
+                        self.feedback_management_tab,
                     ],
                     "show_progress": "hidden",
                 },
@@ -93,9 +101,11 @@ class ResourcesTab(BasePage):
                     gr.update(visible=True),
                     gr.update(visible=True),
                     gr.update(visible=True),
+                    gr.update(visible=True),
                 )
 
             return (
+                gr.update(visible=False),
                 gr.update(visible=False),
                 gr.update(visible=False),
                 gr.update(visible=False),

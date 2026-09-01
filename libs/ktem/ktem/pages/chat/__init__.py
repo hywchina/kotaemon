@@ -14,6 +14,7 @@ from decouple import config
 from ktem.app import BasePage
 from ktem.components import reasonings
 from ktem.db.models import Conversation, engine
+from ktem.feedback import upsert_reaction_feedback
 from ktem.index.file.ui import File
 from ktem.reasoning.prompt_optimization.mindmap import MINDMAP_HTML_EXPORT_TEMPLATE
 from ktem.reasoning.prompt_optimization.suggest_conversation_name import (
@@ -340,8 +341,12 @@ function() {
 
             const toolbar = mindmapContainer?.querySelector(".ktem-mindmap-toolbar");
             toolbar?.querySelector(".mm-toolbar-brand")?.remove();
-            const toolbarLabels = ["放大", "缩小", "适应窗口", "展开或收起全部节点"];
-            toolbar?.querySelectorAll(".mm-toolbar-item").forEach((item, index) => {
+            const toolbarItems = Array.from(
+                toolbar?.querySelectorAll(".mm-toolbar-item") || []
+            );
+            toolbarItems.slice(2).forEach((item) => item.remove());
+            const toolbarLabels = ["放大", "缩小"];
+            toolbarItems.slice(0, 2).forEach((item, index) => {
                 item.title = toolbarLabels[index] || item.title;
                 item.setAttribute("aria-label", item.title);
             });
@@ -877,7 +882,101 @@ class ChatPage(BasePage):
             outputs=self.plot_panel,
         )
 
-        if KH_ENABLE_ASR:
+        if KH_ENABLE_ASR and self.chat_panel.uses_live_audio:
+            self.chat_panel.asr_live_audio.start_recording(
+                fn=self.begin_live_asr_session,
+                inputs=[
+                    self.chat_panel.chatbot,
+                    self._app.user_id,
+                    self.chat_control.conversation_id,
+                    self.chat_control.conversation_rn,
+                    self.state_retrieval_history,
+                    self.state_plot_history,
+                ],
+                outputs=[
+                    self.chat_panel.asr_runtime_session_id,
+                    self.chat_panel.asr_segments,
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                    self.chat_control.conversation_id,
+                    self.chat_control.conversation,
+                    self.chat_control.conversation_rn,
+                    self.state_retrieval_history,
+                    self.state_plot_history,
+                ],
+                show_progress="hidden",
+                queue=False,
+            )
+            self.chat_panel.asr_live_audio.stream(
+                fn=self.chat_panel.stream_live_audio,
+                inputs=[
+                    self.chat_panel.asr_live_audio,
+                    self.chat_panel.asr_runtime_session_id,
+                    self.chat_panel.asr_segments,
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                ],
+                outputs=[
+                    self.chat_panel.asr_runtime_session_id,
+                    self.chat_panel.asr_segments,
+                    self.chat_panel.chatbot,
+                    self.chat_panel.asr_message_index,
+                ],
+                show_progress="hidden",
+                concurrency_limit=1,
+            )
+            live_finish_inputs = [
+                self.chat_panel.asr_runtime_session_id,
+                self.chat_panel.asr_segments,
+                self.chat_panel.chatbot,
+                self.chat_panel.asr_message_index,
+                self.state_retrieval_history,
+                self.state_plot_history,
+            ]
+            live_finish_outputs = [
+                self.chat_panel.asr_runtime_session_id,
+                self.chat_panel.asr_segments,
+                self.chat_panel.chatbot,
+                self.chat_panel.asr_message_index,
+                self.state_retrieval_history,
+                self.state_plot_history,
+            ]
+            live_persist_inputs = [
+                self.chat_control.conversation_id,
+                self._app.user_id,
+                self.chat_panel.chatbot,
+                self.state_retrieval_history,
+                self.state_plot_history,
+                self.state_chat,
+            ] + self._indices_input
+            live_persist_outputs = [
+                self.state_retrieval_history,
+                self.state_plot_history,
+            ]
+            for bridge, finish_fn in (
+                (
+                    self.chat_panel.asr_cancel_bridge,
+                    self.chat_panel.cancel_live_transcription,
+                ),
+                (
+                    self.chat_panel.asr_confirm_bridge,
+                    self.chat_panel.confirm_live_transcription,
+                ),
+            ):
+                bridge.click(
+                    fn=finish_fn,
+                    inputs=live_finish_inputs,
+                    outputs=live_finish_outputs,
+                    show_progress="hidden",
+                    queue=False,
+                ).then(
+                    fn=self.persist_asr_transcript,
+                    inputs=live_persist_inputs,
+                    outputs=live_persist_outputs,
+                    show_progress="hidden",
+                )
+
+        if KH_ENABLE_ASR and not self.chat_panel.uses_live_audio:
             begin_asr_event = self.chat_panel.asr_start_button.click(
                 fn=self.begin_asr_session,
                 inputs=[
@@ -1232,8 +1331,11 @@ class ChatPage(BasePage):
             # user feedback events
             self.chat_panel.chatbot.like(
                 fn=self.is_liked,
-                inputs=[self.chat_control.conversation_id],
-                outputs=None,
+                inputs=[self.chat_control.conversation_id, self._app.user_id],
+                outputs=[
+                    self.report_issue.my_feedback_choice,
+                    self.report_issue.my_feedback_detail,
+                ],
             )
             self.report_issue.report_btn.click(
                 self.report_issue.report,
@@ -1249,7 +1351,13 @@ class ChatPage(BasePage):
                     self.state_chat,
                 ]
                 + self._indices_input,
-                outputs=None,
+                outputs=[
+                    self.report_issue.correctness,
+                    self.report_issue.issues,
+                    self.report_issue.more_detail,
+                    self.report_issue.my_feedback_choice,
+                    self.report_issue.my_feedback_detail,
+                ],
             )
 
         self.reasoning_type.change(
@@ -1600,6 +1708,42 @@ class ChatPage(BasePage):
             plot_history,
         )
 
+    def begin_live_asr_session(
+        self,
+        chat_history,
+        user_id,
+        conv_id,
+        conv_name,
+        retrieval_history,
+        plot_history,
+    ):
+        """Open local ASR and initialize its persisted transcript message."""
+
+        runtime_session_id = self.chat_panel.start_live_transcription()
+        try:
+            result = self.begin_asr_session(
+                chat_history,
+                user_id,
+                conv_id,
+                conv_name,
+                retrieval_history,
+                plot_history,
+            )
+        except Exception:
+            self.chat_panel._asr_service.abort_live_stream(runtime_session_id)
+            raise
+        return (
+            runtime_session_id,
+            result[0],
+            result[1],
+            result[2],
+            result[5],
+            result[6],
+            result[7],
+            result[8],
+            result[9],
+        )
+
     def persist_asr_transcript(
         self,
         convo_id,
@@ -1831,19 +1975,41 @@ class ChatPage(BasePage):
             gr.Info(f"本次会话已切换推理方法：{reasoning_type}")
         return reasoning_type
 
-    def is_liked(self, convo_id, liked: gr.LikeData):
+    def is_liked(self, convo_id, user_id, liked: gr.LikeData):
+        if not convo_id:
+            raise gr.Error("当前会话尚未保存，暂时无法评价")
+        if not user_id:
+            raise gr.Error("请先登录后再评价回答")
+
         with Session(engine) as session:
             statement = select(Conversation).where(Conversation.id == convo_id)
-            result = session.exec(statement).one()
+            result = session.exec(statement).first()
+            if result is None:
+                raise gr.Error("当前会话不存在或已被删除")
+            if self._app.f_user_management and result.user != str(user_id):
+                raise gr.Error("无权评价其他用户的会话")
 
             data_source = deepcopy(result.data_source)
             likes = data_source.get("likes", [])
+            # A message has one current reaction per user. Re-clicking or changing
+            # thumbs updates that reaction instead of creating duplicate records.
+            likes = [item for item in likes if item and item[0] != liked.index]
             likes.append([liked.index, liked.value, liked.liked])
             data_source["likes"] = likes
 
             result.data_source = data_source
             session.add(result)
+            upsert_reaction_feedback(
+                session,
+                user_id=str(user_id),
+                conversation_id=str(convo_id),
+                message_index=liked.index,
+                message_value=liked.value,
+                liked=bool(liked.liked),
+            )
             session.commit()
+        gr.Info("评价已记录，可在“我的反馈”中查看。")
+        return self.report_issue.list_my_feedback(user_id)
 
     def message_selected(self, retrieval_history, plot_history, msg: gr.SelectData):
         index = msg.index[0]

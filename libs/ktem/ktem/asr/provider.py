@@ -35,6 +35,14 @@ class ASRProvider(ABC):
     def delete_voiceprint(self, provider_id: str) -> None:
         """Delete a provider-side voiceprint."""
 
+    def healthcheck(self) -> None:
+        """Raise when the provider cannot accept new sessions."""
+
+    def open_live_session(self, request: ASRStreamRequest):
+        """Open a stateful microphone stream for providers that support it."""
+
+        raise NotImplementedError(f"{self.name} 不支持实时麦克风音频")
+
 
 class MockASRProvider(ASRProvider):
     """Deterministic multi-speaker stream used before an ASR API is configured."""

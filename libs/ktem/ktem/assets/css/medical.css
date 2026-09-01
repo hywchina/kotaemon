@@ -93,6 +93,120 @@ button.stop {
   font-weight: 600;
 }
 
+/* Voiceprint enrollment uses explicit recording and upload paths. Keep the
+   form compact so controls communicate their action without filling the page. */
+#voiceprint-display-name,
+#voiceprint-delete-choice {
+  width: 100%;
+  max-width: 420px;
+}
+
+#voiceprint-sample-tabs,
+#voiceprint-recorded-sample,
+#voiceprint-uploaded-sample {
+  width: 100%;
+  max-width: 720px;
+}
+
+.voiceprint-guidance {
+  max-width: 720px;
+  color: var(--body-text-color-subdued);
+  font-size: 14px;
+}
+
+.voiceprint-action-row {
+  justify-content: flex-start !important;
+}
+
+.voiceprint-action-row > * {
+  flex: 0 0 auto !important;
+}
+
+#voiceprint-register-recording,
+#voiceprint-register-upload,
+#voiceprint-delete,
+#voiceprint-delete-confirm,
+#voiceprint-delete-cancel {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 128px !important;
+  max-width: 180px !important;
+  padding-right: 20px !important;
+  padding-left: 20px !important;
+}
+
+/* Feedback submission stays compact in the chat sidebar, while history is
+   scrollable and remains usable even after many records have accumulated. */
+#report-accordion #feedback-submit-panel,
+#report-accordion #my-feedback-panel {
+  margin: 6px 0 !important;
+  border-radius: 10px !important;
+}
+
+/* The conversation toolbar has three icon actions. Keep the remaining toggle
+   readable even before the share control is relocated by the enhancement JS. */
+#conv-settings-panel .stretch:has(> #suggest-chat-checkbox) {
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+#suggest-chat-checkbox {
+  flex: 1 1 116px !important;
+  min-width: 116px !important;
+}
+
+#suggest-chat-checkbox > span,
+#is-public-checkbox label {
+  white-space: nowrap;
+}
+
+#feedback-submit-panel #is-public-checkbox {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+}
+
+#feedback-submit-button,
+#my-feedback-refresh {
+  width: auto !important;
+  min-width: 104px !important;
+  min-height: 34px !important;
+  padding: 6px 14px !important;
+}
+
+#my-feedback-detail {
+  max-height: 260px;
+  overflow-y: auto;
+  color: var(--body-text-color-subdued);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+#feedback-admin-filters {
+  align-items: flex-end;
+  gap: 12px;
+}
+
+#feedback-admin-refresh,
+#feedback-admin-actions button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: 180px !important;
+}
+
+#feedback-admin-detail {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-color-primary);
+  border-radius: 12px;
+}
+
+#feedback-admin-actions {
+  justify-content: flex-start !important;
+}
+
 @media (max-width: 960px) {
   #conv-settings-panel,
   #chat-info-panel {
@@ -102,5 +216,647 @@ button.stop {
 
   #main-chat-bot .message {
     max-width: 96%;
+  }
+}
+
+/* ChatGPT-style composer shell. The underlying Gradio controls remain mounted
+   so upload, microphone permission, and backend event handling stay native. */
+#chat-composer-row {
+  box-sizing: border-box;
+  position: relative;
+  align-items: center !important;
+  width: min(calc(100% - 32px), 964px);
+  max-width: 964px;
+  min-height: 70px;
+  max-height: 182px;
+  margin: 14px auto 0 max(8px, calc((100% - 964px) / 2));
+  padding: 0 !important;
+  overflow: visible;
+  background: color-mix(
+    in srgb,
+    var(--background-fill-primary) 88%,
+    var(--body-text-color) 12%
+  ) !important;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--border-color-primary) 78%,
+    var(--body-text-color) 22%
+  ) !important;
+  border-radius: 28px !important;
+  box-shadow: none !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+#chat-composer-row:focus-within {
+  border-color: color-mix(
+    in srgb,
+    var(--border-color-primary) 58%,
+    var(--body-text-color) 42%
+  ) !important;
+  box-shadow: none !important;
+}
+
+#chat-input {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 68px;
+  overflow: visible !important;
+}
+
+#chat-input textarea {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 68px !important;
+  max-height: 180px;
+  padding: 21px 126px 19px 72px !important;
+  color: var(--body-text-color) !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  font-size: 16px;
+  line-height: 24px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-color: color-mix(
+    in srgb,
+    var(--body-text-color) 28%,
+    transparent
+  ) transparent;
+  scrollbar-width: thin !important;
+  resize: none;
+}
+
+#chat-input textarea.scroll-hide::-webkit-scrollbar {
+  display: block !important;
+  width: 6px;
+}
+
+#chat-input textarea.scroll-hide::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#chat-input textarea.scroll-hide::-webkit-scrollbar-thumb {
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 28%,
+    transparent
+  );
+  border-radius: 999px;
+}
+
+#chat-composer-row.has-expanded-text #chat-input textarea {
+  padding: 18px 126px 64px 28px !important;
+}
+
+#chat-input textarea::placeholder {
+  color: color-mix(
+    in srgb,
+    var(--body-text-color-subdued) 84%,
+    var(--body-text-color) 16%
+  );
+  opacity: 1;
+}
+
+#chat-input .upload-button.ktem-image-upload {
+  box-sizing: border-box;
+  position: absolute;
+  top: auto;
+  bottom: 13px;
+  left: 14px;
+  z-index: 12;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 !important;
+  color: var(--body-text-color);
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+}
+
+#chat-input .upload-button.ktem-image-upload::after {
+  display: none;
+}
+
+#chat-input .upload-button.ktem-image-upload:hover,
+#chat-input .upload-button.ktem-image-upload[aria-expanded="true"] {
+  color: var(--body-text-color);
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 10%,
+    transparent
+  ) !important;
+}
+
+#chat-input .upload-button.ktem-image-upload svg,
+.ktem-microphone-trigger svg,
+.ktem-inline-recorder svg,
+.ktem-attachment-menu svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#chat-submit-button,
+.ktem-microphone-trigger {
+  box-sizing: border-box;
+  position: absolute;
+  top: auto;
+  bottom: 10px;
+  z-index: 13;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+#chat-submit-button {
+  right: 10px;
+  color: color-mix(in srgb, var(--body-text-color) 78%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 18%,
+    transparent
+  ) !important;
+}
+
+#chat-submit-button:hover:not(:disabled),
+#chat-composer-row.has-message-content #chat-submit-button {
+  color: var(--button-primary-text-color);
+  background: var(--button-primary-background-fill) !important;
+}
+
+#chat-submit-button:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+#chat-submit-button svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ktem-microphone-trigger {
+  right: 66px;
+  color: var(--body-text-color);
+  background: transparent;
+  cursor: pointer;
+}
+
+.ktem-microphone-trigger:hover {
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 10%,
+    transparent
+  );
+}
+
+.ktem-microphone-trigger[hidden],
+#chat-composer-row.is-asr-recording .ktem-microphone-trigger,
+#chat-composer-row.is-asr-recording #chat-submit-button {
+  display: none !important;
+}
+
+.ktem-attachment-menu {
+  box-sizing: border-box;
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  display: grid;
+  width: 220px;
+  padding: 8px;
+  visibility: hidden;
+  opacity: 0;
+  background: color-mix(
+    in srgb,
+    var(--background-fill-primary) 93%,
+    var(--body-text-color) 7%
+  );
+  border: 1px solid var(--border-color-primary);
+  border-radius: 20px;
+  box-shadow: var(--shadow-drop-lg);
+  transform: translateY(-5px) scale(0.98);
+  transform-origin: top left;
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+}
+
+.ktem-attachment-menu.is-open {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.ktem-attachment-menu button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  color: var(--body-text-color);
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ktem-attachment-menu button:hover {
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 10%,
+    transparent
+  );
+}
+
+.ktem-attachment-menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.ktem-attachment-menu svg {
+  flex: 0 0 auto;
+}
+
+.ktem-composer-notice {
+  position: absolute;
+  right: 18px;
+  bottom: calc(100% + 10px);
+  z-index: 45;
+  max-width: min(440px, calc(100vw - 40px));
+  padding: 10px 14px;
+  color: var(--body-text-color);
+  visibility: hidden;
+  opacity: 0;
+  background: var(--background-fill-primary);
+  border: 1px solid color-mix(in srgb, #d97706 55%, var(--border-color-primary));
+  border-radius: 12px;
+  box-shadow: var(--shadow-drop-lg);
+  font-size: 14px;
+  line-height: 20px;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.ktem-composer-notice.is-visible {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Image attachments use the taller, layered composition from the reference:
+   preview at the top, prompt beneath it, and all actions on the bottom edge. */
+#chat-composer-row.has-attachments {
+  align-items: stretch !important;
+  min-height: 220px;
+  max-height: none;
+  border-radius: 28px !important;
+}
+
+#chat-composer-row.has-attachments #chat-input,
+#chat-composer-row.has-attachments #chat-input label {
+  position: relative;
+  display: block;
+  min-height: 218px;
+}
+
+#chat-composer-row.has-attachments #chat-input .thumbnails {
+  box-sizing: border-box;
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  left: 16px;
+  z-index: 8;
+  display: flex;
+  gap: 12px;
+  max-height: 124px;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+#chat-composer-row.has-attachments #chat-input .thumbnail-item {
+  width: 120px !important;
+  min-width: 120px;
+  height: 120px !important;
+  min-height: 120px;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 22px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#chat-composer-row.has-attachments #chat-input .thumbnail-item img {
+  border-radius: 22px !important;
+}
+
+#chat-composer-row.has-attachments #chat-input .thumbnail-item .delete-button {
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  color: #202020;
+  background: rgba(248, 248, 248, 0.82) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  backdrop-filter: blur(8px);
+}
+
+#chat-composer-row.has-attachments #chat-input .thumbnail-item .delete-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+#chat-composer-row.has-attachments #chat-input .input-container {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  height: 84px;
+}
+
+#chat-composer-row.has-attachments #chat-input textarea {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  width: 100%;
+  min-height: 44px !important;
+  max-height: 44px;
+  padding: 7px 126px 7px 38px !important;
+  overflow-y: auto !important;
+  line-height: 24px !important;
+}
+
+#chat-composer-row.has-attachments #chat-input .upload-button.ktem-image-upload {
+  top: auto;
+  bottom: 8px;
+  left: 16px;
+}
+
+#chat-composer-row.has-attachments #chat-submit-button,
+#chat-composer-row.has-attachments .ktem-microphone-trigger {
+  top: auto;
+  bottom: 10px;
+}
+
+/* Keep Gradio's live-audio component operational without exposing its native
+   recorder, which otherwise repaints and flashes beside the composer. */
+#asr-live-audio {
+  position: absolute !important;
+  width: 1px !important;
+  min-width: 1px !important;
+  height: 1px !important;
+  min-height: 1px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ktem-inline-recorder {
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  display: none;
+  align-items: center;
+  overflow: hidden;
+  background: color-mix(
+    in srgb,
+    var(--background-fill-primary) 88%,
+    var(--body-text-color) 12%
+  );
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+#chat-composer-row.is-asr-recording .ktem-inline-recorder {
+  display: flex;
+}
+
+#chat-composer-row.is-asr-recording #chat-input textarea {
+  visibility: hidden;
+}
+
+#chat-composer-row.is-asr-recording .ktem-image-upload {
+  color: color-mix(in srgb, var(--body-text-color) 34%, transparent);
+  pointer-events: none;
+}
+
+.ktem-recorder-lead {
+  display: none;
+}
+
+.ktem-recorder-wave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: min(56%, 460px);
+  height: 34px;
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+}
+
+.ktem-recorder-wave i {
+  display: block;
+  flex: 0 0 2px;
+  width: 2px;
+  height: var(--bar-height);
+  max-height: 24px;
+  opacity: 0.72;
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 62%,
+    transparent
+  );
+  border-radius: 999px;
+  transform-origin: center;
+  animation: ktem-recorder-wave 1.12s ease-in-out infinite alternate;
+  animation-delay: var(--bar-delay);
+}
+
+.ktem-recorder-cancel,
+.ktem-recorder-confirm {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--body-text-color);
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translateY(-50%);
+}
+
+.ktem-recorder-cancel { right: 56px; }
+.ktem-recorder-confirm { right: 8px; }
+
+.ktem-inline-recorder .ktem-recorder-cancel svg,
+.ktem-inline-recorder .ktem-recorder-confirm svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.5;
+}
+
+#chat-composer-row .ktem-inline-recorder .ktem-recorder-cancel,
+#chat-composer-row .ktem-inline-recorder .ktem-recorder-confirm {
+  display: flex !important;
+}
+
+.ktem-recorder-cancel:hover,
+.ktem-recorder-confirm:hover {
+  background: color-mix(
+    in srgb,
+    var(--body-text-color) 10%,
+    transparent
+  );
+}
+
+body.ktem-asr-recording #main-chat-bot .message.pending,
+body.ktem-asr-recording #main-chat-bot [role="status"] {
+  display: none !important;
+}
+
+@keyframes ktem-recorder-wave {
+  from { transform: scaleY(0.74); opacity: 0.55; }
+  to { transform: scaleY(1); opacity: 0.82; }
+}
+
+@media (max-width: 640px) {
+  #chat-composer-row {
+    width: calc(100% - 16px);
+    min-height: 62px;
+    max-height: 170px;
+    margin-top: 8px;
+    border-radius: 24px !important;
+  }
+
+  #chat-input,
+  #chat-input textarea {
+    min-height: 60px !important;
+  }
+
+  #chat-input textarea {
+    padding: 16px 114px 16px 60px !important;
+    font-size: 16px;
+  }
+
+  #chat-input .upload-button.ktem-image-upload {
+    top: auto;
+    bottom: 9px;
+    left: 8px;
+  }
+
+  #chat-submit-button,
+  .ktem-microphone-trigger {
+    top: auto;
+    bottom: 7px;
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px;
+    min-height: 46px;
+  }
+
+  #chat-submit-button { right: 7px; }
+  .ktem-microphone-trigger { right: 55px; }
+
+  .ktem-inline-recorder {
+    inset: 0;
+  }
+
+  .ktem-recorder-wave {
+    gap: 2px;
+    width: 42%;
+  }
+
+  .ktem-recorder-wave i:nth-child(n + 31) {
+    display: none;
+  }
+
+  .ktem-recorder-cancel,
+  .ktem-recorder-confirm {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ktem-recorder-cancel { right: 48px; }
+  .ktem-recorder-confirm { right: 4px; }
+
+  .ktem-attachment-menu {
+    width: 200px;
+  }
+
+  #chat-composer-row.has-attachments {
+    min-height: 194px;
+    max-height: none;
+    border-radius: 24px !important;
+  }
+
+  #chat-composer-row.has-attachments #chat-input,
+  #chat-composer-row.has-attachments #chat-input label {
+    min-height: 192px;
+  }
+
+  #chat-composer-row.has-attachments #chat-input .thumbnail-item {
+    width: 100px !important;
+    min-width: 100px;
+    height: 100px !important;
+    min-height: 100px;
+    border-radius: 18px !important;
+  }
+
+  #chat-composer-row.has-attachments #chat-input .thumbnail-item img {
+    border-radius: 18px !important;
+  }
+
+  #chat-composer-row.has-attachments #chat-input textarea {
+    padding-right: 112px !important;
+    padding-left: 26px !important;
   }
 }

@@ -54,24 +54,33 @@ class VoiceprintManager:
         if not self._admin_checker(user_id):
             raise VoiceprintPermissionError("只有管理员可以管理声纹库")
 
-    def list_for_admin(self, user_id: str | None) -> list[VoiceprintTable]:
+    def list_for_admin(
+        self, user_id: str | None, *, is_mock: bool | None = None
+    ) -> list[VoiceprintTable]:
         self.assert_admin(user_id)
-        return self.list_active()
+        return self.list_active(is_mock=is_mock)
 
-    def list_active(self) -> list[VoiceprintTable]:
+    def list_active(self, *, is_mock: bool | None = None) -> list[VoiceprintTable]:
         """Internal read used by speaker verification during transcription."""
 
         with Session(self._engine) as session:
-            items = session.execute(
-                select(VoiceprintTable).order_by(VoiceprintTable.created_at)
-            ).scalars()
+            query = select(VoiceprintTable)
+            if is_mock is not None:
+                query = query.where(VoiceprintTable.is_mock == is_mock)
+            items = session.execute(query.order_by(VoiceprintTable.created_at)).scalars()
             return list(items)
 
-    def get_for_admin(self, user_id: str | None, voiceprint_id: str) -> VoiceprintTable:
+    def get_for_admin(
+        self,
+        user_id: str | None,
+        voiceprint_id: str,
+        *,
+        is_mock: bool | None = None,
+    ) -> VoiceprintTable:
         self.assert_admin(user_id)
         with Session(self._engine) as session:
             item = session.get(VoiceprintTable, voiceprint_id)
-            if item is None:
+            if item is None or (is_mock is not None and item.is_mock != is_mock):
                 raise ValueError("声纹记录不存在")
             session.expunge(item)
             return item
@@ -92,12 +101,16 @@ class VoiceprintManager:
 
         with Session(self._engine) as session:
             existing = session.execute(
-                select(VoiceprintTable).where(
-                    VoiceprintTable.display_name == display_name
-                )
+                select(VoiceprintTable).where(VoiceprintTable.display_name == display_name)
             ).scalar_one_or_none()
             if existing:
-                raise ValueError(f"声纹姓名“{display_name}”已存在")
+                if not is_mock and existing.is_mock:
+                    # Mock identities are disposable UI fixtures. Replace one when
+                    # a real voiceprint is registered with the same display name.
+                    session.delete(existing)
+                    session.flush()
+                else:
+                    raise ValueError(f"声纹姓名“{display_name}”已存在")
 
             item = VoiceprintTable(
                 display_name=display_name,
@@ -124,9 +137,19 @@ class VoiceprintManager:
         """Seed deterministic demo identities without bypassing normal UI auth."""
 
         with Session(self._engine) as session:
-            if session.execute(select(VoiceprintTable.id).limit(1)).first():
+            if session.execute(
+                select(VoiceprintTable.id)
+                .where(VoiceprintTable.is_mock.is_(True))
+                .limit(1)
+            ).first():
                 return
             for name in names:
+                if session.execute(
+                    select(VoiceprintTable.id).where(
+                        VoiceprintTable.display_name == name
+                    )
+                ).first():
+                    continue
                 session.add(
                     VoiceprintTable(
                         display_name=name,

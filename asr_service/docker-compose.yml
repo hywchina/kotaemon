@@ -1,0 +1,12 @@
+services:
+  asr:
+    build: .
+    image: kotaemon-asr-service:0.1
+    env_file:
+      - .env
+    ports:
+      - "${ASR_PORT:-8002}:8002"
+    volumes:
+      - ./data:/opt/asr-service/data
+      - ./model-cache:/root/.cache/modelscope
+    restart: unless-stopped

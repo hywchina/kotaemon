@@ -1,4 +1,18 @@
 function run() {
+  // Authentication callbacks run during the initial Gradio load. Define these
+  // helpers before optional UI enhancements so a layout error can never hide
+  // the login form.
+  globalThis.setStorage = (key, value) => {
+    localStorage.setItem(key, value);
+  };
+  globalThis.getStorage = (key, value) => {
+    const item = localStorage.getItem(key);
+    return item ? item : value;
+  };
+  globalThis.removeFromStorage = (key) => {
+    localStorage.removeItem(key);
+  };
+
   const chatTab = document.getElementById("chat-tab");
   const mainParent = chatTab && chatTab.parentNode;
   if (!mainParent) return;
@@ -27,10 +41,18 @@ function run() {
   const icon = {
     plus:
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    image:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.5-4 3.2 2.8 2.3-2 3 3.2"/></svg>',
+    file:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7l5 5V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M13 3.5V9h5M8 13h7M8 17h7"/></svg>',
     microphone:
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 1 0-7 0v5A3.5 3.5 0 0 0 12 15Z"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></svg>',
     send:
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>',
+    close:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',
+    check:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
     copy:
       '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
     edit:
@@ -93,11 +115,250 @@ function run() {
   });
   localizeGeneratedText(document.body);
 
-  // Use one action slot: microphone while empty, send while text/files exist,
-  // and a recording indicator while ASR is active.
+  // Rebuild the composer shell around Gradio's native inputs. The native file
+  // and audio controls still own browser permissions and backend events, while
+  // this stable layer provides the compact interaction shown to users.
   const composerRow = document.getElementById("chat-composer-row");
   const chatInput = document.getElementById("chat-input");
   if (composerRow && chatInput) {
+    let attachmentMenu = composerRow.querySelector(".ktem-attachment-menu");
+    if (!attachmentMenu) {
+      attachmentMenu = document.createElement("div");
+      attachmentMenu.className = "ktem-attachment-menu";
+      attachmentMenu.setAttribute("role", "menu");
+      attachmentMenu.innerHTML =
+        '<button type="button" role="menuitem" data-ktem-upload="image">' +
+        icon.image +
+        '<span>添加图片</span></button>' +
+        '<button type="button" role="menuitem" data-ktem-upload="file">' +
+        icon.file +
+        '<span>添加文件</span></button>';
+      composerRow.appendChild(attachmentMenu);
+    }
+
+    let composerNotice = composerRow.querySelector(".ktem-composer-notice");
+    if (!composerNotice) {
+      composerNotice = document.createElement("div");
+      composerNotice.className = "ktem-composer-notice";
+      composerNotice.setAttribute("role", "status");
+      composerNotice.setAttribute("aria-live", "polite");
+      composerRow.appendChild(composerNotice);
+    }
+
+    const showComposerNotice = (message) => {
+      window.clearTimeout(composerNotice.ktemHideTimer);
+      composerNotice.textContent = message;
+      composerNotice.classList.add("is-visible");
+      composerNotice.ktemHideTimer = window.setTimeout(() => {
+        composerNotice.classList.remove("is-visible");
+      }, 3600);
+    };
+
+    const acceptedExtensions = (input, fallback) => {
+      const accept = (input?.getAttribute("accept") || "")
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.startsWith("."));
+      return new Set(accept.length ? accept : fallback);
+    };
+
+    const bindUploadValidation = (input, fallbackExtensions, message) => {
+      if (!input || input.dataset.ktemTypeValidation) return;
+      input.dataset.ktemTypeValidation = "true";
+      input.addEventListener(
+        "change",
+        (event) => {
+          const allowed = acceptedExtensions(input, fallbackExtensions);
+          const invalidFile = Array.from(input.files || []).find((file) => {
+            const normalizedName = file.name.toLowerCase();
+            return !Array.from(allowed).some((extension) =>
+              normalizedName.endsWith(extension)
+            );
+          });
+          if (!invalidFile) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          input.value = "";
+          showComposerNotice(`不支持“${invalidFile.name}”。${message}`);
+        },
+        true
+      );
+    };
+    const imageExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+    const documentExtensions = [
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".pptx",
+      ".txt", ".md", ".html", ".mhtml", ".png", ".jpg",
+      ".jpeg", ".tif", ".tiff"
+    ];
+    const imageTypeMessage = "图片仅支持 PNG、JPEG 和 WebP 格式。";
+    const documentTypeMessage = "请选择系统支持的文档或图片格式。";
+
+    let microphoneButton = composerRow.querySelector(".ktem-microphone-trigger");
+    if (!microphoneButton) {
+      microphoneButton = document.createElement("button");
+      microphoneButton.type = "button";
+      microphoneButton.className = "ktem-microphone-trigger";
+      microphoneButton.innerHTML = icon.microphone;
+      microphoneButton.title = "开始实时语音转写";
+      microphoneButton.setAttribute("aria-label", "开始实时语音转写");
+      composerRow.appendChild(microphoneButton);
+    }
+
+    let recorder = composerRow.querySelector(".ktem-inline-recorder");
+    if (!recorder) {
+      recorder = document.createElement("div");
+      recorder.className = "ktem-inline-recorder";
+      recorder.setAttribute("aria-label", "正在录音");
+      const bars = Array.from({ length: 72 }, (_, index) => {
+        const height = 5 + ((index * 11 + index * index) % 18);
+        const delay = -((index % 13) * 0.05).toFixed(2);
+        return `<i style="--bar-height:${height}px;--bar-delay:${delay}s"></i>`;
+      }).join("");
+      recorder.innerHTML =
+        '<div class="ktem-recorder-lead" aria-hidden="true"></div>' +
+        `<div class="ktem-recorder-wave" aria-hidden="true">${bars}</div>`;
+      composerRow.appendChild(recorder);
+    }
+
+    const closeAttachmentMenu = () => {
+      attachmentMenu.classList.remove("is-open");
+      composerRow.classList.remove("has-attachment-menu");
+      const uploadButton = chatInput.querySelector(
+        "button[data-testid='upload-button']"
+      );
+      if (uploadButton) uploadButton.setAttribute("aria-expanded", "false");
+    };
+
+    const audioRoot = document.getElementById("asr-live-audio");
+    const cancelBridge = document.getElementById("asr-cancel-bridge");
+    const confirmBridge = document.getElementById("asr-confirm-bridge");
+    const cancelBridgeButton = resolveButton(cancelBridge);
+    const confirmBridgeButton = resolveButton(confirmBridge);
+    if (cancelBridgeButton) {
+      cancelBridgeButton.classList.add("ktem-recorder-cancel");
+      setIconButton(cancelBridgeButton, icon.close, "取消录音");
+      if (!recorder.contains(cancelBridgeButton)) {
+        recorder.appendChild(cancelBridgeButton);
+      }
+    }
+    if (confirmBridgeButton) {
+      confirmBridgeButton.classList.add("ktem-recorder-confirm");
+      setIconButton(confirmBridgeButton, icon.check, "完成录音");
+      if (!recorder.contains(confirmBridgeButton)) {
+        recorder.appendChild(confirmBridgeButton);
+      }
+    }
+    composerRow.classList.toggle("has-live-audio", Boolean(audioRoot));
+    const nativeRecordButton = () =>
+      audioRoot && audioRoot.querySelector("button.record-button");
+    const nativeStopButton = () =>
+      audioRoot && audioRoot.querySelector("button.stop-button");
+
+    const syncRecordingUi = () => {
+      const hasNativeStopButton = Boolean(nativeStopButton());
+      if (!hasNativeStopButton) delete composerRow.dataset.ktemAsrEnding;
+      const recording =
+        hasNativeStopButton && !composerRow.dataset.ktemAsrEnding;
+      composerRow.classList.toggle("is-asr-recording", recording);
+      document.body.classList.toggle("ktem-asr-recording", recording);
+      const textarea = chatInput.querySelector("textarea");
+      if (textarea) textarea.readOnly = recording;
+      if (recording) closeAttachmentMenu();
+    };
+
+    const beginRecording = () => {
+      const recordButton = nativeRecordButton();
+      if (!recordButton) return;
+      delete composerRow.dataset.ktemAsrEnding;
+      closeAttachmentMenu();
+      composerRow.classList.add("is-asr-recording");
+      document.body.classList.add("ktem-asr-recording");
+      recordButton.click();
+      setTimeout(syncRecordingUi, 250);
+      setTimeout(syncRecordingUi, 3000);
+    };
+
+    const endRecording = (mode) => {
+      composerRow.dataset.ktemAsrEnding = mode;
+      const stopButton = nativeStopButton();
+      window.setTimeout(() => {
+        if (stopButton) stopButton.click();
+      }, 0);
+      composerRow.classList.remove("is-asr-recording");
+      document.body.classList.remove("ktem-asr-recording");
+      const textarea = chatInput.querySelector("textarea");
+      if (textarea) textarea.readOnly = false;
+    };
+
+    if (!microphoneButton.dataset.ktemBound) {
+      microphoneButton.dataset.ktemBound = "true";
+      microphoneButton.addEventListener("click", beginRecording);
+    }
+    if (cancelBridgeButton && !cancelBridgeButton.dataset.ktemRecorderBound) {
+      cancelBridgeButton.dataset.ktemRecorderBound = "true";
+      cancelBridgeButton.addEventListener("click", () => endRecording("cancel"));
+    }
+    if (confirmBridgeButton && !confirmBridgeButton.dataset.ktemRecorderBound) {
+      confirmBridgeButton.dataset.ktemRecorderBound = "true";
+      confirmBridgeButton.addEventListener("click", () => endRecording("confirm"));
+    }
+
+    if (audioRoot && !audioRoot.dataset.ktemObserved) {
+      audioRoot.dataset.ktemObserved = "true";
+      new MutationObserver(syncRecordingUi).observe(audioRoot, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    if (!document.body.dataset.ktemAttachmentDismiss) {
+      document.body.dataset.ktemAttachmentDismiss = "true";
+      document.addEventListener("click", (event) => {
+        if (!composerRow.contains(event.target)) closeAttachmentMenu();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeAttachmentMenu();
+      });
+    }
+
+    if (!attachmentMenu.dataset.ktemBound) {
+      attachmentMenu.dataset.ktemBound = "true";
+      attachmentMenu
+        .querySelector('[data-ktem-upload="image"]')
+        .addEventListener("click", () => {
+          closeAttachmentMenu();
+          const imageInput = chatInput.querySelector('input[type="file"]');
+          if (imageInput) {
+            bindUploadValidation(
+              imageInput,
+              imageExtensions,
+              imageTypeMessage
+            );
+            imageInput.click();
+          } else {
+            showComposerNotice("图片上传组件尚未就绪，请稍后重试。");
+          }
+        });
+      attachmentMenu
+        .querySelector('[data-ktem-upload="file"]')
+        .addEventListener("click", () => {
+          closeAttachmentMenu();
+          const fileInput = document.querySelector(
+            '#quick-file input[type="file"]'
+          );
+          if (fileInput) {
+            bindUploadValidation(
+              fileInput,
+              documentExtensions,
+              documentTypeMessage
+            );
+            fileInput.click();
+          } else {
+            showComposerNotice("文件上传组件尚未就绪，请稍后重试。");
+          }
+        });
+    }
+
     const syncComposerAction = () => {
       const textarea = chatInput.querySelector("textarea");
       const sendButton = resolveButton(
@@ -119,7 +380,30 @@ function run() {
       }
       if (uploadButton) {
         uploadButton.classList.add("ktem-image-upload");
-        setIconButton(uploadButton, icon.plus, "添加图片");
+        setIconButton(uploadButton, icon.plus, "添加附件");
+        uploadButton.setAttribute("aria-haspopup", "menu");
+        uploadButton.setAttribute(
+          "aria-expanded",
+          attachmentMenu.classList.contains("is-open") ? "true" : "false"
+        );
+        if (!uploadButton.dataset.ktemMenuBound) {
+          uploadButton.dataset.ktemMenuBound = "true";
+          uploadButton.addEventListener(
+            "click",
+            (event) => {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              const willOpen = !attachmentMenu.classList.contains("is-open");
+              closeAttachmentMenu();
+              if (willOpen) {
+                attachmentMenu.classList.add("is-open");
+                composerRow.classList.add("has-attachment-menu");
+                uploadButton.setAttribute("aria-expanded", "true");
+              }
+            },
+            true
+          );
+        }
       }
 
       setIconButton(sendButton, icon.send, "发送消息");
@@ -134,12 +418,44 @@ function run() {
       }
 
       const hasText = Boolean(textarea && textarea.value.trim());
-      const hasFiles = Boolean(
-        chatInput.querySelector(
-          ".thumbnail-item, .file-preview, .file-container, [data-testid='file-preview']"
-        )
+      const hasFiles = Boolean(chatInput.querySelector(".thumbnail-item"));
+      composerRow.classList.remove("has-expanded-text");
+      const hasExpandedText = Boolean(
+        textarea && textarea.value.trim() && textarea.scrollHeight > 80
       );
+      composerRow.classList.toggle(
+        "has-expanded-text",
+        hasExpandedText && !hasFiles
+      );
+      composerRow.classList.toggle("has-attachments", hasFiles);
       composerRow.classList.toggle("has-message-content", hasText || hasFiles);
+      if (sendButton) {
+        sendButton.disabled = !(hasText || hasFiles);
+        sendButton.setAttribute(
+          "aria-disabled",
+          hasText || hasFiles ? "false" : "true"
+        );
+      }
+      const quickFileInput = document.querySelector(
+        '#quick-file input[type="file"]'
+      );
+      const imageFileInput = chatInput.querySelector('input[type="file"]');
+      bindUploadValidation(
+        imageFileInput,
+        imageExtensions,
+        imageTypeMessage
+      );
+      bindUploadValidation(
+        quickFileInput,
+        documentExtensions,
+        documentTypeMessage
+      );
+      const fileMenuButton = attachmentMenu.querySelector(
+        '[data-ktem-upload="file"]'
+      );
+      if (fileMenuButton) fileMenuButton.disabled = !quickFileInput;
+      microphoneButton.hidden = !audioRoot;
+      syncRecordingUi();
     };
 
     const textarea = chatInput.querySelector("textarea");
@@ -471,13 +787,21 @@ function run() {
     }
   }
 
-  // move share conv checkbox
-  const reportDiv = document.querySelector(
-    "#report-accordion > div:nth-child(3) > div:nth-child(1)"
+  // Move the public-conversation toggle into the feedback form. It originally
+  // shares a narrow toolbar with the suggestion toggle and three icon buttons;
+  // leaving it there makes both labels collapse vertically in the sidebar.
+  const feedbackSubmitContent = document.querySelector(
+    "#feedback-submit-panel > div:nth-child(3) > div:nth-child(1)"
   );
+  const feedbackSubmitButton = document.getElementById("feedback-submit-button");
   const shareConvCheckbox = document.getElementById("is-public-checkbox");
-  if (reportDiv && shareConvCheckbox) {
-    reportDiv.insertBefore(shareConvCheckbox, reportDiv.querySelector("button"));
+  if (
+    feedbackSubmitContent &&
+    feedbackSubmitButton &&
+    shareConvCheckbox &&
+    feedbackSubmitButton.parentNode === feedbackSubmitContent
+  ) {
+    feedbackSubmitContent.insertBefore(shareConvCheckbox, feedbackSubmitButton);
   }
 
   // create slider toggle
@@ -505,18 +829,6 @@ function run() {
     } else {
       content.style.display = "none";
     }
-  };
-
-  // store info in local storage
-  globalThis.setStorage = (key, value) => {
-    localStorage.setItem(key, value);
-  };
-  globalThis.getStorage = (key, value) => {
-    const item = localStorage.getItem(key);
-    return item ? item : value;
-  };
-  globalThis.removeFromStorage = (key) => {
-    localStorage.removeItem(key);
   };
 
   // Function to scroll to given citation with ID

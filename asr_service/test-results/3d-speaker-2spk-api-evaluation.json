@@ -1,0 +1,70 @@
+{
+  "source": {
+    "name": "3D-Speaker official two-speaker sample",
+    "wav": "test-data/3d-speaker-2spk/2speakers_example.wav",
+    "rttm": "test-data/3d-speaker-2spk/2speakers_example.rttm",
+    "sample_rate": 16000,
+    "reference_turn_count": 5,
+    "evaluated_speech_seconds": 50.72
+  },
+  "reference_boundary_evaluation": {
+    "reference_speaker_count": 2,
+    "predicted_speaker_count": 2,
+    "one_to_one_mapping": {
+      "speaker_00": "1",
+      "speaker_01": "2"
+    },
+    "duration_weighted_speaker_accuracy": 1.0,
+    "non_empty_transcript_rate": 1.0,
+    "processing_seconds": 12.21,
+    "turns": [
+      {
+        "turn": 1,
+        "source_start_seconds": 0.252,
+        "duration_seconds": 23.298,
+        "reference_speaker": "1",
+        "predicted_speaker": "speaker_00",
+        "text": "嗯，那么今天我们就简单的进行一下那个新生招聘的嗯讨论吧。因为现在不是马上就新生到校嘛，然后我们社团呢也需要招聘一些新的社员，然后就今天就大概就讨论一下嗯怎么招聘的内容吧。嗯我们就首先想一下那个招聘的地点在哪里吧。"
+      },
+      {
+        "turn": 2,
+        "source_start_seconds": 24.24,
+        "duration_seconds": 10.509,
+        "reference_speaker": "2",
+        "predicted_speaker": "speaker_01",
+        "text": "嗯，地点的话，我们现在可以有三个选择。嗯，第一个的话，我们可以选择在操场，因为那儿嗯学生流动量也挺大的。"
+      },
+      {
+        "turn": 3,
+        "source_start_seconds": 34.749,
+        "duration_seconds": 6.183,
+        "reference_speaker": "1",
+        "predicted_speaker": "speaker_00",
+        "text": "操场的话，这这段时间太热了，我怕那个人流量有点少。"
+      },
+      {
+        "turn": 4,
+        "source_start_seconds": 40.932,
+        "duration_seconds": 7.801,
+        "reference_speaker": "2",
+        "predicted_speaker": "speaker_01",
+        "text": "嗯，那我们还可以有第二个选择呀，嗯我们可以在图书馆楼下那里有一块可以遮阴的地方。"
+      },
+      {
+        "turn": 5,
+        "source_start_seconds": 48.733,
+        "duration_seconds": 2.929,
+        "reference_speaker": "1",
+        "predicted_speaker": "speaker_00",
+        "text": "哦，图书馆我觉得应该还可以吧。"
+      }
+    ]
+  },
+  "single_commit_evaluation": {
+    "predicted_speaker_count": 1,
+    "final_speaker": "speaker_00",
+    "partial_count": 86,
+    "processing_seconds": 12.429,
+    "conclusion": "A single commit treats the entire recording as one utterance and cannot discover internal speaker changes."
+  }
+}

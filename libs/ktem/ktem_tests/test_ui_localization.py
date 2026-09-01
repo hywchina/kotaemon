@@ -6,6 +6,7 @@ import pandas as pd
 from ktem.index.file.ui import FileIndexPage
 from ktem.pages.chat import ChatPage, open_info_panel_for_evidence, toggle_info_panel
 from ktem.pages.chat import chat_panel as chat_panel_module
+from ktem.pages.login import LoginPage, fetch_creds, signin_js
 from ktem.reasoning.simple import FullDecomposeQAPipeline, FullQAPipeline
 from ktem.utils.i18n import translate_choices, translate_ui_text
 
@@ -15,6 +16,18 @@ def _page_without_ui() -> FileIndexPage:
     page.selected_panel_false = "未选择文件"
     page.selected_panel_true = "已选文件：{name}"
     return page
+
+
+def test_login_form_is_available_without_optional_ui_javascript() -> None:
+    with gr.Blocks():
+        page = LoginPage(SimpleNamespace(app_name="AI 辅助诊断系统"))
+
+    assert page.usn.visible is True
+    assert page.pwd.visible is True
+    assert page.btn_login.visible is True
+    assert "localStorage.getItem" in fetch_creds
+    assert "localStorage.setItem" in signin_js
+    assert "getStorage(" not in fetch_creds
 
 
 def test_localized_file_table_selection_keeps_internal_id() -> None:
@@ -53,9 +66,138 @@ def test_chat_composer_uses_one_send_or_microphone_action(monkeypatch) -> None:
     assert panel.asr_start_button.value == "🎙"
     assert panel.text_input.file_types == ["image"]
     assert panel.text_input.file_count == "multiple"
+    assert panel.text_input.placeholder == "请输入问题"
     assert panel.pending_multimodal_input.value == {"query": "", "image_paths": []}
     assert panel.chatbot.placeholder.startswith("开始一次辅助诊断问答")
     assert not hasattr(panel, "regen_btn")
+
+
+def test_chat_composer_uses_streaming_audio_for_real_asr(monkeypatch) -> None:
+    monkeypatch.setattr(chat_panel_module, "KH_ENABLE_ASR", True)
+    monkeypatch.setattr(
+        chat_panel_module,
+        "get_asr_service",
+        lambda: SimpleNamespace(is_mock=False),
+    )
+
+    with gr.Blocks():
+        panel = chat_panel_module.ChatPanel(SimpleNamespace(app_name="医院知识库"))
+
+    assert panel.uses_live_audio is True
+    assert panel.asr_live_audio.streaming is True
+    assert panel.asr_live_audio.sources == ["microphone"]
+    assert panel.asr_live_audio.type == "numpy"
+    assert panel.asr_cancel_bridge.value == "取消录音"
+    assert panel.asr_confirm_bridge.value == "完成录音"
+    assert not hasattr(panel, "asr_start_button")
+
+
+def test_chat_composer_assets_define_upload_menu_and_inline_recorder() -> None:
+    assets_root = Path(__file__).parents[1] / "ktem" / "assets"
+    main_js = (assets_root / "js" / "main.js").read_text(encoding="utf-8")
+    medical_css = (assets_root / "css" / "medical.css").read_text(
+        encoding="utf-8"
+    )
+
+    for fragment in (
+        "Authentication callbacks run during the initial Gradio load",
+        "ktem-attachment-menu",
+        "添加图片",
+        "添加文件",
+        "#quick-file input[type=\"file\"]",
+        "ktem-composer-notice",
+        "图片仅支持 PNG、JPEG 和 WebP 格式",
+        'classList.toggle("has-attachments", hasFiles)',
+        "ktem-inline-recorder",
+        "Array.from({ length: 72 }",
+        'endRecording("cancel")',
+        'endRecording("confirm")',
+    ):
+        assert fragment in main_js
+
+    assert main_js.index("globalThis.getStorage") < main_js.index(
+        'const chatTab = document.getElementById("chat-tab")'
+    )
+    assert "feedbackSubmitButton.parentNode === feedbackSubmitContent" in main_js
+    assert (
+        'reportDiv.insertBefore(shareConvCheckbox, reportDiv.querySelector("button"))'
+        not in main_js
+    )
+    assert "feedbackSubmitContent.insertBefore" in main_js
+
+    for selector in (
+        ".ktem-attachment-menu",
+        ".ktem-composer-notice",
+        "#chat-composer-row.has-attachments",
+        ".ktem-inline-recorder",
+        "#asr-live-audio",
+        "body.ktem-asr-recording #main-chat-bot .message.pending",
+    ):
+        assert selector in medical_css
+
+    for recorder_style in (
+        "width: min(56%, 460px)",
+        "transform: translate(-50%, -50%)",
+        "flex: 0 0 2px",
+        "max-height: 24px",
+    ):
+        assert recorder_style in medical_css
+
+    for composer_style in (
+        "width: min(calc(100% - 32px), 964px)",
+        "max-height: 180px",
+        "textarea.scroll-hide::-webkit-scrollbar",
+        "#chat-composer-row.has-expanded-text",
+        "bottom: 10px",
+    ):
+        assert composer_style in medical_css
+
+    for voiceprint_style in (
+        "#voiceprint-display-name",
+        "#voiceprint-sample-tabs",
+        ".voiceprint-action-row",
+        "#voiceprint-register-recording",
+        ".stretch:has(> #suggest-chat-checkbox)",
+        "#feedback-submit-panel #is-public-checkbox",
+    ):
+        assert voiceprint_style in medical_css
+
+
+def test_quick_upload_mentions_indexed_documents_in_composer() -> None:
+    page = _page_without_ui()
+
+    result = page.complete_quick_file_upload(
+        ["/tmp/检查 报告.pdf", "/tmp/用药.md"],
+        ["file-1", "file-2"],
+        {"text": "请总结", "files": ["/tmp/image.png"]},
+    )
+
+    assert result[2] == {
+        "text": '请总结 @"检查 报告.pdf" @"用药.md"',
+        "files": ["/tmp/image.png"],
+    }
+
+
+def test_quick_upload_does_not_mention_failed_or_duplicate_documents() -> None:
+    page = _page_without_ui()
+    existing = {"text": '请比较 @"病历.pdf"', "files": []}
+
+    failed = page.complete_quick_file_upload(["/tmp/失败.pdf"], [], existing)
+    duplicate = page.complete_quick_file_upload(
+        ["/tmp/病历.pdf"], ["file-1"], existing
+    )
+
+    assert failed[2] == existing
+    assert duplicate[2] == existing
+
+
+def test_mindmap_toolbar_keeps_only_zoom_controls() -> None:
+    chat_source = (
+        Path(__file__).parents[1] / "ktem" / "pages" / "chat" / "__init__.py"
+    ).read_text(encoding="utf-8")
+
+    assert "toolbarItems.slice(2).forEach((item) => item.remove())" in chat_source
+    assert 'const toolbarLabels = ["放大", "缩小"]' in chat_source
 
 
 def test_evidence_panel_is_opt_in_and_toggleable() -> None:

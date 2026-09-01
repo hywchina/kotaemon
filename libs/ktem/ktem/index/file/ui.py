@@ -61,7 +61,10 @@ logger = logging.getLogger(__name__)
 chat_input_focus_js = """
 function() {
     let chatInput = document.querySelector("#chat-input textarea");
-    chatInput.focus();
+    if (chatInput) {
+        chatInput.dispatchEvent(new Event("input", {bubbles: true}));
+        chatInput.focus();
+    }
 }
 """
 
@@ -755,6 +758,35 @@ class FileIndexPage(BasePage):
                 gr.update(visible=True),
             ]
 
+    @staticmethod
+    def complete_quick_file_upload(files, indexed_ids, chat_input):
+        """Clear a successful quick upload and mention its files in the composer."""
+
+        normalized_input = deepcopy(chat_input) if isinstance(chat_input, dict) else {}
+        normalized_input.setdefault("text", "")
+        normalized_input.setdefault("files", [])
+
+        if indexed_ids:
+            file_values = files if isinstance(files, (list, tuple)) else [files]
+            existing_text = str(normalized_input.get("text") or "").strip()
+            mentions = []
+            for file_value in file_values:
+                if not file_value:
+                    continue
+                file_name = Path(str(file_value)).name.replace('"', "”")
+                mention = f'@"{file_name}"'
+                if mention not in existing_text and mention not in mentions:
+                    mentions.append(mention)
+            normalized_input["text"] = " ".join(
+                part for part in (existing_text, *mentions) if part
+            )
+
+        return [
+            gr.update(value=None),
+            gr.update(value="select"),
+            normalized_input,
+        ]
+
     def on_register_quick_uploads(self):
         try:
             # quick file upload event registration of first Index only
@@ -787,13 +819,16 @@ class FileIndexPage(BasePage):
                             concurrency_limit=10,
                         )
                         .success(
-                            fn=lambda: [
-                                gr.update(value=None),
-                                gr.update(value="select"),
+                            fn=self.complete_quick_file_upload,
+                            inputs=[
+                                self._app.chat_page.quick_file_upload,
+                                self.quick_upload_state,
+                                self._app.chat_page.chat_panel.text_input,
                             ],
                             outputs=[
                                 self._app.chat_page.quick_file_upload,
                                 self._app.chat_page._indices_input[0],
+                                self._app.chat_page.chat_panel.text_input,
                             ],
                         )
                     )
