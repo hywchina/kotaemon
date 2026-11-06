@@ -89,6 +89,7 @@ KH_FEATURE_USER_MANAGEMENT_ADMIN = str(  # 用户管理管理员
 KH_FEATURE_USER_MANAGEMENT_PASSWORD = str(  # 用户管理密码
     config("KH_FEATURE_USER_MANAGEMENT_PASSWORD", default="admin")
 )
+KH_ENABLE_MCP_MANAGEMENT = config("KH_ENABLE_MCP_MANAGEMENT", default=False, cast=bool)
 KH_ENABLE_ALEMBIC = False  # 是否启用Alembic
 KH_DATABASE = f"sqlite:///{KH_USER_DATA_DIR / 'sql.db'}"  # 数据库路径
 KH_FILESTORAGE_PATH = str(KH_USER_DATA_DIR / "files")  # 文件存储路径
