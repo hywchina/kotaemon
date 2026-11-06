@@ -4,15 +4,15 @@ from pydantic import BaseModel, Field
 
 
 class SettingItem(BaseModel):
-    """Represent a setting item
+    """表示一个配置项
 
-    Args:
-        name: the name of the setting item
-        value: the default value of the setting item
-        choices: the list of choices of the setting item, if any
-        metadata: the metadata of the setting item
-        component: the expected UI component to render the setting
-    """
+    参数：
+        name: 配置项名称
+        value: 配置项默认值
+        choices: 配置项可选值列表（如有）
+        metadata: 配置项的元数据
+        component: 用于渲染该配置项的UI组件
+    """  # translate Represent a setting item... --》表示一个配置项...
 
     name: str
     value: Any
@@ -50,7 +50,7 @@ class BaseSettingGroup(BaseModel):
 
         key, sub_path = path.split(".", 1)
         if key != "options":
-            raise ValueError(f"Invalid key {path}. Should starts with `options.*`")
+            raise ValueError(f"无效键名 {path}，应以 `options.*` 开头")  # translate Invalid key {path}. Should starts with `options.*` --》无效键名 {path}，应以 `options.*` 开头
 
         option_id, sub_path = sub_path.split(".", 1)
         option = self.options[option_id]
@@ -103,7 +103,7 @@ class SettingIndexOption(BaseSettingGroup):
         key, sub_path = path.split(".", 1)
         if key not in ["indexing", "retrieval"]:
             raise ValueError(
-                f"Invalid key {path}. Should starts with `indexing.*` or `retrieval.*`"
+                f"无效键名 {path}，应以 `indexing.*` 或 `retrieval.*` 开头"  # translate Invalid key... --》无效键名...
             )
 
         value = getattr(self, key)
@@ -146,7 +146,7 @@ class SettingGroup(BaseModel):
         key, sub_path = path.split(".", 1)
         if key not in ["application", "index", "reasoning"]:
             raise ValueError(
-                f"Invalid key {path}. Should starts with `indexing.*` or `retrieval.*`"
+                f"无效键名 {path}，应以 `indexing.*` 或 `retrieval.*` 开头"  # translate Invalid key... --》无效键名...
             )
 
         value = getattr(self, key)

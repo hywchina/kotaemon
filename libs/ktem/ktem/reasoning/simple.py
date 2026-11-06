@@ -372,8 +372,10 @@ class FullQAPipeline(BaseReasoning):
             settings[f"{prefix}.highlight_citation"] != "off"
         )
         answer_pipeline.enable_mindmap = settings[f"{prefix}.create_mindmap"]
-        answer_pipeline.enable_citation_viz = settings[f"{prefix}.create_citation_viz"]
-        answer_pipeline.use_multimodal = settings[f"{prefix}.use_multimodal"]
+        answer_pipeline.enable_citation_viz = settings.get(
+            f"{prefix}.create_citation_viz", False
+        )
+        answer_pipeline.use_multimodal = settings.get(f"{prefix}.use_multimodal", False)
         answer_pipeline.system_prompt = settings[f"{prefix}.system_prompt"]
         answer_pipeline.qa_template = settings[f"{prefix}.qa_prompt"]
         answer_pipeline.lang = SUPPORTED_LANGUAGE_MAP.get(
@@ -426,9 +428,12 @@ class FullQAPipeline(BaseReasoning):
                 ),
                 "component": "radio",
                 "choices": [
-                    ("citation: highlight", "highlight"),
-                    ("citation: inline", "inline"),
-                    ("no citation", "off"),
+                    ("引用：高亮", "highlight"),
+                    ("引用：行内", "inline"),
+                    ("无引用", "off"),
+                    # ("citation: highlight", "highlight"),
+                    # ("citation: inline", "inline"),
+                    # ("no citation", "off"),
                 ],
             },
             "create_mindmap": {
@@ -477,9 +482,12 @@ class FullQAPipeline(BaseReasoning):
             "id": "simple",
             "name": "Simple QA",
             "description": (
-                "Simple RAG-based question answering pipeline. This pipeline can "
-                "perform both keyword search and similarity search to retrieve the "
-                "context. After that it includes that context to generate the answer."
+                # "Simple RAG-based question answering pipeline. This pipeline can "
+                # "perform both keyword search and similarity search to retrieve the "
+                # "context. After that it includes that context to generate the answer."
+                "基于 RAG（Retrieval-Augmented Generation）的简易问答流水线。"
+                "该流水线能够执行关键词检索（keyword search）与相似度检索（similarity search）以获取上下文，"
+                "随后将检索到的上下文纳入答案生成过程。"
             ),
         }
 
@@ -601,9 +609,12 @@ class FullDecomposeQAPipeline(FullQAPipeline):
             "id": "complex",
             "name": "Complex QA",
             "description": (
-                "Use multi-step reasoning to decompose a complex question into "
-                "multiple sub-questions. This pipeline can "
-                "perform both keyword search and similarity search to retrieve the "
-                "context. After that it includes that context to generate the answer."
+                # "Use multi-step reasoning to decompose a complex question into "
+                # "multiple sub-questions. This pipeline can "
+                # "perform both keyword search and similarity search to retrieve the "
+                # "context. After that it includes that context to generate the answer."
+                "采用多步推理（multi-step reasoning）将复杂问题分解为多个子问题。"
+                "该处理流水线（pipeline）能够同时执行关键词检索（keyword search）和相似度检索（similarity search）以获取上下文。"
+                "随后将检索到的上下文纳入生成答案的过程。"
             ),
         }

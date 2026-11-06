@@ -21,7 +21,7 @@ function run() {
 
   // setup conversation dropdown placeholder
   let conv_dropdown = document.querySelector("#conversation-dropdown input");
-  conv_dropdown.placeholder = "Browse conversation";
+  conv_dropdown.placeholder = "浏览会话记录";  // translate Browse conversation --》浏览对话记录
 
   // move info-expand-button
   let info_expand_button = document.getElementById("info-expand-button");

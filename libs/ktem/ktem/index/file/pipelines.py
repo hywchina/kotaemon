@@ -254,25 +254,25 @@ class DocumentRetrievalPipeline(BaseFileIndexRetriever):
                 "component": "dropdown",
             },
             "prioritize_table": {
-                "name": "Prioritize table",
+                "name": "Prioritize table:在检索时优先考虑表格（例如在 PDF/文档中表格内容比正文更重要）",
                 "value": False,
                 "choices": [True, False],
                 "component": "checkbox",
             },
             "mmr": {
-                "name": "Use MMR",
+                "name": "Use MMR: 是否启用 最大边际相关性（MMR, Maximal Marginal Relevance）,在检索文档时平衡 相关性 和 多样性，避免检索结果过于冗余",
                 "value": False,
                 "choices": [True, False],
                 "component": "checkbox",
             },
             "use_reranking": {
-                "name": "Use reranking",
+                "name": "Use reranking:是否启用 重排序（reranking） 阶段",
                 "value": True,
                 "choices": [True, False],
                 "component": "checkbox",
             },
             "use_llm_reranking": {
-                "name": "Use LLM relevant scoring",
+                "name": "Use LLM relevant scoring:是否启用 基于 LLM 的相关性评分（LLM reranking）",
                 "value": not config("USE_LOW_LLM_REQUESTS", default=False, cast=bool),
                 "choices": [True, False],
                 "component": "checkbox",
@@ -473,13 +473,15 @@ class IndexPipeline(BaseComponent):
             the file id if the file is indexed, otherwise None
         """
         file_name = file_path.name if isinstance(file_path, Path) else file_path
-        if self.private:
-            cond: tuple = (
-                self.Source.name == file_name,
-                self.Source.user == self.user_id,
-            )
-        else:
-            cond = (self.Source.name == file_name,)
+        # 移除用户过滤，允许检测全局文件重复
+        # if self.private:
+        #     cond: tuple = (
+        #         self.Source.name == file_name,
+        #         self.Source.user == self.user_id,
+        #     )
+        # else:
+        #     cond = (self.Source.name == file_name,)
+        cond = (self.Source.name == file_name,)
 
         with Session(engine) as session:
             stmt = select(self.Source).where(*cond)
@@ -718,17 +720,6 @@ class IndexDocumentPipeline(BaseFileIndexIndexing):
                 "value": "default",
                 "choices": [
                     ("Default (open-source)", "default"),
-                    ("Adobe API (figure+table extraction)", "adobe"),
-                    (
-                        "Azure AI Document Intelligence (figure+table extraction)",
-                        "azure-di",
-                    ),
-                    ("Docling (figure+table extraction)", "docling"),
-                    (
-                        "PaddleOCR PPStructureV3 (table+figure extraction)",
-                        "paddle-struct",
-                    ),
-                    ("PaddleOCR-VL (VLM document parsing)", "paddle-vl"),
                 ],
                 "component": "dropdown",
             },

@@ -32,7 +32,7 @@ except ImportError:
     raise ImportError("Please install `ktem` to use this component")
 
 MAX_IMAGES = 10
-CITATION_TIMEOUT = 5.0
+CITATION_TIMEOUT = 10.0 # ori 5.0 --> 10.0
 CONTEXT_RELEVANT_WARNING_SCORE = config(
     "CONTEXT_RELEVANT_WARNING_SCORE", 0.3, cast=float
 )

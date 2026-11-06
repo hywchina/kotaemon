@@ -16,7 +16,7 @@ def get_remote_doc(url: str) -> str:
         res.raise_for_status()
         return res.text
     except Exception as e:
-        print(f"Failed to fetch document from {url}: {e}")
+        print(f"从{url}获取文档失败: {e}")  # translate Failed to fetch document from {url}: {e} --》从{url}获取文档失败: {e}
         return ""
 
 
@@ -27,7 +27,7 @@ def download_changelogs(release_url: str) -> str:
 
         return changelogs
     except Exception as e:
-        print(f"Failed to fetch changelogs from {release_url}: {e}")
+        print(f"从{release_url}获取更新日志失败: {e}")  # translate Failed to fetch changelogs from {release_url}: {e} --》从{release_url}获取更新日志失败: {e}
         return ""
 
 
@@ -58,7 +58,7 @@ class HelpPage:
                 f"{self.remote_content_url}/v{self.app_version}/docs/about.md"
             )
         if about_md:
-            with gr.Accordion("About"):
+            with gr.Accordion("About"):  # translate
                 if self.app_version:
                     about_md = f"Version: {self.app_version}\n\n{about_md}"
                 gr.Markdown(about_md)
@@ -66,17 +66,15 @@ class HelpPage:
         if KH_DEMO_MODE:
             with gr.Accordion("Create Your Own Space"):
                 gr.Markdown(
-                    "This is a demo with limited functionality. "
-                    "Use **Create space** button to install Kotaemon "
-                    "in your own space with all features "
-                    "(including upload and manage your private "
-                    "documents securely)."
-                )
+                    "此为功能受限的演示版本。"
+                    "点击**创建空间**按钮可在您自己的空间安装Kotaemon，"
+                    "获得完整功能（包括安全上传和管理私人文档）。"
+                )  # translate This is a demo... --》此为功能受限的演示版本...
                 gr.Button(
-                    value="Create Your Own Space",
+                    value="创建专属空间",  # translate Create Your Own Space --》创建专属空间
                     link=HF_SPACE_URL,
-                    variant="primary",
-                    size="lg",
+                    variant="primary",  # 保留样式参数不变
+                    size="lg",  # 保留尺寸参数不变
                 )
 
         user_guide_md_dir = self.doc_dir / "usage.md"
@@ -88,7 +86,7 @@ class HelpPage:
                 f"{self.remote_content_url}/v{self.app_version}/docs/usage.md"
             )
         if user_guide_md:
-            with gr.Accordion("User Guide", open=not KH_DEMO_MODE):
+            with gr.Accordion("用户指南", open=not KH_DEMO_MODE):  # translate User Guide --》用户指南
                 gr.Markdown(user_guide_md)
 
         if self.app_version:

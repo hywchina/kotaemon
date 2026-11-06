@@ -314,11 +314,7 @@ class ReactAgentPipeline(BaseReasoning):
         except Exception as e:
             logger.exception(f"Failed to get LLM options: {e}")
 
-        tool_choices = ["Wikipedia", "Google", "LLM", "SearchDoc"]
-        try:
-            tool_choices += mcp_manager.list_registered_mcp_servers()
-        except Exception as e:
-            logger.exception(f"Failed to get MCP tool options: {e}")
+        tool_choices = ["LLM", "SearchDoc"]
 
         return {
             "llm": {
@@ -355,9 +351,12 @@ class ReactAgentPipeline(BaseReasoning):
             "id": "ReAct",
             "name": "ReAct Agent",
             "description": (
-                "Implementing ReAct paradigm: https://arxiv.org/abs/2210.03629. "
-                "ReAct agent answers the user's request by iteratively formulating "
-                "plan and executing it. The agent can use multiple tools to gather "
-                "information and generate the final answer."
+                # "Implementing ReAct paradigm: https://arxiv.org/abs/2210.03629. "
+                # "ReAct agent answers the user's request by iteratively formulating "
+                # "plan and executing it. The agent can use multiple tools to gather "
+                # "information and generate the final answer."
+                "实现 ReAct 范式（ReAct paradigm）：https://arxiv.org/abs/2210.03629。"
+                "ReAct 智能体通过迭代地制定计划并执行计划来响应用户请求。"
+                "该智能体能够调用多种工具以获取信息，并基于整合结果生成最终答案。"
             ),
         }

@@ -12,34 +12,32 @@ class ReportIssue(BasePage):
         self.on_building_ui()
 
     def on_building_ui(self):
-        with gr.Accordion(label="Feedback", open=False, elem_id="report-accordion"):
-            self.correctness = gr.Radio(
-                choices=[
-                    ("The answer is correct", "correct"),
-                    ("The answer is incorrect", "incorrect"),
+        with gr.Accordion(label="反馈", open=False, elem_id="report-accordion"):  # translate Feedback --》反馈
+            self.correctness = gr.Radio(  # translate
+                choices=[  # translate
+                    ("回答正确", "correct"),  # translate The answer is correct --》回答正确
+                    ("回答错误", "incorrect"),  # translate The answer is incorrect --》回答错误
                 ],
-                label="Correctness:",
+                label="准确性评估:",  # translate Correctness: --》准确性评估:
             )
             self.issues = gr.CheckboxGroup(
                 choices=[
-                    ("The answer is offensive", "offensive"),
-                    ("The evidence is incorrect", "wrong-evidence"),
+                    ("回答内容不当", "offensive"),  # translate The answer is offensive --》回答内容不当
+                    ("证据材料有误", "wrong-evidence"),  # translate The evidence is incorrect --》证据材料有误
                 ],
-                label="Other issue:",
+                label="其他问题:",  # translate Other issue: --》其他问题:
             )
             self.more_detail = gr.Textbox(
                 placeholder=(
-                    "More detail (e.g. how wrong is it, what is the "
-                    "correct answer, etc...)"
+                    "补充说明（例如：错误详情、正确答案等）"  # translate More detail... --》补充说明...
                 ),
                 container=False,
                 lines=3,
             )
             gr.Markdown(
-                "This will send the current chat and the user settings to "
-                "help with investigation"
+                "系统将发送当前对话记录和用户设置以协助问题调查"  # translate This will send... --》系统将发送...
             )
-            self.report_btn = gr.Button("Report")
+            self.report_btn = gr.Button("提交反馈")  # translate Report --》提交反馈
 
     def report(
         self,
@@ -83,4 +81,4 @@ class ReportIssue(BasePage):
             )
             session.add(issue)
             session.commit()
-        gr.Info("Thank you for your feedback")
+        gr.Info("感谢您的反馈")  # translate Thank you for your feedback --》感谢您的反馈
