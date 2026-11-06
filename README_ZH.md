@@ -17,3 +17,7 @@
 `http://127.0.0.1:1234/v1`。模型名和密钥可按 `.env.example` 配置。
 本地重排通过 `RERANK_MODEL_PATH` 指定模型目录，或使用 `conf/rerank_models.json`。
 部署时保留仓库内的 PDF.js、NLTK 和 Tiktoken 资源，以便加载对应功能。
+
+## 聊天内语音转写
+
+参见 [ASR 配置和启动步骤](services/speech/README.md)。

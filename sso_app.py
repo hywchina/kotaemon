@@ -26,11 +26,13 @@ KEYCLOAK_CLIENT_ID = config("KEYCLOAK_CLIENT_ID", default="")
 KEYCLOAK_CLIENT_SECRET = config("KEYCLOAK_CLIENT_SECRET", default="")
 
 from ktem.main import App  # noqa
+from ktem.pages.chat.speech_gateway import mount_speech  # noqa
 
 gradio_app = App()
 demo = gradio_app.make()
 
 app = FastAPI()
+mount_speech(app, prefix="/app")
 
 if AUTHENTICATION_METHOD == "KEYCLOAK":
     # for authentication with Open ID by keycloak

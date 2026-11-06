@@ -196,6 +196,12 @@ class BaseApp:
             "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/tributejs/5.1.3/tribute.css'/>"  # noqa
         )
 
+        from ktem.pages.chat.speech_gateway import ENABLED as SPEECH_ENABLED
+
+        if SPEECH_ENABLED:
+            speech_js = Path(__file__).parent / "assets" / "js" / "speech.js"
+            external_js += "<script>" + speech_js.read_text(encoding="utf-8") + "</script>"
+
         with gr.Blocks(
             theme=self._theme,
             css=self._css,

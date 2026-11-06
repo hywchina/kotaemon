@@ -456,3 +456,46 @@ div.markmap {
   display: grid;
   place-items: center;
 }
+
+#speech-composer { position: relative; }
+#speech-mic-slot {
+    position: absolute;
+    right: 45px;
+    bottom: 7px;
+    width: 32px;
+    min-width: 32px;
+    z-index: 2;
+    background: transparent;
+    border: 0;
+}
+#speech-microphone button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--body-text-color);
+}
+#speech-microphone button:hover { background: var(--background-fill-secondary); }
+#speech-microphone button[aria-pressed="true"] { color: #d33f3f; }
+#speech-microphone .speech-stop,
+#speech-microphone [aria-pressed="true"] .speech-mic { display: none; }
+#speech-microphone [aria-pressed="true"] .speech-stop { display: block; }
+#speech-composer #chat-input textarea { padding-right: 44px; }
+.speech-bridge { display: none !important; }
+#speech-preview[hidden], #speech-save[hidden] { display: none; }
+#speech-preview-wrap:has(#speech-preview[hidden]) { display: none; }
+#speech-preview { padding: 10px 12px; }
+#speech-preview pre, #speech-saved pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: inherit;
+    margin: 6px 0;
+}
+#speech-preview pre, #speech-saved { max-height: 11rem; overflow: auto; }
+#speech-saved pre { padding: 8px 12px; }
+#speech-save {
+    padding: 5px 10px;
+    border: 1px solid var(--border-color-primary);
+    border-radius: 6px;
+}

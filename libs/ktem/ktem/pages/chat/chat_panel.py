@@ -2,6 +2,9 @@ import gradio as gr
 from ktem.app import BasePage
 from theflow.settings import settings as flowsettings
 
+from .speech_gateway import ENABLED as SPEECH_ENABLED
+from .speech_ui import MIC, SpeechControls
+
 KH_DEMO_MODE = getattr(flowsettings, "KH_DEMO_MODE", False)
 
 if not KH_DEMO_MODE:
@@ -33,7 +36,7 @@ class ChatPanel(BasePage):
             likeable=True,
             bubble_full_width=False,
         )
-        with gr.Row():
+        with gr.Row(elem_id="speech-composer" if SPEECH_ENABLED else None):
             self.text_input = gr.MultimodalTextbox(
                 interactive=True,
                 scale=20,
@@ -43,6 +46,10 @@ class ChatPanel(BasePage):
                 show_label=False,
                 elem_id="chat-input",
             )
+            if SPEECH_ENABLED:
+                gr.HTML(MIC, elem_id="speech-mic-slot")
+        if SPEECH_ENABLED:
+            self.speech = SpeechControls()
 
     def submit_msg(self, chat_input, chat_history):
         """Submit a message to the chatbot"""

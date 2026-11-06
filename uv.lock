@@ -3408,6 +3408,7 @@ dev = [
 name = "ktem"
 source = { editable = "libs/ktem" }
 dependencies = [
+    { name = "cachetools" },
     { name = "click" },
     { name = "gradio" },
     { name = "gradiologin" },
@@ -3421,10 +3422,12 @@ dependencies = [
     { name = "sqlmodel" },
     { name = "tiktoken" },
     { name = "tzlocal" },
+    { name = "websockets" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "cachetools", specifier = ">=6,<7" },
     { name = "click", specifier = ">=8.1.7,<9" },
     { name = "gradio", specifier = ">=4.31.0,<5" },
     { name = "gradiologin" },
@@ -3438,6 +3441,7 @@ requires-dist = [
     { name = "sqlmodel", specifier = ">=0.0.16,<0.1" },
     { name = "tiktoken", specifier = ">=0.6.0,<1" },
     { name = "tzlocal", specifier = ">=5.0" },
+    { name = "websockets", specifier = ">=11,<12" },
 ]
 
 [[package]]

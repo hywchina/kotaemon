@@ -415,6 +415,8 @@ class ChatPage(BasePage):
         return plot
 
     def on_register_events(self):
+        if hasattr(self.chat_panel, "speech"):
+            self.chat_panel.speech.bind(self._app.user_id, self.chat_control)
         # first index paper recommendation
         if KH_DEMO_MODE and len(self._indices_input) > 0:
             self._indices_input[1].change(

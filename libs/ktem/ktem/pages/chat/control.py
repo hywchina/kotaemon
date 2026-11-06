@@ -7,11 +7,12 @@ from ktem.app import BasePage
 from ktem.db.models import Conversation, User, engine
 from sqlmodel import Session, or_, select
 
-import flowsettings
+from theflow.settings import settings as flowsettings
 
 from ...utils.conversation import sync_retrieval_n_message
 from .chat_suggestion import ChatSuggestion
 from .common import STATE
+from .speech_ui import delete_transcripts
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +286,9 @@ class ConversationControl(BasePage):
             statement = select(Conversation).where(Conversation.id == conversation_id)
             result = session.exec(statement).one()
 
+            if result.user != user_id:
+                raise gr.Error("只能删除自己的会话")
+            delete_transcripts(session, conversation_id)
             session.delete(result)
             session.commit()
 

@@ -1,6 +1,9 @@
+from datetime import datetime, timezone
+
 import ktem.db.base_models as base_models
 from ktem.db.engine import engine
-from sqlmodel import SQLModel
+from sqlalchemy import Column, ForeignKey, String, Text
+from sqlmodel import Field, SQLModel
 from theflow.settings import settings
 from theflow.utils.modules import import_dotted_string
 
@@ -43,6 +46,22 @@ class Settings(_base_settings, table=True):  # type: ignore
 
 class IssueReport(_base_issue_report, table=True):  # type: ignore
     """Record of issues"""
+
+
+class SpeechTranscript(SQLModel, table=True):
+    """An explicitly saved transcript, separate from model prompt history."""
+
+    id: str = Field(primary_key=True)
+    conversation_id: str = Field(
+        sa_column=Column(
+            String,
+            ForeignKey("conversation.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    text: str = Field(sa_column=Column(Text, nullable=False))
+    created: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 if not getattr(settings, "KH_ENABLE_ALEMBIC", False):
